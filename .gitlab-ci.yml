@@ -1,0 +1,38 @@
+stages:
+  - test
+  - build
+
+# Optional shared cache to speed things up
+cache:
+  paths:
+    - backend/.m2/repository
+    - frontend/node_modules
+
+# -------------------------
+# Backend: run Maven tests
+# -------------------------
+backend-test:
+  stage: test
+  image: maven:3.9.9-eclipse-temurin-21
+  script:
+    - cd backend
+    - mvn -B test
+  artifacts:
+    when: always
+    reports:
+      junit: backend/target/surefire-reports/*.xml
+
+# -------------------------
+# Frontend: build + lint
+# -------------------------
+frontend-build:
+  stage: build
+  image: node:22-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist
