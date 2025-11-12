@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  mysql-db:
+    image: mysql:8.1
+    container_name: springboot-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: aspd_root
+      MYSQL_DATABASE: aspd_db
+      MYSQL_USER: aspd_user
+      MYSQL_PASSWORD: aspd_team3
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - backend-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql-db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql-db
+    networks:
+      - backend-network
+
+volumes:
+  mysql-data:
+
+networks:
+  backend-network:
