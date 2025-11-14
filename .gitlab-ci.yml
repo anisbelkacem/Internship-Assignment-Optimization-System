@@ -2,7 +2,6 @@ stages:
   - test
   - build
 
-# Optional shared cache to speed things up
 cache:
   paths:
     - backend/.m2/repository
@@ -23,7 +22,22 @@ backend-test:
       junit: backend/target/surefire-reports/*.xml
 
 # -------------------------
-# Frontend: build + lint
+# Frontend: lint + unit tests
+# -------------------------
+frontend-test:
+  stage: test
+  image: node:22-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - npm test     
+  artifacts:
+    when: always
+
+
+# -------------------------
+# Frontend: build
 # -------------------------
 frontend-build:
   stage: build
@@ -31,7 +45,6 @@ frontend-build:
   script:
     - cd frontend
     - npm ci
-    - npm run lint
     - npm run build
   artifacts:
     paths:
