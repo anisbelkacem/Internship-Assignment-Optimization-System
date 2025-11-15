@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    @Inheritance(strategy = InheritanceType.JOINED)
     @Table(name = "users")
     public class User {
         @Id
@@ -16,10 +17,22 @@ import lombok.NoArgsConstructor;
         private Long id;
 
         @Column(nullable = false)
-        private String name;
+        private String firstName;
+
+        @Column(nullable = false)
+        private String lastName;
 
         @Column(unique = true, nullable = false)
         private String email;
 
-        private String role;
+        @Column(nullable = false)
+        private String password;
+
+        private String address;
+
+        private String school;
+
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false)
+        private UserRole role;
     }
