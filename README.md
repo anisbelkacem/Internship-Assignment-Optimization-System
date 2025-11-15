@@ -11,7 +11,7 @@ repo-root/
 │   └── src/...  → contains a simple Hello World API
 │
 └── frontend/    → React + TypeScript app created with Vite
-└── src/...  → displays a simple Hello World page
+    └── src/...  → displays a simple Hello World page
 
 ````
 
