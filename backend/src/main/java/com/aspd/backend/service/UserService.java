@@ -1,6 +1,8 @@
 package com.aspd.backend.service;
 
-import com.aspd.backend.dto.UserDTO;
+import com.aspd.backend.common.exception.EmailAlreadyUsedException;
+import com.aspd.backend.dto.UserCreateDTO;
+import com.aspd.backend.dto.UserResponseDTO;
 import com.aspd.backend.model.Student;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.model.User;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -23,66 +27,43 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponseDTO> getAllUsers() {
+        return userRepository.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
 
-    public User createUser(UserDTO userDTO) {
-        User user;
-
-        // Create the correct subclass
-        if (userDTO.getRole() == UserRole.STUDENT) {
-            Student student = new Student();
-            student.setMainSubject(userDTO.getMainSubject());
-            user = student;
-        } else if (userDTO.getRole() == UserRole.TEACHER) {
-            Teacher teacher = new Teacher();
-            teacher.setDepartment(userDTO.getDepartment());
-            teacher.setYearsOfExperience(userDTO.getYearsOfExperience() != null ? userDTO.getYearsOfExperience() : 0);
-            user = teacher;
-        } else {
-            // Admin or generic user
-            user = new User();
+    public UserResponseDTO createUser(UserCreateDTO userDTO) {
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
+            throw new EmailAlreadyUsedException("Email already exists");
         }
+        User user = User.builder()
+                .firstName(userDTO.getFirstName())
+                .lastName(userDTO.getLastName())
+                .email(userDTO.getEmail())
+                .password(passwordEncoder.encode(userDTO.getPassword()))
+                .address(userDTO.getAddress())
+                .school(userDTO.getSchool())
+                .roles(userDTO.getRoles() == null ? Set.of() : userDTO.getRoles())
+                .permissions(userDTO.getPermissions() == null ? Set.of() : userDTO.getPermissions())
+                .build();
 
-        // Set common fields
-        user.setFirstName(userDTO.getFirstName());
-        user.setLastName(userDTO.getLastName());
-        user.setEmail(userDTO.getEmail());
-        user.setAddress(userDTO.getAddress());
-        user.setSchool(userDTO.getSchool());
-        user.setRole(userDTO.getRole());
-        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-
-        // Save: Hibernate automatically handles the subclass table
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        return toDto(savedUser);
     }
 
-    public User updateUser(Long id, UserDTO userDTO) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        existingUser.setFirstName(userDTO.getFirstName());
-        existingUser.setLastName(userDTO.getLastName());
-        existingUser.setEmail(userDTO.getEmail());
-        existingUser.setAddress(userDTO.getAddress());
-        existingUser.setSchool(userDTO.getSchool());
-
-        if (existingUser instanceof Student student && userDTO.getRole() == UserRole.STUDENT) {
-            student.setMainSubject(userDTO.getMainSubject());
-        } else if (existingUser instanceof Teacher teacher && userDTO.getRole() == UserRole.TEACHER) {
-            teacher.setDepartment(userDTO.getDepartment());
-            teacher.setYearsOfExperience(userDTO.getYearsOfExperience() != null ? userDTO.getYearsOfExperience() : teacher.getYearsOfExperience());
-        }
-
-        return userRepository.save(existingUser);
-    }
-
-    public void deleteUser(Long id) {
-        userRepository.deleteById(id);
+    private UserResponseDTO toDto(User user) {
+        UserResponseDTO userResponseDTO = new UserResponseDTO();
+        userResponseDTO.setId(user.getId());
+        userResponseDTO.setFirstName(user.getFirstName());
+        userResponseDTO.setLastName(user.getLastName());
+        userResponseDTO.setEmail(user.getEmail());
+        userResponseDTO.setAddress(user.getAddress());
+        userResponseDTO.setSchool(user.getSchool());
+        userResponseDTO.setRoles(user.getRoles());
+        userResponseDTO.setPermissions(user.getPermissions());
+        return userResponseDTO;
     }
 }

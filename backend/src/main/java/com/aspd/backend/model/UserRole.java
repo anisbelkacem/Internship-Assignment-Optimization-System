@@ -1,7 +1,7 @@
 package com.aspd.backend.model;
 
 public enum UserRole {
-    STUDENT,
-    TEACHER,
-    ADMIN
-}
+        ADMIN,
+        STAFF,
+        USER
+    }

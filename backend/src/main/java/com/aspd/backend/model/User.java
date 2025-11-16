@@ -2,15 +2,20 @@ package com.aspd.backend.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-    @Entity
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Inheritance(strategy = InheritanceType.JOINED)
     @Table(name = "users")
+    @Builder
     public class User {
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,10 +34,17 @@ import lombok.NoArgsConstructor;
         private String password;
 
         private String address;
-
         private String school;
 
-        @Enumerated(EnumType.STRING)
-        @Column(nullable = false)
-        private UserRole role;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role")
+    private Set<UserRole> roles = new HashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_permissions", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permission")
+    private Set<Permission> permissions = new HashSet<>();
     }

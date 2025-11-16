@@ -9,8 +9,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-// NEVER store plain text passwords, so will use BCrypt hashing.
-// Class that encodes passwords
 public class SecurityConfig {
 
     @Bean

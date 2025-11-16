@@ -1,17 +1,21 @@
 package com.aspd.backend.model;
 
-import jakarta.persistence.Entity;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Data
 @NoArgsConstructor
+@Table(name = "teachers")
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-public class Teacher extends User{
+@Builder
+public class Teacher{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String firstName;
+    private String lastName;
     private String department;
     private Integer yearsOfExperience;
 }
