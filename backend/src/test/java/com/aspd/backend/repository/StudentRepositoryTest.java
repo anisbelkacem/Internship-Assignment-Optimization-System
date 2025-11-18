@@ -4,14 +4,21 @@ import com.aspd.backend.model.Student;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest
+@ActiveProfiles("test")
+@SpringBootTest
 class StudentRepositoryTest {
-
+    @Test
+    void printDatasource(@Autowired Environment env) {
+        System.out.println("URL = " + env.getProperty("spring.datasource.url"));
+    }
     @Autowired
     private StudentRepository studentRepository;
 
