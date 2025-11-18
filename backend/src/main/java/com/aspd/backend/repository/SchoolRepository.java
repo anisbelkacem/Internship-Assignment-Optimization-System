@@ -1,0 +1,7 @@
+package com.aspd.backend.repository;
+
+import com.aspd.backend.model.School;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface SchoolRepository extends JpaRepository<School, Long> {
+}
