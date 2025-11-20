@@ -1,7 +1,7 @@
 package com.aspd.backend.controller;
 
-import com.aspd.backend.dto.UserCreateDTO;
-import com.aspd.backend.dto.UserResponseDTO;
+import com.aspd.backend.dto.UserCreate;
+import com.aspd.backend.dto.UserResponse;
 import com.aspd.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,13 +18,26 @@ public class UserAdminController {
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_USERS')")
     @PostMapping
-    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserCreateDTO userCreateDTO){
-        return ResponseEntity.ok(userService.createUser(userCreateDTO));
+    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreate userDto){
+        return ResponseEntity.ok(userService.createUser(userDto));
     }
 
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_USERS')")
     @GetMapping
-    public ResponseEntity<List<UserResponseDTO>> getAllUsers(){
+    public ResponseEntity<List<UserResponse>> getAllUsers(){
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_USERS')")
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @RequestBody UserCreate userDto) {
+        return ResponseEntity.ok(userService.updateUser(id, userDto));
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_USERS')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }

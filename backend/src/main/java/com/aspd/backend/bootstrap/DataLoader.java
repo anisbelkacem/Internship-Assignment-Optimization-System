@@ -23,7 +23,7 @@ public class DataLoader implements ApplicationRunner {
     }
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void run(ApplicationArguments args)  {
         String adminEmail = "admin@school.com";
         if (userRepository.findByEmail(adminEmail).isEmpty()) {
             User admin = User.builder()
@@ -32,10 +32,9 @@ public class DataLoader implements ApplicationRunner {
                     .email(adminEmail)
                     .password(passwordEncoder.encode("admin123"))
                     .roles(Set.of(UserRole.ADMIN))
-                    .permissions(Set.of(Permission.MANAGE_USERS, Permission.MANAGE_STUDENTS, Permission.MANAGE_TEACHERS))
+                    .permissions(Set.of(Permission.MANAGE_USERS, Permission.VIEW, Permission.EDIT))
                     .build();
             userRepository.save(admin);
-            System.out.println("Seeded admin user: " + adminEmail);
         }
     }
 }

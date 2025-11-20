@@ -1,8 +1,6 @@
 package com.aspd.backend.controller;
 
-import com.aspd.backend.model.Student;
 import com.aspd.backend.model.Teacher;
-import com.aspd.backend.service.StudentService;
 import com.aspd.backend.service.TeacherService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,7 +24,7 @@ public class TeacherController {
         return ResponseEntity.ok(teacherService.createTeacher(teacher));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_TEACHERS')")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
     public ResponseEntity<List<Teacher>>  getAllTeachers(){
         return ResponseEntity.ok(teacherService.getAllTeachers());

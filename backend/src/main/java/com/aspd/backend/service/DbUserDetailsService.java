@@ -24,7 +24,7 @@ public class DbUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername (String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        Set<GrantedAuthority> grantedAuthorities = user.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())).collect(java.util.stream.Collectors.toSet());
+        Set<GrantedAuthority> grantedAuthorities = user.getRoles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())).collect(Collectors.toSet());
         grantedAuthorities.addAll(user.getPermissions().stream()
                 .map(Permission::name)
                 .map(SimpleGrantedAuthority::new)
