@@ -1,6 +1,7 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.common.exception.EmailAlreadyUsedException;
+import com.aspd.backend.common.exception.UserNotFoundException;
 import com.aspd.backend.dto.UserCreate;
 import com.aspd.backend.dto.UserResponse;
 import com.aspd.backend.model.User;
@@ -47,29 +48,43 @@ public class UserService {
 
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
+            throw new UserNotFoundException(id);
         }
         userRepository.deleteById(id);
     }
 
     public UserResponse getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
         return toDto(user);
     }
 
     public UserResponse updateUser(Long id, UserCreate userDTO) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if(userDTO.getFirstName() != null) user.setFirstName(userDTO.getFirstName());
-        if(userDTO.getLastName() != null) user.setLastName(userDTO.getLastName());
-        if(userDTO.getEmail() != null) user.setEmail(userDTO.getEmail());
-        if(userDTO.getPassword() != null) user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        if(userDTO.getAddress() != null) user.setAddress(userDTO.getAddress());
-        if(userDTO.getSchool() != null) user.setSchool(userDTO.getSchool());
-        if(userDTO.getRoles() != null) user.setRoles(userDTO.getRoles());
-        if(userDTO.getPermissions() != null) user.setPermissions(userDTO.getPermissions());
-
+                .orElseThrow(() -> new UserNotFoundException(id));
+        if (userDTO.getFirstName() != null) {
+            user.setFirstName(userDTO.getFirstName());
+        }
+        if (userDTO.getLastName() != null) {
+            user.setLastName(userDTO.getLastName());
+        }
+        if (userDTO.getEmail() != null) {
+            user.setEmail(userDTO.getEmail());
+        }
+        if (userDTO.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        }
+        if (userDTO.getAddress() != null) {
+            user.setAddress(userDTO.getAddress());
+        }
+        if (userDTO.getSchool() != null) {
+            user.setSchool(userDTO.getSchool());
+        }
+        if (userDTO.getRoles() != null) {
+            user.setRoles(userDTO.getRoles());
+        }
+        if (userDTO.getPermissions() != null) {
+            user.setPermissions(userDTO.getPermissions());
+        }
         User savedUser = userRepository.save(user);
         return toDto(savedUser);
 
