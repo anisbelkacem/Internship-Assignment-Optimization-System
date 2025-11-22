@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/completed-internships")
@@ -19,50 +20,84 @@ public class CompletedInternshipsController {
     }
 
     @PostMapping
-    public ResponseEntity<CompletedInternships> create(@RequestBody CompletedInternshipsDto dto) {
+    public ResponseEntity<CompletedInternshipsDto> create(@RequestBody CompletedInternshipsDto dto) {
         CompletedInternships created = completedInternshipsService.createCompletedInternship(dto);
-        return ResponseEntity.ok(created);
+        return ResponseEntity.ok(toDto(created));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CompletedInternships> getById(@PathVariable Long id) {
+    public ResponseEntity<CompletedInternshipsDto> getById(@PathVariable Long id) {
         return completedInternshipsService.getCompletedInternshipById(id)
-                .map(ResponseEntity::ok)
+                .map(internship -> ResponseEntity.ok(toDto(internship)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public ResponseEntity<List<CompletedInternships>> getAll() {
-        return ResponseEntity.ok(completedInternshipsService.getAllCompletedInternships());
+    public ResponseEntity<List<CompletedInternshipsDto>> getAll() {
+        List<CompletedInternshipsDto> dtos =
+                completedInternshipsService.getAllCompletedInternships()
+                        .stream()
+                        .map(this::toDto)
+                        .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<CompletedInternships>> getByStudentId(@PathVariable int studentId) {
-        return ResponseEntity.ok(completedInternshipsService.getInternshipsByStudentId(studentId));
+    public ResponseEntity<List<CompletedInternshipsDto>> getByStudentId(@PathVariable int studentId) {
+        List<CompletedInternshipsDto> dtos =
+                completedInternshipsService.getInternshipsByStudentId(studentId)
+                        .stream()
+                        .map(this::toDto)
+                        .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/teacher/{teacherId}")
-    public ResponseEntity<List<CompletedInternships>> getByTeacherId(@PathVariable Long teacherId) {
-        return ResponseEntity.ok(completedInternshipsService.getInternshipsByTeacherId(teacherId));
+    public ResponseEntity<List<CompletedInternshipsDto>> getByTeacherId(@PathVariable Long teacherId) {
+        List<CompletedInternshipsDto> dtos =
+                completedInternshipsService.getInternshipsByTeacherId(teacherId)
+                        .stream()
+                        .map(this::toDto)
+                        .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/school/{schoolId}")
-    public ResponseEntity<List<CompletedInternships>> getBySchoolId(@PathVariable Long schoolId) {
-        return ResponseEntity.ok(completedInternshipsService.getInternshipsBySchoolId(schoolId));
+    public ResponseEntity<List<CompletedInternshipsDto>> getBySchoolId(@PathVariable Long schoolId) {
+        List<CompletedInternshipsDto> dtos =
+                completedInternshipsService.getInternshipsBySchoolId(schoolId)
+                        .stream()
+                        .map(this::toDto)
+                        .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CompletedInternships> update(
+    public ResponseEntity<CompletedInternshipsDto> update(
             @PathVariable Long id,
             @RequestBody CompletedInternshipsDto dto) {
 
         CompletedInternships updated = completedInternshipsService.updateCompletedInternship(id, dto);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(toDto(updated));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         completedInternshipsService.deleteCompletedInternship(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ----------- Mapping method -----------
+    private CompletedInternshipsDto toDto(CompletedInternships ci) {
+        return new CompletedInternshipsDto(
+                ci.getId(),
+                ci.getStudent().getMatriculationNbr(),
+                ci.getTeacher().getTeacherId(),
+                ci.getSchool().getId(),
+                ci.getCourse(),
+                ci.getStartDate(),
+                ci.getEndDate(),
+                ci.getDescription()
+        );
     }
 }

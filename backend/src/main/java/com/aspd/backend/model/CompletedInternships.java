@@ -20,11 +20,13 @@ public class CompletedInternships {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @Column(nullable = false)
-    private Long teacherId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private Teacher teacher;
 
-    @Column(nullable = false)
-    private Long schoolId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -38,13 +40,14 @@ public class CompletedInternships {
 
     private String description;
 
-    public CompletedInternships(Student student, Long teacherId, Long schoolId,
+    public CompletedInternships(Student student, Teacher teacher, School school,
                                 Course course, LocalDate startDate, LocalDate endDate) {
         this.student = student;
-        this.teacherId = teacherId;
-        this.schoolId = schoolId;
+        this.teacher = teacher;
+        this.school = school;
         this.course = course;
         this.startDate = startDate;
         this.endDate = endDate;
     }
+
 }

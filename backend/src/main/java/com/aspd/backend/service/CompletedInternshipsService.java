@@ -1,10 +1,15 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.CompletedInternships;
+import com.aspd.backend.model.School;
 import com.aspd.backend.model.Student;
+import com.aspd.backend.model.Teacher;
 import com.aspd.backend.dto.CompletedInternshipsDto;
 import com.aspd.backend.repository.CompletedInternshipsRepository;
+import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.StudentRepository;
+import com.aspd.backend.repository.TeacherRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,30 +20,43 @@ public class CompletedInternshipsService {
 
     private final CompletedInternshipsRepository completedInternshipsRepository;
     private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final SchoolRepository schoolRepository;
 
-    public CompletedInternshipsService(CompletedInternshipsRepository completedInternshipsRepository,
-                                       StudentRepository studentRepository) {
+    public CompletedInternshipsService(
+            CompletedInternshipsRepository completedInternshipsRepository,
+            StudentRepository studentRepository,
+            TeacherRepository teacherRepository,
+            SchoolRepository schoolRepository
+    ) {
         this.completedInternshipsRepository = completedInternshipsRepository;
         this.studentRepository = studentRepository;
+        this.teacherRepository = teacherRepository;
+        this.schoolRepository = schoolRepository;
     }
 
-    public CompletedInternships createCompletedInternship(CompletedInternshipsDto dto) {
 
+    public CompletedInternships createCompletedInternship(CompletedInternshipsDto dto) {
         Student student = studentRepository.findById(dto.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
+        Teacher teacher = teacherRepository.findById(dto.getTeacherId())
+                .orElseThrow(() -> new RuntimeException("Teacher not found"));
+
+        School school = schoolRepository.findById(dto.getSchoolId())
+                .orElseThrow(() -> new RuntimeException("School not found"));
+
         CompletedInternships internship = new CompletedInternships(
                 student,
-                dto.getTeacherId(),
-                dto.getSchoolId(),
+                teacher,
+                school,
                 dto.getCourse(),
                 dto.getStartDate(),
                 dto.getEndDate()
         );
-
         internship.setDescription(dto.getDescription());
-
         return completedInternshipsRepository.save(internship);
+
     }
 
     public Optional<CompletedInternships> getCompletedInternshipById(Long id) {
@@ -54,11 +72,11 @@ public class CompletedInternshipsService {
     }
 
     public List<CompletedInternships> getInternshipsByTeacherId(Long teacherId) {
-        return completedInternshipsRepository.findByTeacherId(teacherId);
+        return completedInternshipsRepository.findByTeacher_TeacherId(teacherId);
     }
 
     public List<CompletedInternships> getInternshipsBySchoolId(Long schoolId) {
-        return completedInternshipsRepository.findBySchoolId(schoolId);
+        return completedInternshipsRepository.findBySchool_Id(schoolId);
     }
 
     public CompletedInternships updateCompletedInternship(Long id, CompletedInternshipsDto dto) {
@@ -73,11 +91,15 @@ public class CompletedInternshipsService {
         }
 
         if (dto.getTeacherId() != null) {
-            internship.setTeacherId(dto.getTeacherId());
+            Teacher teacher = teacherRepository.findById(dto.getTeacherId())
+                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
+            internship.setTeacher(teacher);
         }
 
         if (dto.getSchoolId() != null) {
-            internship.setSchoolId(dto.getSchoolId());
+            School school = schoolRepository.findById(dto.getSchoolId())
+                    .orElseThrow(() -> new RuntimeException("School not found"));
+            internship.setSchool(school);
         }
 
         if (dto.getCourse() != null) {
