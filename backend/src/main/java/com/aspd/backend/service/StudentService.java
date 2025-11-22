@@ -1,5 +1,6 @@
 package com.aspd.backend.service;
 
+import com.aspd.backend.common.exception.NotFoundException;
 import com.aspd.backend.dto.StudentDto;
 import com.aspd.backend.model.Student;
 import com.aspd.backend.repository.StudentRepository;
@@ -65,7 +66,7 @@ public class StudentService {
             student.setBirthDate(dto.getBirthDate());
             student.setDescription(dto.getDescription());
             return studentRepository.save(student);
-        }).orElseThrow(() -> new RuntimeException("Student not found"));
+        }).orElseThrow(() -> new NotFoundException("Student", dto.getMatriculationNbr()));
     }
 
     public void deleteStudent(int id) {

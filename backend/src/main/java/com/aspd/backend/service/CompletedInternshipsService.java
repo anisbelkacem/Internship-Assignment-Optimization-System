@@ -1,5 +1,6 @@
 package com.aspd.backend.service;
 
+import com.aspd.backend.common.exception.NotFoundException;
 import com.aspd.backend.model.CompletedInternships;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.Student;
@@ -35,16 +36,15 @@ public class CompletedInternshipsService {
         this.schoolRepository = schoolRepository;
     }
 
-
     public CompletedInternships createCompletedInternship(CompletedInternshipsDto dto) {
         Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new NotFoundException("Student", dto.getStudentId()));
 
         Teacher teacher = teacherRepository.findById(dto.getTeacherId())
-                .orElseThrow(() -> new RuntimeException("Teacher not found"));
+                .orElseThrow(() -> new NotFoundException("Teacher", dto.getTeacherId()));
 
         School school = schoolRepository.findById(dto.getSchoolId())
-                .orElseThrow(() -> new RuntimeException("School not found"));
+                .orElseThrow(() -> new NotFoundException("School", dto.getSchoolId()));
 
         CompletedInternships internship = new CompletedInternships(
                 student,
@@ -56,7 +56,6 @@ public class CompletedInternshipsService {
         );
         internship.setDescription(dto.getDescription());
         return completedInternshipsRepository.save(internship);
-
     }
 
     public Optional<CompletedInternships> getCompletedInternshipById(Long id) {
@@ -81,24 +80,24 @@ public class CompletedInternshipsService {
 
     public CompletedInternships updateCompletedInternship(Long id, CompletedInternshipsDto dto) {
 
-        var internship = completedInternshipsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Internship not found"));
+        CompletedInternships internship = completedInternshipsRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("CompletedInternship", id));
 
         if (dto.getStudentId() != 0) {
             Student student = studentRepository.findById(dto.getStudentId())
-                    .orElseThrow(() -> new RuntimeException("Student not found"));
+                    .orElseThrow(() -> new NotFoundException("Student", dto.getStudentId()));
             internship.setStudent(student);
         }
 
         if (dto.getTeacherId() != null) {
             Teacher teacher = teacherRepository.findById(dto.getTeacherId())
-                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
+                    .orElseThrow(() -> new NotFoundException("Teacher", dto.getTeacherId()));
             internship.setTeacher(teacher);
         }
 
         if (dto.getSchoolId() != null) {
             School school = schoolRepository.findById(dto.getSchoolId())
-                    .orElseThrow(() -> new RuntimeException("School not found"));
+                    .orElseThrow(() -> new NotFoundException("School", dto.getSchoolId()));
             internship.setSchool(school);
         }
 
@@ -124,4 +123,5 @@ public class CompletedInternshipsService {
     public void deleteCompletedInternship(Long id) {
         completedInternshipsRepository.deleteById(id);
     }
+
 }
