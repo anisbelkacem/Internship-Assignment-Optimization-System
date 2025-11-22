@@ -32,6 +32,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    @ExceptionHandler(InvalidDataException.class)
+    public ResponseEntity<?> handleInvalidData(InvalidDataException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", ex.getMessage());
+        if (ex.getFieldName() != null) {
+            body.put("field", ex.getFieldName());
+            body.put("invalidValue", ex.getInvalidValue());
+        }
+        return ResponseEntity.badRequest().body(body);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, Object> body = new HashMap<>();

@@ -1,5 +1,6 @@
 package com.aspd.backend.service;
 
+import com.aspd.backend.common.exception.InvalidDataException;
 import com.aspd.backend.common.exception.NotFoundException;
 import com.aspd.backend.dto.SchoolImportResult;
 import com.aspd.backend.dto.SchoolRequest;
@@ -27,7 +28,7 @@ public class SchoolService {
     }
 
     public School get(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("School not found: " + id));
+        return repository.findById(id).orElseThrow(() -> new NotFoundException("School", id));
     }
 
     @Transactional
@@ -66,7 +67,7 @@ public class SchoolService {
         try (Workbook workbook = new XSSFWorkbook(inputStream)) {
             Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
             if (sheet == null) {
-                throw new IllegalArgumentException("No sheets found in the Excel file");
+                throw new InvalidDataException("No sheets found in the Excel file");
             }
 
             if (sheet.getPhysicalNumberOfRows() <= 1) {
@@ -76,17 +77,19 @@ public class SchoolService {
 
             Map<String, Integer> headerIndex = buildHeaderIndex(sheet.getRow(0));
             validateRequiredHeaders(headerIndex, result);
-            if (result.getErrorCount() > 0){ return result;}
+            if (result.getErrorCount() > 0)
+                { return result;}
 
             int total = 0;
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null) {continue;}
+                if (row == null) 
+                    {continue;}
                 total++;
                 try {
                     School s = parseRow(row, headerIndex);
                     toSave.add(s);
-                } catch (IllegalArgumentException e) {
+                } catch (InvalidDataException e) {
                     result.addError("Row " + (i + 1) + ": " + e.getMessage());
                 }
             }
@@ -101,8 +104,13 @@ public class SchoolService {
         } catch (org.apache.poi.ooxml.POIXMLException e) {
             // Corrupted/unsupported Excel content: let GlobalExceptionHandler return 400
             throw e;
+        } catch (InvalidDataException e) {
+            // Validation issues: aggregate into result
+            result.addError(e.getMessage());
+            result.setErrorCount(result.getErrors().size());
+            return result;
         } catch (IllegalArgumentException e) {
-            // If it's a POI format exception, bubble up to global handler; otherwise aggregate
+            // If it's a POI format exception, bubble up to global handler
             if ("org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException".equals(e.getClass().getName())) {
                 throw e;
             }
@@ -119,12 +127,17 @@ public class SchoolService {
 
     private Map<String, Integer> buildHeaderIndex(Row headerRow) {
         Map<String, Integer> idx = new HashMap<>();
-        if (headerRow == null) {return idx;}
+        if (headerRow == null) 
+            {
+                return idx;
+            }
         for (int c = 0; c < headerRow.getLastCellNum(); c++) {
             Cell cell = headerRow.getCell(c);
             if (cell == null) {continue;}
             String key = normalize(headerString(cell));
-            if (!key.isEmpty()) idx.put(key, c);
+            if (!key.isEmpty()) {
+                idx.put(key, c);
+            }
         }
         return idx;
     }
@@ -147,7 +160,7 @@ public class SchoolService {
         SchoolType type = readType(row, headerIndex.get("type"));
 
         if (isBlank(name) || isBlank(address) || isBlank(zone) || oepnv == null || type == null) {
-            throw new IllegalArgumentException("Required fields missing or invalid");
+            throw new InvalidDataException("Required fields missing or invalid");
         }
 
         School s = new School();
@@ -160,7 +173,9 @@ public class SchoolService {
     }
 
     private String normalize(String s) {
-        if (s == null) {return "";}
+        if (s == null) {
+            return "";
+        }
         String t = s.trim().toLowerCase(Locale.ROOT);
         t = t.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss");
         t = t.replaceAll("[^a-z0-9]", "");
@@ -181,9 +196,13 @@ public class SchoolService {
             return isBlank(v) ? null : v.trim();
         } else if (cell.getCellType() == CellType.NUMERIC) {
             double d = cell.getNumericCellValue();
-            if (Double.isNaN(d)) {return null;}
+            if (Double.isNaN(d)) {
+                return null;
+            }
             long l = (long) d;
-            if (Math.abs(d - l) < 1e-9) {return String.valueOf(l);}
+            if (Math.abs(d - l) < 1e-9) {
+                return String.valueOf(l);
+            }
             return String.valueOf(d);
         } else if (cell.getCellType() == CellType.BOOLEAN) {
             return String.valueOf(cell.getBooleanCellValue());
@@ -193,18 +212,28 @@ public class SchoolService {
 
 
     private Boolean readBoolean(Row row, Integer colIdx) {
-        if (colIdx == null) {return null;}
+        if (colIdx == null) {
+            return null;
+        }
         Cell cell = row.getCell(colIdx);
-        if (cell == null) {return null;}
+        if (cell == null) {
+            return null;
+        }
         if (cell.getCellType() == CellType.BOOLEAN) {
             return cell.getBooleanCellValue();
         } else if (cell.getCellType() == CellType.STRING) {
             String v = cell.getStringCellValue();
-            if (isBlank(v)) {return null;}
+            if (isBlank(v)) {
+                return null;
+            }
             String t = v.trim().toLowerCase(Locale.ROOT);
-            if (t.equals("true") || t.equals("yes") || t.equals("ja") || t.equals("1")){ return true;}
-            if (t.equals("false") || t.equals("no") || t.equals("nein") || t.equals("0")) {return false;}
-            throw new IllegalArgumentException("oepnv must be boolean (true/false/yes/no/ja/nein/1/0)");
+            if (t.equals("true") || t.equals("yes") || t.equals("ja") || t.equals("1")){ 
+                return true;
+            }
+            if (t.equals("false") || t.equals("no") || t.equals("nein") || t.equals("0")) {
+                return false;
+            }
+            throw new InvalidDataException("oepnv", v, "must be boolean (true/false/yes/no/ja/nein/1/0)");
         } else if (cell.getCellType() == CellType.NUMERIC) {
             return Math.abs(cell.getNumericCellValue()) >= 0.5;
         }
@@ -215,9 +244,13 @@ public class SchoolService {
         String val = readString(row, colIdx);
         if (isBlank(val)) {return null;}
         String u = val.trim().toUpperCase(Locale.ROOT);
-        if (u.equals("GS")) {return SchoolType.GS;}
-        if (u.equals("MS")) {return SchoolType.MS;}
-        throw new IllegalArgumentException("type must be GS or MS");
+        if (u.equals("GS")) {
+            return SchoolType.GS;
+        }
+        if (u.equals("MS")) {
+            return SchoolType.MS;
+        }
+        throw new InvalidDataException("type", val, "must be GS or MS");
     }
 
     private boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }

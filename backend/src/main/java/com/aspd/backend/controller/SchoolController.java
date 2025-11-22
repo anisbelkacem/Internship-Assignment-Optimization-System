@@ -1,5 +1,6 @@
 package com.aspd.backend.controller;
 
+import com.aspd.backend.common.exception.InvalidDataException;
 import com.aspd.backend.dto.SchoolImportResult;
 import com.aspd.backend.dto.SchoolRequest;
 import com.aspd.backend.dto.SchoolResponse;
@@ -51,10 +52,10 @@ public class SchoolController {
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SchoolImportResult importExcel(@RequestPart("file") MultipartFile file) throws IOException {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("file is required");
+            throw new InvalidDataException("file", null, "is required");
         }
         if (!file.getOriginalFilename().toLowerCase().endsWith(".xlsx")) {
-            throw new IllegalArgumentException("Only .xlsx files are supported");
+            throw new InvalidDataException("file", file.getOriginalFilename(), "Only .xlsx files are supported");
         }
         return service.importFromExcel(file.getInputStream());
     }
