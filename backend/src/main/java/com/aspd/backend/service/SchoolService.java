@@ -71,62 +71,81 @@ public class SchoolService {
     @Transactional
     public SchoolImportResult importFromExcel(InputStream inputStream) {
         SchoolImportResult result = new SchoolImportResult();
-        List<School> toSave = new ArrayList<>();
-
         try (Workbook workbook = new XSSFWorkbook(inputStream)) {
-            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
-            if (sheet == null) {
-                throw new InvalidDataException("No sheets found in the Excel file");
-            }
-
-            if (sheet.getPhysicalNumberOfRows() <= 1) {
+            Sheet sheet = getFirstSheet(workbook);
+            if (isSheetEmpty(sheet)) {
                 result.setTotalRows(0);
                 return result;
             }
 
             Map<String, Integer> headerIndex = buildHeaderIndex(sheet.getRow(0));
             validateRequiredHeaders(headerIndex, result);
-            if (result.getErrorCount() > 0)
-                { return result;}
-
-            int total = 0;
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null) 
-                    {continue;}
-                total++;
-                try {
-                    School s = parseRow(row, headerIndex);
-                    toSave.add(s);
-                } catch (InvalidDataException e) {
-                    result.addError("Row " + (i + 1) + ": " + e.getMessage());
-                }
+            if (result.getErrorCount() > 0) {
+                return result;
             }
-            result.setTotalRows(total);
 
-            if (!toSave.isEmpty()) {
-                repository.saveAll(toSave);
-                result.setImportedCount(toSave.size());
-            }
-            result.setErrorCount(result.getErrors().size());
+            List<School> toSave = processDataRows(sheet, headerIndex, result);
+            saveImportedSchools(toSave, result);
             return result;
-        } catch (org.apache.poi.ooxml.POIXMLException e) {
-            // Corrupted/unsupported Excel content: let GlobalExceptionHandler return 400
-            throw e;
-        } catch (org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException e) {
-            // Not a valid .xlsx file format: let GlobalExceptionHandler return 400
+        } catch (org.apache.poi.ooxml.POIXMLException | org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException e) {
             throw e;
         } catch (InvalidDataException e) {
-            // Validation issues: aggregate into result
-            result.addError(e.getMessage());
-            result.setErrorCount(result.getErrors().size());
-            return result;
+            return handleValidationError(result, e);
         } catch (java.io.IOException e) {
-            // I/O errors while reading the stream: report in result
-            result.addError("I/O error while reading Excel file: " + e.getMessage());
-            result.setErrorCount(result.getErrors().size());
-            return result;
+            return handleIOError(result, e);
         }
+    }
+
+    private Sheet getFirstSheet(Workbook workbook) {
+        Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
+        if (sheet == null) {
+            throw new InvalidDataException("No sheets found in the Excel file");
+        }
+        return sheet;
+    }
+
+    private boolean isSheetEmpty(Sheet sheet) {
+        return sheet.getPhysicalNumberOfRows() <= 1;
+    }
+
+    private List<School> processDataRows(Sheet sheet, Map<String, Integer> headerIndex, SchoolImportResult result) {
+        List<School> toSave = new ArrayList<>();
+        int total = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null) {
+                continue;
+            }
+            total++;
+            try {
+                School s = parseRow(row, headerIndex);
+                toSave.add(s);
+            } catch (InvalidDataException e) {
+                result.addError("Row " + (i + 1) + ": " + e.getMessage());
+            }
+        }
+        result.setTotalRows(total);
+        return toSave;
+    }
+
+    private void saveImportedSchools(List<School> toSave, SchoolImportResult result) {
+        if (!toSave.isEmpty()) {
+            repository.saveAll(toSave);
+            result.setImportedCount(toSave.size());
+        }
+        result.setErrorCount(result.getErrors().size());
+    }
+
+    private SchoolImportResult handleValidationError(SchoolImportResult result, InvalidDataException e) {
+        result.addError(e.getMessage());
+        result.setErrorCount(result.getErrors().size());
+        return result;
+    }
+
+    private SchoolImportResult handleIOError(SchoolImportResult result, java.io.IOException e) {
+        result.addError("I/O error while reading Excel file: " + e.getMessage());
+        result.setErrorCount(result.getErrors().size());
+        return result;
     }
 
     private Map<String, Integer> buildHeaderIndex(Row headerRow) {
