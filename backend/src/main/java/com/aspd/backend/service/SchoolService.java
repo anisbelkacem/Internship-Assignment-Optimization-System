@@ -76,12 +76,12 @@ public class SchoolService {
 
             Map<String, Integer> headerIndex = buildHeaderIndex(sheet.getRow(0));
             validateRequiredHeaders(headerIndex, result);
-            if (result.getErrorCount() > 0) return result;
+            if (result.getErrorCount() > 0){ return result;}
 
             int total = 0;
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (row == null) {continue;}
                 total++;
                 try {
                     School s = parseRow(row, headerIndex);
@@ -98,21 +98,31 @@ public class SchoolService {
             }
             result.setErrorCount(result.getErrors().size());
             return result;
+        } catch (org.apache.poi.ooxml.POIXMLException e) {
+            // Corrupted/unsupported Excel content: let GlobalExceptionHandler return 400
+            throw e;
         } catch (IllegalArgumentException e) {
+            // If it's a POI format exception, bubble up to global handler; otherwise aggregate
+            if ("org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException".equals(e.getClass().getName())) {
+                throw e;
+            }
             result.addError(e.getMessage());
             result.setErrorCount(result.getErrors().size());
             return result;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to read Excel file: " + e.getMessage());
+        } catch (java.io.IOException e) {
+            // I/O errors while reading the stream: report in result
+            result.addError("I/O error while reading Excel file: " + e.getMessage());
+            result.setErrorCount(result.getErrors().size());
+            return result;
         }
     }
 
     private Map<String, Integer> buildHeaderIndex(Row headerRow) {
         Map<String, Integer> idx = new HashMap<>();
-        if (headerRow == null) return idx;
+        if (headerRow == null) {return idx;}
         for (int c = 0; c < headerRow.getLastCellNum(); c++) {
             Cell cell = headerRow.getCell(c);
-            if (cell == null) continue;
+            if (cell == null) {continue;}
             String key = normalize(headerString(cell));
             if (!key.isEmpty()) idx.put(key, c);
         }
@@ -150,7 +160,7 @@ public class SchoolService {
     }
 
     private String normalize(String s) {
-        if (s == null) return "";
+        if (s == null) {return "";}
         String t = s.trim().toLowerCase(Locale.ROOT);
         t = t.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss");
         t = t.replaceAll("[^a-z0-9]", "");
@@ -163,17 +173,17 @@ public class SchoolService {
     }
 
     private String readString(Row row, Integer colIdx) {
-        if (colIdx == null) return null;
+        if (colIdx == null) {return null;}
         Cell cell = row.getCell(colIdx);
-        if (cell == null) return null;
+        if (cell == null) {return null;}
         if (cell.getCellType() == CellType.STRING) {
             String v = cell.getStringCellValue();
             return isBlank(v) ? null : v.trim();
         } else if (cell.getCellType() == CellType.NUMERIC) {
             double d = cell.getNumericCellValue();
-            if (Double.isNaN(d)) return null;
+            if (Double.isNaN(d)) {return null;}
             long l = (long) d;
-            if (Math.abs(d - l) < 1e-9) return String.valueOf(l);
+            if (Math.abs(d - l) < 1e-9) {return String.valueOf(l);}
             return String.valueOf(d);
         } else if (cell.getCellType() == CellType.BOOLEAN) {
             return String.valueOf(cell.getBooleanCellValue());
@@ -183,17 +193,17 @@ public class SchoolService {
 
 
     private Boolean readBoolean(Row row, Integer colIdx) {
-        if (colIdx == null) return null;
+        if (colIdx == null) {return null;}
         Cell cell = row.getCell(colIdx);
-        if (cell == null) return null;
+        if (cell == null) {return null;}
         if (cell.getCellType() == CellType.BOOLEAN) {
             return cell.getBooleanCellValue();
         } else if (cell.getCellType() == CellType.STRING) {
             String v = cell.getStringCellValue();
-            if (isBlank(v)) return null;
+            if (isBlank(v)) {return null;}
             String t = v.trim().toLowerCase(Locale.ROOT);
-            if (t.equals("true") || t.equals("yes") || t.equals("ja") || t.equals("1")) return true;
-            if (t.equals("false") || t.equals("no") || t.equals("nein") || t.equals("0")) return false;
+            if (t.equals("true") || t.equals("yes") || t.equals("ja") || t.equals("1")){ return true;}
+            if (t.equals("false") || t.equals("no") || t.equals("nein") || t.equals("0")) {return false;}
             throw new IllegalArgumentException("oepnv must be boolean (true/false/yes/no/ja/nein/1/0)");
         } else if (cell.getCellType() == CellType.NUMERIC) {
             return Math.abs(cell.getNumericCellValue()) >= 0.5;
@@ -203,10 +213,10 @@ public class SchoolService {
 
     private SchoolType readType(Row row, Integer colIdx) {
         String val = readString(row, colIdx);
-        if (isBlank(val)) return null;
+        if (isBlank(val)) {return null;}
         String u = val.trim().toUpperCase(Locale.ROOT);
-        if (u.equals("GS")) return SchoolType.GS;
-        if (u.equals("MS")) return SchoolType.MS;
+        if (u.equals("GS")) {return SchoolType.GS;}
+        if (u.equals("MS")) {return SchoolType.MS;}
         throw new IllegalArgumentException("type must be GS or MS");
     }
 

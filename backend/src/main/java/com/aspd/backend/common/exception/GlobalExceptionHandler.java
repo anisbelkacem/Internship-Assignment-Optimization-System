@@ -38,4 +38,25 @@ public class GlobalExceptionHandler {
         body.put("error", ex.getMessage());
         return ResponseEntity.badRequest().body(body);
     }
+
+    @ExceptionHandler(org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException.class)
+    public ResponseEntity<?> handleNotXlsx(org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "Invalid file format: please upload a .xlsx file");
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(org.apache.poi.ooxml.POIXMLException.class)
+    public ResponseEntity<?> handlePoi(org.apache.poi.ooxml.POIXMLException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "Corrupted or unsupported Excel file");
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(java.io.IOException.class)
+    public ResponseEntity<?> handleIo(java.io.IOException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "I/O error while reading Excel file: " + ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
 }
