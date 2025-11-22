@@ -2,7 +2,7 @@ package com.aspd.backend.dto;
 
 import com.aspd.backend.model.Address;
 import com.aspd.backend.model.Course;
-import com.aspd.backend.model.Lehramt;
+import com.aspd.backend.model.SchoolType;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +20,7 @@ public class StudentDto {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    private Lehramt lehramt;
+    private SchoolType schoolType;
 
     @Enumerated(EnumType.STRING)
     private Course mainCourse;

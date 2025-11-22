@@ -17,7 +17,7 @@ public class Student {
     private String lastName;
     private String email;
 
-    private Lehramt lehramt;
+    private SchoolType schoolType;
     
     private Course mainCourse;
     private Course prefCourse1;

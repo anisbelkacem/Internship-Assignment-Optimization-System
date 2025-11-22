@@ -31,7 +31,7 @@ public class StudentService {
         student.setFirstName(dto.getFirstName());
         student.setLastName(dto.getLastName());
         student.setEmail(dto.getEmail());
-        student.setLehramt(dto.getLehramt());
+        student.setSchoolType(dto.getSchoolType());
         student.setMainCourse(dto.getMainCourse());
         student.setPrefCourse1(dto.getPrefCourse1());
         student.setPrefCourse2(dto.getPrefCourse2());
@@ -52,7 +52,7 @@ public class StudentService {
             student.setFirstName(dto.getFirstName());
             student.setLastName(dto.getLastName());
             student.setEmail(dto.getEmail());
-            student.setLehramt(dto.getLehramt());
+            student.setSchoolType(dto.getSchoolType());
             student.setMainCourse(dto.getMainCourse());
             student.setPrefCourse1(dto.getPrefCourse1());
             student.setPrefCourse2(dto.getPrefCourse2());

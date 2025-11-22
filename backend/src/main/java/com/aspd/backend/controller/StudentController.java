@@ -60,7 +60,7 @@ public class StudentController {
                 student.getFirstName(),
                 student.getLastName(),
                 student.getEmail(),
-                student.getLehramt(),
+                student.getSchoolType(),
                 student.getMainCourse(),
                 student.getPrefCourse1(),
                 student.getPrefCourse2(),
