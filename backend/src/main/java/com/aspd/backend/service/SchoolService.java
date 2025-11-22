@@ -7,13 +7,22 @@ import com.aspd.backend.dto.SchoolRequest;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.SchoolType;
 import com.aspd.backend.repository.SchoolRepository;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class SchoolService {
@@ -104,16 +113,11 @@ public class SchoolService {
         } catch (org.apache.poi.ooxml.POIXMLException e) {
             // Corrupted/unsupported Excel content: let GlobalExceptionHandler return 400
             throw e;
+        } catch (org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException e) {
+            // Not a valid .xlsx file format: let GlobalExceptionHandler return 400
+            throw e;
         } catch (InvalidDataException e) {
             // Validation issues: aggregate into result
-            result.addError(e.getMessage());
-            result.setErrorCount(result.getErrors().size());
-            return result;
-        } catch (IllegalArgumentException e) {
-            // If it's a POI format exception, bubble up to global handler
-            if ("org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException".equals(e.getClass().getName())) {
-                throw e;
-            }
             result.addError(e.getMessage());
             result.setErrorCount(result.getErrors().size());
             return result;
@@ -133,7 +137,9 @@ public class SchoolService {
             }
         for (int c = 0; c < headerRow.getLastCellNum(); c++) {
             Cell cell = headerRow.getCell(c);
-            if (cell == null) {continue;}
+            if (cell == null) {
+                continue;
+            }
             String key = normalize(headerString(cell));
             if (!key.isEmpty()) {
                 idx.put(key, c);
@@ -188,9 +194,13 @@ public class SchoolService {
     }
 
     private String readString(Row row, Integer colIdx) {
-        if (colIdx == null) {return null;}
+        if (colIdx == null) {
+            return null;
+        }
         Cell cell = row.getCell(colIdx);
-        if (cell == null) {return null;}
+        if (cell == null) {
+            return null;
+        }
         if (cell.getCellType() == CellType.STRING) {
             String v = cell.getStringCellValue();
             return isBlank(v) ? null : v.trim();
@@ -242,7 +252,9 @@ public class SchoolService {
 
     private SchoolType readType(Row row, Integer colIdx) {
         String val = readString(row, colIdx);
-        if (isBlank(val)) {return null;}
+        if (isBlank(val)) {
+            return null;
+        }
         String u = val.trim().toUpperCase(Locale.ROOT);
         if (u.equals("GS")) {
             return SchoolType.GS;
