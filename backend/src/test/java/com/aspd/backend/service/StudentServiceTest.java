@@ -1,6 +1,7 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.dto.StudentDto;
+import com.aspd.backend.model.Address;
 import com.aspd.backend.model.Student;
 import com.aspd.backend.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,8 @@ class StudentServiceTest {
         StudentDto dto = new StudentDto();
         dto.setMatriculationNbr(10);
         dto.setFirstName("John");
+        dto.setAddress(new Address());
+        dto.setAddressSemester(new Address());
 
         ArgumentCaptor<Student> captor = ArgumentCaptor.forClass(Student.class);
 
@@ -51,6 +54,7 @@ class StudentServiceTest {
         Student saved = studentService.createStudent(dto);
 
         verify(studentRepository).save(captor.capture());
+
         assertEquals("John", captor.getValue().getFirstName());
         assertEquals(10, saved.getMatriculationNbr());
     }
@@ -60,9 +64,13 @@ class StudentServiceTest {
         Student student = new Student();
         student.setMatriculationNbr(5);
         student.setFirstName("Old");
+        student.setAddress(new Address());
+        student.setAddressSemester(new Address());
 
         StudentDto dto = new StudentDto();
         dto.setFirstName("New");
+        dto.setAddress(new Address());
+        dto.setAddressSemester(new Address());
 
         when(studentRepository.findById(5)).thenReturn(Optional.of(student));
         when(studentRepository.save(any(Student.class)))
@@ -71,5 +79,6 @@ class StudentServiceTest {
         Student updated = studentService.updateStudent(5, dto);
 
         assertEquals("New", updated.getFirstName());
+        verify(studentRepository).save(student);
     }
 }
