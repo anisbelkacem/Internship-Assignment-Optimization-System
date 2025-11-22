@@ -11,17 +11,17 @@ import java.util.Map;
 @Component
 public class JwtUtil {
 
-    private final String SECRET = "Aspd_Team3_Anis_Youssef_Hadir_Fekher_Hedi";
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final String secret = "Aspd_Team3_Anis_Youssef_Hadir_Fekher_Hedi";
+    private final Key key = Keys.hmacShaKeyFor(secret.getBytes());
 
-    private final long EXPIRATION = 1000 * 60 * 60 * 24; // 24h
+    private final long expiration = 1000 * 60 * 60 * 24; // 24h
 
     public String generateToken(String username, Map<String, Object> claims) {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -34,7 +34,7 @@ public class JwtUtil {
         try {
             parse(token);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException e) {
             return false;
         }
     }
