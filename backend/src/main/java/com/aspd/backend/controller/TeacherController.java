@@ -1,32 +1,58 @@
 package com.aspd.backend.controller;
 
-import com.aspd.backend.model.Teacher;
+
+import com.aspd.backend.dto.TeacherDto;
+import com.aspd.backend.dto.TeacherRequest;
 import com.aspd.backend.service.TeacherService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/teachers")
+@RequestMapping("/api/pls")
 public class TeacherController {
 
     private final TeacherService teacherService;
-    public TeacherController(TeacherService teacherService){ this.teacherService = teacherService; }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('MANAGE_STUDENTS')")
-    @PostMapping
-    public ResponseEntity<Teacher> createTeacher(Teacher teacher){
-        return ResponseEntity.ok(teacherService.createTeacher(teacher));
+    public TeacherController(TeacherService teacherService) {
+        this.teacherService = teacherService;
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    // List all PLs
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
-    public ResponseEntity<List<Teacher>>  getAllTeachers(){
-        return ResponseEntity.ok(teacherService.getAllTeachers());
+    public List<TeacherDto> listAll() {
+        return teacherService.getAll();
+    }
+
+    // Get one PL by id
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    @GetMapping("/{id}")
+    public TeacherDto getOne(@PathVariable Long id) {
+        return teacherService.getById(id);
+    }
+
+    // Create a PL
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PostMapping
+    public TeacherDto create(@RequestBody TeacherRequest request) {
+        return teacherService.create(request);
+    }
+
+    // Update a PL
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{id}")
+    public TeacherDto update(@PathVariable Long id, @RequestBody TeacherRequest request) {
+        return teacherService.update(id, request);
+    }
+
+    // Delete a PL
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        teacherService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
