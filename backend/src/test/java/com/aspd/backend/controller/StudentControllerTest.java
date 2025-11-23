@@ -1,9 +1,12 @@
 package com.aspd.backend.controller;
 
 import com.aspd.backend.model.Student;
+import com.aspd.backend.security.JwtAuthenticationFilter;
+import com.aspd.backend.security.JwtUtil;
 import com.aspd.backend.service.StudentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -17,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(StudentController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class StudentControllerTest {
 
     @Autowired
@@ -24,6 +28,12 @@ class StudentControllerTest {
 
     @MockBean
     private StudentService studentService;
+
+    @MockBean
+    private JwtUtil jwtUtil;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void testGetStudentById() throws Exception {
