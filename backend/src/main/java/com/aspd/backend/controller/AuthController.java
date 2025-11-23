@@ -4,7 +4,6 @@ import com.aspd.backend.dto.LoginRequest;
 import com.aspd.backend.dto.LoginResponse;
 import com.aspd.backend.security.JwtUtil;
 import com.aspd.backend.service.DbUserDetailsService;
-import com.aspd.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,13 +19,11 @@ import java.util.Map;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final DbUserDetailsService userDetailsService;
 
-    public AuthController(UserService userService, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, DbUserDetailsService userDetailsService){
-        this.userService = userService;
+    public AuthController(PasswordEncoder passwordEncoder, JwtUtil jwtUtil, DbUserDetailsService userDetailsService){
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
