@@ -44,7 +44,7 @@ class CompletedInternshipsRepositoryTest {
         t.setFirstName("Teach");
         t.setLastName("Er");
         t.setEmail("teacher@test.com");
-        t.setMainSubject("math");
+        t.setMainSubject(Course.SCIENCES);
         teacherRepository.save(t);
 
         School school = new School();
@@ -93,7 +93,7 @@ class CompletedInternshipsRepositoryTest {
         t.setFirstName("T");
         t.setLastName("T");
         t.setEmail("t@test.com");
-        t.setMainSubject("math");
+        t.setMainSubject(Course.SCIENCES);
         teacherRepository.saveAndFlush(t);
 
         School school = new School();

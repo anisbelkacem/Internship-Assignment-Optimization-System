@@ -1,6 +1,8 @@
 package com.aspd.backend.model;
 
 import jakarta.persistence.*;
+
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -24,44 +26,28 @@ public class Teacher {
     private String lastName; // last_name
 
     @Column(name = "main_subject", nullable = false)
-    private String mainSubject; // main_subject (primary subject)
+    @Enumerated(EnumType.STRING)
+    private Course mainSubject; // main_subject (primary subject)
 
-    @Column(name = "school_id")
-    private Long schoolId; // school_id (can be null for now until School is implemented)
-
-    @Column(name = "max_praktika_per_year")
-    private Integer maxPraktikaPerYear; // workload info
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school; // school_id (can be null for now until School is implemented)
 
     @Column(name = "email", nullable = false, unique = true)
     private String email; // email, main identifier for duplicates
 
-    @Column(name = "total_hours_credit")
-    private Integer totalHoursCredit; // total_hours_credit (reduction hours)
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "availability_status")
-    private AvailabilityStatus availabilityStatus; // availability_status
-
-    // ----- Extra fields for PL story -----
-
-    // Multiple subject specializations (Math, Physics, etc.)
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "teacher_subjects",
-            joinColumns = @JoinColumn(name = "teacher_id")
+    @OneToMany(
+            mappedBy = "teacher",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
     )
-    @Column(name = "subject", nullable = false)
-    private Set<String> subjectSpecializations;
+    private Set<TeacherPlConfig> plConfigs = new HashSet<>();
 
-    // Internship preferences: PDP I, PDP II, ZSP, SFP
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "teacher_internship_preferences",
-            joinColumns = @JoinColumn(name = "teacher_id")
-    )
-    @Enumerated(EnumType.STRING)
-    @Column(name = "preference", nullable = false)
-    private Set<PraktikumType> internshipPreferences;
+    public Set<TeacherPlConfig> getPlConfigs() {
+        return plConfigs;
+    }
+
+
 
     // ----- Getters & setters -----
 
@@ -89,28 +75,20 @@ public class Teacher {
         this.lastName = lastName;
     }
 
-    public String getMainSubject() {
+    public Course getMainSubject() {
         return mainSubject;
     }
 
-    public void setMainSubject(String mainSubject) {
+    public void setMainSubject(Course mainSubject) {
         this.mainSubject = mainSubject;
     }
 
-    public Long getSchoolId() {
-        return schoolId;
+    public School getSchool() {
+        return school;
     }
 
-    public void setSchoolId(Long schoolId) {
-        this.schoolId = schoolId;
-    }
-
-    public Integer getMaxPraktikaPerYear() {
-        return maxPraktikaPerYear;
-    }
-
-    public void setMaxPraktikaPerYear(Integer maxPraktikaPerYear) {
-        this.maxPraktikaPerYear = maxPraktikaPerYear;
+    public void setSchool(School school) {
+        this.school = school;
     }
 
     public String getEmail() {
@@ -121,35 +99,15 @@ public class Teacher {
         this.email = email;
     }
 
-    public Integer getTotalHoursCredit() {
-        return totalHoursCredit;
+
+    public void addPlConfig(TeacherPlConfig cfg) {
+        plConfigs.add(cfg);
+        cfg.setTeacher(this);
     }
 
-    public void setTotalHoursCredit(Integer totalHoursCredit) {
-        this.totalHoursCredit = totalHoursCredit;
+    public void removePlConfig(TeacherPlConfig cfg) {
+        plConfigs.remove(cfg);
+        cfg.setTeacher(null);
     }
 
-    public AvailabilityStatus getAvailabilityStatus() {
-        return availabilityStatus;
-    }
-
-    public void setAvailabilityStatus(AvailabilityStatus availabilityStatus) {
-        this.availabilityStatus = availabilityStatus;
-    }
-
-    public Set<String> getSubjectSpecializations() {
-        return subjectSpecializations;
-    }
-
-    public void setSubjectSpecializations(Set<String> subjectSpecializations) {
-        this.subjectSpecializations = subjectSpecializations;
-    }
-
-    public Set<PraktikumType> getInternshipPreferences() {
-        return internshipPreferences;
-    }
-
-    public void setInternshipPreferences(Set<PraktikumType> internshipPreferences) {
-        this.internshipPreferences = internshipPreferences;
-    }
 }
