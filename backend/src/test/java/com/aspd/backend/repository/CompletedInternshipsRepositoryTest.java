@@ -40,12 +40,6 @@ class CompletedInternshipsRepositoryTest {
         s.setLastName("Student");
         studentRepository.save(s);
 
-        Teacher t = new Teacher();
-        t.setFirstName("Teach");
-        t.setLastName("Er");
-        t.setEmail("teacher@test.com");
-        t.setMainSubject(Course.SCIENCES);
-        teacherRepository.save(t);
 
         School school = new School();
         school.setName("Test School");
@@ -54,6 +48,15 @@ class CompletedInternshipsRepositoryTest {
         school.setOepnv(true);
         school.setType(SchoolType.GS);
         schoolRepository.save(school);
+
+        Teacher t = new Teacher();
+        t.setFirstName("Teach");
+        t.setLastName("Er");
+        t.setEmail("teacher@test.com");
+        t.setMainSubject(Course.SCIENCES);
+        t.setSchool(school);
+        teacherRepository.save(t);
+
 
         CompletedInternships ci = new CompletedInternships();
         ci.setStudent(s);
@@ -89,12 +92,6 @@ class CompletedInternshipsRepositoryTest {
         s.setLastName("Me");
         studentRepository.saveAndFlush(s);
 
-        Teacher t = new Teacher();
-        t.setFirstName("T");
-        t.setLastName("T");
-        t.setEmail("t@test.com");
-        t.setMainSubject(Course.SCIENCES);
-        teacherRepository.saveAndFlush(t);
 
         School school = new School();
         school.setName("School");
@@ -103,6 +100,14 @@ class CompletedInternshipsRepositoryTest {
         school.setOepnv(true);
         school.setType(SchoolType.MS);
         schoolRepository.saveAndFlush(school);
+
+        Teacher t = new Teacher();
+        t.setFirstName("T");
+        t.setLastName("T");
+        t.setEmail("t@test.com");
+        t.setMainSubject(Course.SCIENCES);
+        t.setSchool(school);
+        teacherRepository.saveAndFlush(t);
 
         CompletedInternships ci = new CompletedInternships();
         ci.setStudent(s);
