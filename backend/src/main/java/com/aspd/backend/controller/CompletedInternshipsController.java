@@ -4,6 +4,7 @@ import com.aspd.backend.dto.CompletedInternshipsDto;
 import com.aspd.backend.model.CompletedInternships;
 import com.aspd.backend.service.CompletedInternshipsService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +20,14 @@ public class CompletedInternshipsController {
         this.completedInternshipsService = completedInternshipsService;
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping
     public ResponseEntity<CompletedInternshipsDto> create(@RequestBody CompletedInternshipsDto dto) {
         CompletedInternships created = completedInternshipsService.createCompletedInternship(dto);
         return ResponseEntity.ok(toDto(created));
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/{id}")
     public ResponseEntity<CompletedInternshipsDto> getById(@PathVariable Long id) {
         return completedInternshipsService.getCompletedInternshipById(id)
@@ -32,6 +35,7 @@ public class CompletedInternshipsController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
     public ResponseEntity<List<CompletedInternshipsDto>> getAll() {
         List<CompletedInternshipsDto> dtos =
@@ -42,6 +46,7 @@ public class CompletedInternshipsController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<CompletedInternshipsDto>> getByStudentId(@PathVariable int studentId) {
         List<CompletedInternshipsDto> dtos =
@@ -52,6 +57,7 @@ public class CompletedInternshipsController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/teacher/{teacherId}")
     public ResponseEntity<List<CompletedInternshipsDto>> getByTeacherId(@PathVariable Long teacherId) {
         List<CompletedInternshipsDto> dtos =
@@ -62,6 +68,7 @@ public class CompletedInternshipsController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/school/{schoolId}")
     public ResponseEntity<List<CompletedInternshipsDto>> getBySchoolId(@PathVariable Long schoolId) {
         List<CompletedInternshipsDto> dtos =
@@ -72,6 +79,7 @@ public class CompletedInternshipsController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public ResponseEntity<CompletedInternshipsDto> update(
             @PathVariable Long id,
@@ -81,6 +89,7 @@ public class CompletedInternshipsController {
         return ResponseEntity.ok(toDto(updated));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         completedInternshipsService.deleteCompletedInternship(id);

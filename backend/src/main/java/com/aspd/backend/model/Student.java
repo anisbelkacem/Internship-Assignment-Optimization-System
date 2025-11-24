@@ -18,7 +18,7 @@ public class Student {
     private String email;
 
     private SchoolType schoolType;
-    
+
     private Course mainCourse;
     private Course prefCourse1;
     private Course prefCourse2;

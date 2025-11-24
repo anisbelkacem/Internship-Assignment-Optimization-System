@@ -8,6 +8,7 @@ import com.aspd.backend.model.School;
 import com.aspd.backend.service.SchoolService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,31 +33,37 @@ public class SchoolController {
         this.service = service;
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
     public List<SchoolResponse> list() {
         return service.list().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/{id}")
     public SchoolResponse get(@PathVariable Long id) {
         return toResponse(service.get(id));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping
     public SchoolResponse create(@Valid @RequestBody SchoolRequest req) {
         return toResponse(service.create(req));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public SchoolResponse update(@PathVariable Long id, @Valid @RequestBody SchoolRequest req) {
         return toResponse(service.update(id, req));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SchoolImportResult importExcel(@RequestPart("file") MultipartFile file) throws IOException {
         if (file.isEmpty()) {

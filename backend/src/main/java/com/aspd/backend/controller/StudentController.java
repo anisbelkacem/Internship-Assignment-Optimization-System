@@ -4,6 +4,7 @@ import com.aspd.backend.dto.StudentDto;
 import com.aspd.backend.model.Student;
 import com.aspd.backend.service.StudentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class StudentController {
         this.studentService = studentService;
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
     public ResponseEntity<List<StudentDto>> getAllStudents() {
         List<StudentDto> dtos = studentService.getAllStudents().stream()
@@ -27,6 +29,7 @@ public class StudentController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/{id}")
     public ResponseEntity<StudentDto> getStudentById(@PathVariable int id) {
         return studentService.getStudentById(id)
@@ -35,18 +38,21 @@ public class StudentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping
     public ResponseEntity<StudentDto> createStudent(@RequestBody StudentDto dto) {
         Student created = studentService.createStudent(dto);
         return ResponseEntity.ok(toDto(created));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public ResponseEntity<StudentDto> updateStudent(@PathVariable int id, @RequestBody StudentDto dto) {
         Student updated = studentService.updateStudent(id, dto);
         return ResponseEntity.ok(toDto(updated));
     }
 
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStudent(@PathVariable int id) {
         studentService.deleteStudent(id);

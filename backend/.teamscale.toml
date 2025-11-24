@@ -1,0 +1,9 @@
+version = "1.0"
+
+root = true
+
+[server]
+url = "https://aspd.teamscale.io/"
+
+[project]
+id = "team-3"
