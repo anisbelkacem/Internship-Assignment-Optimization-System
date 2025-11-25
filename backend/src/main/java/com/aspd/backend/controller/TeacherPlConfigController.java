@@ -36,7 +36,6 @@ public class TeacherPlConfigController {
     public TeacherPlConfigDto update(@PathVariable Long teacherId,
                                      @PathVariable Long configId,
                                      @RequestBody TeacherPlConfigRequest request) {
-        // teacherId is only for URL structure, we don't strictly need it inside
         return plConfigService.update(configId, request);
     }
 

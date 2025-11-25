@@ -115,7 +115,6 @@ public class TeacherService {
             throw new IllegalArgumentException("Email is required");
         }
 
-        // Uniqueness by email
         teacherRepository.findByEmail(request.email()).ifPresent(existing -> {
             if (currentId == null || !existing.getTeacherId().equals(currentId)) {
                 throw new IllegalArgumentException("A teacher/PL with this email already exists");
@@ -156,10 +155,7 @@ public class TeacherService {
         );
     }
 
-    // =====================================================================
     // Excel IMPORT / EXPORT for Teachers (PLs)
-    // =====================================================================
-
     @Transactional
     public TeacherImportResult importFromExcel(InputStream inputStream) {
         TeacherImportResult result = new TeacherImportResult();
@@ -198,7 +194,6 @@ public class TeacherService {
 
             int rowIdx = 0;
 
-            // Header row
             Row header = sheet.createRow(rowIdx++);
             header.createCell(0).setCellValue("firstName");
             header.createCell(1).setCellValue("lastName");
@@ -229,9 +224,7 @@ public class TeacherService {
         }
     }
 
-    // -----------------------------------------------------------------
-    // Helpers – same pattern as SchoolService
-    // -----------------------------------------------------------------
+
 
     private Sheet getFirstSheet(Workbook workbook) {
         Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
@@ -298,7 +291,6 @@ public class TeacherService {
 
     private void validateRequiredHeaders(Map<String, Integer> headerIndex,
                                          TeacherImportResult result) {
-        // Normalized header keys: "firstname", "lastname", "email", "mainsubject"
         List<String> required = List.of("firstname", "lastname", "email", "mainsubject");
         for (String r : required) {
             if (!headerIndex.containsKey(r)) {
@@ -324,7 +316,6 @@ public class TeacherService {
 
         Course mainSubject;
         try {
-            // Expect values like COMPUTER_SCIENCE, BUSINESS, etc.
             mainSubject = Course.valueOf(mainSubjectRaw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
             throw new InvalidDataException("mainSubject", mainSubjectRaw,
@@ -337,7 +328,6 @@ public class TeacherService {
         teacher.setEmail(email.trim());
         teacher.setMainSubject(mainSubject);
 
-        // Optional: link to a School by id if column schoolId exists and is not empty
         if (!isBlank(schoolIdRaw)) {
             try {
                 Long schoolId = Long.valueOf(schoolIdRaw.trim());
@@ -353,7 +343,6 @@ public class TeacherService {
         return teacher;
     }
 
-    // ---- small helper methods (copied style from SchoolService) ----
 
     private String headerString(Cell cell) {
         DataFormatter formatter = new DataFormatter();

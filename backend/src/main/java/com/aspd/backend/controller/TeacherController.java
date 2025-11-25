@@ -64,10 +64,7 @@ public class TeacherController {
         return ResponseEntity.noContent().build();
     }
 
-    // -------------------------------------------------------------
-    // Excel IMPORT / EXPORT endpoints  (similar to School)
-    // -------------------------------------------------------------
-
+    // Excel IMPORT / EXPORT endpoints
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public TeacherImportResult importExcel(@RequestPart("file") MultipartFile file) throws IOException {
