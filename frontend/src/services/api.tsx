@@ -1,0 +1,87 @@
+import API_BASE_URL from '../config/api';
+
+interface ApiError {
+  message: string;
+  status: number;
+}
+
+class ApiService {
+  private getToken(): string | null {
+    const token = sessionStorage.getItem('token');
+    console.log('API Service - Getting token:', token ? token.substring(0, 30) + '...' : 'NULL'); // DEBUG
+    return token;
+  }
+
+  private getHeaders(includeAuth = true): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (includeAuth) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('API Service - No token found!'); 
+      }
+    }
+    return headers;
+  }
+
+  async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const headers = this.getHeaders(true);
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        console.error('Unauthorized/Forbidden - Token might be invalid or missing');
+      }
+      
+      const error: ApiError = {
+        message: `HTTP error! status: ${response.status}`,
+        status: response.status,
+      };
+      throw error;
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return response.json();
+  }
+
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async put<T>(endpoint: string, data: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+}
+
+export default new ApiService();
