@@ -1,20 +1,17 @@
 package com.aspd.backend.dto;
 
-import java.util.Set;
-import com.aspd.backend.model.AvailabilityStatus;
-import com.aspd.backend.model.PraktikumType;
+import com.aspd.backend.model.Course;
+import com.aspd.backend.model.School;
+
+import java.util.List;
 
 public record TeacherDto(
         Long teacherId,
         String firstName,
         String lastName,
-        String mainSubject,
-        Long schoolId,
-        Integer maxPraktikaPerYear,
+        Course mainSubject,
+        School school,
         String email,
-        Integer totalHoursCredit,
-        AvailabilityStatus availabilityStatus,
-        Set<String> subjectSpecializations,
-        Set<PraktikumType> internshipPreferences
+        List<TeacherPlConfigDto> plConfigs
 ) {
 }
