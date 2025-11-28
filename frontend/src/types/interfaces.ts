@@ -1,4 +1,4 @@
-import type { SchoolType, Course } from "./enums";
+import type { SchoolType, Course, PraktikumType } from "./enums";
 
 export interface Address {
   street?: string;
@@ -32,6 +32,7 @@ export interface CompletedInternship {
   studentId: number;
   teacherId?: number;
   schoolId?: number;
+  type: PraktikumType;
   course: Course;
   startDate: string; // ISO date string
   endDate: string;   // ISO date string

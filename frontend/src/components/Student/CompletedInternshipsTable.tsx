@@ -8,7 +8,7 @@ interface CompletedInternshipsTableProps {
 const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
     studentId,
 }) => {
-    const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6W3siYXV0aG9yaXR5IjoiRURJVCJ9LHsiYXV0aG9yaXR5IjoiTUFOQUdFX1VTRVJTIn0seyJhdXRob3JpdHkiOiJST0xFX0FETUlOIn0seyJhdXRob3JpdHkiOiJWSUVXIn1dLCJzdWIiOiJhZG1pbkBzY2hvb2wuY29tIiwiaWF0IjoxNzY0MDE5NzczLCJleHAiOjE3NjQxMDYxNzN9.ONifzqXCgqfSOqwI72zYQcrs-cPufMm8pPYKkYjzLFc";
+    const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6W3siYXV0aG9yaXR5IjoiRURJVCJ9LHsiYXV0aG9yaXR5IjoiTUFOQUdFX1VTRVJTIn0seyJhdXRob3JpdHkiOiJST0xFX0FETUlOIn0seyJhdXRob3JpdHkiOiJWSUVXIn1dLCJzdWIiOiJhZG1pbkBzY2hvb2wuY29tIiwiaWF0IjoxNzY0MzU5MTM2LCJleHAiOjE3NjQ0NDU1MzZ9.0IAfemkdN9vGFCsLq02O0kntSZUbvr6M8nKt2daR8-Y";
 
     const [internships, setInternships] = useState<CompletedInternship[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,6 +45,7 @@ const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
             <thead>
                 <tr>
+                    <th style={{ border: "1px solid gray", padding: "4px" }}>Type</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>Course</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>Start Date</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>End Date</th>
@@ -54,6 +55,7 @@ const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
             <tbody>
                 {internships.map((internship) => (
                     <tr key={internship.id}>
+                        <td style={{ border: "1px solid gray", padding: "4px" }}>{internship.type || "PDP_I"}</td>
                         <td style={{ border: "1px solid gray", padding: "4px" }}>{internship.course}</td>
                         <td style={{ border: "1px solid gray", padding: "4px" }}>{internship.startDate}</td>
                         <td style={{ border: "1px solid gray", padding: "4px" }}>{internship.endDate}</td>
@@ -63,6 +65,7 @@ const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
             </tbody>
         </table>
     );
+
 };
 
 export default CompletedInternshipsTable;
