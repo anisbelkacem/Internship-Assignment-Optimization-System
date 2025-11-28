@@ -9,6 +9,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.aspd.backend.common.exception.InvalidDataException;
+
+import com.aspd.backend.dto.TeacherImportResult;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/pls")
@@ -55,4 +63,34 @@ public class TeacherController {
         teacherService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    // Excel IMPORT / EXPORT endpoints
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TeacherImportResult importExcel(@RequestPart("file") MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new InvalidDataException("file", null, "is required");
+        }
+        if (!file.getOriginalFilename().toLowerCase().endsWith(".xlsx")) {
+            throw new InvalidDataException("file", file.getOriginalFilename(), "Only .xlsx files are supported");
+        }
+        return teacherService.importFromExcel(file.getInputStream());
+    }
+
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportExcel() {
+        byte[] data = teacherService.exportToExcel();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=teachers.xlsx");
+
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .body(data);
+    }
 }
+
+

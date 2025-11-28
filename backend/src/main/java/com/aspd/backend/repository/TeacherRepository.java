@@ -1,5 +1,6 @@
 package com.aspd.backend.repository;
 
+import com.aspd.backend.model.Course;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -11,5 +12,5 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
     boolean existsByEmail(String email);
 
-    boolean existsByFirstNameAndLastNameAndMainSubject(String firstName, String lastName, String mainSubject);
+    boolean existsByFirstNameAndLastNameAndMainSubject(String firstName, String lastName, Course mainSubject);
 }
