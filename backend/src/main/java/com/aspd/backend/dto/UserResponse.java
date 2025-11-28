@@ -11,9 +11,7 @@ public class UserResponse {
     private Long id;
     private String firstName;
     private String lastName;
-    private String email;
-    private String address;
-    private String school;
+    private String email;;
     private Set<UserRole> roles;
     private Set<Permission> permissions;
 }

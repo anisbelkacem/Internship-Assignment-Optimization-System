@@ -56,4 +56,12 @@ public class JwtUtil {
                 .build()
                 .parseClaimsJws(token);
     }
+
+    public Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }

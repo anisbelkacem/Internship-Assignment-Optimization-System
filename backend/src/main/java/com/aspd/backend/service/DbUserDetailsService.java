@@ -9,12 +9,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
 import java.util.Set;
 import java.util.stream.Collectors;
+import static org.springframework.security.core.userdetails.User.withUsername;
 
 @Service
 public class DbUserDetailsService implements UserDetailsService {
+
     private final UserRepository userRepository;
 
     public DbUserDetailsService(UserRepository userRepository) {
@@ -30,7 +31,7 @@ public class DbUserDetailsService implements UserDetailsService {
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toSet()));
 
-        return org.springframework.security.core.userdetails.User.withUsername(user.getEmail())
+        return  withUsername(user.getEmail())
                 .password(user.getPassword())
                 .authorities(grantedAuthorities)
                 .accountExpired(false).accountLocked(false).credentialsExpired(false).disabled(false)

@@ -36,8 +36,6 @@ public class UserService {
                 .lastName(userDTO.getLastName())
                 .email(userDTO.getEmail())
                 .password(passwordEncoder.encode(userDTO.getPassword()))
-                .address(userDTO.getAddress())
-                .school(userDTO.getSchool())
                 .roles(userDTO.getRoles())
                 .permissions(userDTO.getPermissions())
                 .build();
@@ -73,12 +71,6 @@ public class UserService {
         if (userDTO.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
-        if (userDTO.getAddress() != null) {
-            user.setAddress(userDTO.getAddress());
-        }
-        if (userDTO.getSchool() != null) {
-            user.setSchool(userDTO.getSchool());
-        }
         if (userDTO.getRoles() != null) {
             user.setRoles(userDTO.getRoles());
         }
@@ -95,8 +87,6 @@ public class UserService {
         userResponseDTO.setFirstName(user.getFirstName());
         userResponseDTO.setLastName(user.getLastName());
         userResponseDTO.setEmail(user.getEmail());
-        userResponseDTO.setAddress(user.getAddress());
-        userResponseDTO.setSchool(user.getSchool());
         userResponseDTO.setRoles(user.getRoles());
         userResponseDTO.setPermissions(user.getPermissions());
         return userResponseDTO;
