@@ -8,7 +8,6 @@ interface ApiError {
 class ApiService {
   private getToken(): string | null {
     const token = sessionStorage.getItem('token');
-    console.log('API Service - Getting token:', token ? token.substring(0, 30) + '...' : 'NULL'); // DEBUG
     return token;
   }
 
@@ -22,7 +21,7 @@ class ApiService {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       } else {
-        console.warn('API Service - No token found!'); 
+        console.warn('No token found!'); 
       }
     }
     return headers;
