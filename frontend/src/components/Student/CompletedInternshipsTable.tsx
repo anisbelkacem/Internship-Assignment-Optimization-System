@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import type { CompletedInternship } from "../../types/interfaces";
+import type { CompletedInternship } from "../../services/studentService";
+import CompletedInternshipsService from "../../services/completedInternshipsService";
 
 interface CompletedInternshipsTableProps {
     studentId: number;
@@ -17,14 +18,7 @@ const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
     useEffect(() => {
         const fetchInternships = async () => {
             try {
-                const response = await fetch(`/api/completed-internships/student/${studentId}`, {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${TOKEN}`,
-                    },
-                });
-                if (!response.ok) throw new Error("Failed to fetch internships");
-                const data: CompletedInternship[] = await response.json();
+                const data = await CompletedInternshipsService.getByStudentId(studentId);
                 setInternships(data);
             } catch (err) {
                 console.error(err);

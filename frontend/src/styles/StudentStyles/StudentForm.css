@@ -64,6 +64,9 @@ textarea.student-input {
     font-size: 16px;
     margin: 8px 0;
 }
+.student-checkbox-row label{
+    color: #555;
+;}
 
 .student-address-title {
     grid-column: 1 / -1;

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import type { Student } from "../../types/interfaces";
+import type { Student } from "../../services/studentService";
 import CompletedInternshipsTable from "./CompletedInternshipsTable";
-import "./StudentListEntry.css";
+import "../../styles/StudentStyles/StudentListEntry.css";
 interface Props {
     student: Student;
     editMode?: boolean;
@@ -23,7 +23,7 @@ const StudentListEntry: React.FC<Props> = ({
                 className="student-entry-header"
                 onClick={() => setExpanded(!expanded)}
             >
-                {student.firstName} {student.lastName} ({student.matriculationNbr})
+                {student.firstName} {student.lastName} - {student.matriculationNbr}
             </div>
 
             {expanded && (

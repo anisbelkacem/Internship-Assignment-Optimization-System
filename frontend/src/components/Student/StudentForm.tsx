@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import type { Student, Address } from "../../types/interfaces";
-import type { SchoolType, Course } from "../../types/enums";
-import "./StudentForm.css";
+import type { Student, Address, SchoolType, Course } from "../../services/studentService";
+import StudentService from "../../services/studentService";
+import "../../styles/StudentStyles/StudentForm.css";
 
 interface Props {
     student?: Student | null;
@@ -9,7 +9,6 @@ interface Props {
     onSave: (student: Student) => void;
 }
 
-const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6W3siYXV0aG9yaXR5IjoiRURJVCJ9LHsiYXV0aG9yaXR5IjoiTUFOQUdFX1VTRVJTIn0seyJhdXRob3JpdHkiOiJST0xFX0FETUlOIn0seyJhdXRob3JpdHkiOiJWSUVXIn1dLCJzdWIiOiJhZG1pbkBzY2hvb2wuY29tIiwiaWF0IjoxNzY0MzU5MTM2LCJleHAiOjE3NjQ0NDU1MzZ9.0IAfemkdN9vGFCsLq02O0kntSZUbvr6M8nKt2daR8-Y";
 
 const emptyAddress: Address = {
     street: "",
@@ -58,28 +57,23 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
     };
 
     const handleSubmit = async () => {
-        console.log(student);
         try {
-            const url = student
-                ? `/api/students/${student.matriculationNbr}`
-                : "/api/students";
-            const method = student ? "PUT" : "POST";
+            let saved: Student;
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${TOKEN}`,
-                },
-                body: JSON.stringify(form),
-            });
+            if (student) {
+                saved = await StudentService.updateStudent(
+                    student.matriculationNbr,
+                    form
+                );
+            } else {
+                saved = await StudentService.createStudent(form);
+            }
 
-            if (!response.ok) throw new Error("Failed to save student");
-            const saved: Student = await response.json();
             onSave(saved);
         } catch (err) {
             console.error(err);
         }
+
     };
 
     return (

@@ -1,5 +1,5 @@
 import React from "react";
-import "./StudentModal.css";
+import "../../styles/StudentStyles/StudentModal.css";
 interface Props {
     children: React.ReactNode;
     onClose: () => void;
