@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/auth")
@@ -23,7 +25,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final DbUserDetailsService userDetailsService;
 
-    public AuthController(PasswordEncoder passwordEncoder, JwtUtil jwtUtil, DbUserDetailsService userDetailsService){
+    public AuthController(PasswordEncoder passwordEncoder, JwtUtil jwtUtil, DbUserDetailsService userDetailsService) {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
@@ -36,8 +38,12 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", user.getAuthorities());
+        List<String> authorities = user.getAuthorities().stream()
+                .map(auth -> auth.getAuthority())
+                .collect(Collectors.toList());
+        claims.put("authorities", authorities);
         String token = jwtUtil.generateToken(request.getEmail(), claims);
 
-        return ResponseEntity.ok(new LoginResponse(token));    }
+        return ResponseEntity.ok(new LoginResponse(token));
+    }
 }

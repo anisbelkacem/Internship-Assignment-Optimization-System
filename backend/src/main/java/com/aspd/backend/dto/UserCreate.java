@@ -12,8 +12,6 @@ public class UserCreate {
     private String lastName;
     private String email;
     private String password;
-    private String address;
-    private String school;
     private Set<UserRole> roles;
     private Set<Permission> permissions;
 }
