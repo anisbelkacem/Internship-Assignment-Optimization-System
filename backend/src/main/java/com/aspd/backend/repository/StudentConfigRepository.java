@@ -2,6 +2,7 @@ package com.aspd.backend.repository;
 
 import com.aspd.backend.model.StudentConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +17,6 @@ public interface StudentConfigRepository extends JpaRepository<StudentConfig, Lo
 
     // List all configs for a given year
     List<StudentConfig> findByYear(String year);
+    @Query("SELECT DISTINCT sc.year FROM StudentConfig sc")
+    List<String> findDistinctYears();
 }

@@ -88,6 +88,9 @@ public class StudentConfigService {
         }
         configRepository.deleteById(id);
     }
+    public List<String> getAllYears() {
+        return configRepository.findDistinctYears();
+    }
 
     private StudentConfigDto toDto(StudentConfig config) {
         return new StudentConfigDto(

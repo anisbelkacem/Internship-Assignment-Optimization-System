@@ -17,6 +17,13 @@ public class StudentConfigController {
     public StudentConfigController(StudentConfigService configService) {
         this.configService = configService;
     }
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    @GetMapping("/year/{year}")
+    public ResponseEntity<List<StudentConfigDto>> getConfigsByYear(@PathVariable String year) {
+        List<StudentConfigDto> dtos = configService.getConfigsByYear(year);
+        return ResponseEntity.ok(dtos);
+    }
+
 
     @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping
@@ -60,4 +67,12 @@ public class StudentConfigController {
         configService.deleteConfig(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    @GetMapping("/years")
+    public ResponseEntity<List<String>> getAllYears() {
+        List<String> years = configService.getAllYears();
+        return ResponseEntity.ok(years);
+    }
+
 }
