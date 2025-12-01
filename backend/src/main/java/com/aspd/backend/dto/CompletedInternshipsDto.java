@@ -1,6 +1,8 @@
 package com.aspd.backend.dto;
 
 import com.aspd.backend.model.Course;
+import com.aspd.backend.model.PraktikumType;
+
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,17 +17,19 @@ public class CompletedInternshipsDto {
     private int studentId;
     private Long teacherId;
     private Long schoolId;
+    private PraktikumType type;
     private Course course;
     private LocalDate startDate;
     private LocalDate endDate;
     private String description;
 
-    public CompletedInternshipsDto(Long id, int studentId, Long teacherId, Long schoolId,
+    public CompletedInternshipsDto(Long id, int studentId, Long teacherId, Long schoolId, PraktikumType type,
                                    Course course, LocalDate startDate, LocalDate endDate, String description) {
         this.id = id;
         this.studentId = studentId;
         this.teacherId = teacherId;
         this.schoolId = schoolId;
+        this.type = type;
         this.course = course;
         this.startDate = startDate;
         this.endDate = endDate;

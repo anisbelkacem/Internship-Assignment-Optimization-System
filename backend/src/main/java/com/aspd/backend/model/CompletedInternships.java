@@ -30,6 +30,10 @@ public class CompletedInternships {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private PraktikumType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Course course;
 
     @Column(nullable = false)
@@ -40,11 +44,12 @@ public class CompletedInternships {
 
     private String description;
 
-    public CompletedInternships(Student student, Teacher teacher, School school,
+    public CompletedInternships(Student student, Teacher teacher, School school, PraktikumType type,
                                 Course course, LocalDate startDate, LocalDate endDate) {
         this.student = student;
         this.teacher = teacher;
         this.school = school;
+        this.type = type;
         this.course = course;
         this.startDate = startDate;
         this.endDate = endDate;
