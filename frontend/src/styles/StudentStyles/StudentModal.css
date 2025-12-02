@@ -1,0 +1,164 @@
+/* ------------------ Student List ------------------ */
+.student-list-container {
+    padding: 20px;
+    background-color: rgb(21, 34, 89);
+    border-radius: 12px;
+    max-width: 900px;
+    margin: 20px auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.student-list-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.student-list-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.student-list-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: rgb(80, 156, 219);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.student-list-btn:hover {
+    background-color: #005fa3;
+}
+
+.student-list-btn-create {
+    background-color: #00a86b;
+}
+
+.student-list-btn-create:hover {
+    background-color: #00774f;
+}
+
+.student-list-btn-delete {
+    background-color: #cc4f4f;
+}
+
+.student-list-btn-delete:hover {
+    background-color: #a33737;
+}
+
+/* ------------------ Student Entry ------------------ */
+.student-entry {
+    background-color: #f5f6fa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.student-entry-header {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: rgb(80, 156, 219);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.student-entry-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.student-entry-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.student-entry-btn:hover {
+    opacity: 0.85;
+}
+
+.student-entry-btn-delete {
+    background-color: #cc4f4f;
+    color: #fff;
+}
+
+.student-entry-btn-delete:hover {
+    background-color: #a33737;
+}
+
+.student-entry-btn-update {
+    background-color: #4a90e2;
+    color: #fff;
+}
+
+.student-entry-btn-update:hover {
+    background-color: #3571b8;
+}
+
+.student-entry-content {
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* two equal columns */
+    gap: 12px;
+    background-color: #ffffff;
+    border-top: 1px solid hsl(0, 0%, 80%);
+    font-size: 14px;
+    color: black;
+}
+
+.student-entry-content h5 {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    font-size: 15px;
+}
+
+.student-entry-content p {
+    margin: 2px 0;
+}
+
+.student-entry-content .completed-internships {
+    grid-column: 1 / -1;
+}
+
+/* ------------------ Modal ------------------ */
+.student-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(128, 128, 128, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.student-modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}

@@ -103,6 +103,7 @@ public class CompletedInternshipsController {
                 ci.getStudent().getMatriculationNbr(),
                 ci.getTeacher().getTeacherId(),
                 ci.getSchool().getId(),
+                ci.getType(),
                 ci.getCourse(),
                 ci.getStartDate(),
                 ci.getEndDate(),

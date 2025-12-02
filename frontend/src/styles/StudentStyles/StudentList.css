@@ -1,0 +1,121 @@
+/* StudentList.css */
+/* Container */
+.student-list-container {
+    padding: 20px;
+    background-color: rgb(21, 34, 89) ; /* light blue */
+    border-radius: 12px;
+    max-width: 900px;
+    margin: 20px auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Title */
+.student-list-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* Controls */
+.student-list-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Buttons */
+.student-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: rgb(80, 156, 219);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.student-btn:hover {
+    background-color: #005fa3;
+}
+
+.student-btn-create {
+    background-color: #00a86b;
+}
+
+.student-btn-create:hover {
+    background-color: #00774f;
+}
+
+.student-btn-delete {
+    background-color: #cc4f4f;
+}
+
+.student-btn-delete:hover {
+    background-color: #a33737;
+}
+
+
+/* Container for each student entry */
+.student-entry {
+    background-color: #f5f6fa;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+/* Header: clickable to expand/collapse */
+.student-entry-header {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: rgb(80, 156, 219);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+/* Actions (Update/Delete buttons) */
+.student-entry-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.student-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.student-btn:hover {
+    opacity: 0.85;
+}
+
+.student-btn-delete {
+    background-color: #cc4f4f;
+    color: #fff;
+}
+
+.student-btn-delete:hover {
+    background-color: #a33737;
+}
+
+.student-btn-update {
+    background-color: #4a90e2;
+    color: #fff;
+}
+
+.student-btn-update:hover {
+    background-color: #3571b8;
+}
