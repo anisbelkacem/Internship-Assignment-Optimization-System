@@ -53,11 +53,16 @@ class ApiService {
       throw error;
     }
 
-    if (response.status === 204) {
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
       return {} as T;
     }
 
-    return response.json();
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    return {} as T;
   }
 
   async get<T>(endpoint: string): Promise<T> {
