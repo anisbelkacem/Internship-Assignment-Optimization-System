@@ -2,72 +2,34 @@ import { useState } from "react";
 import StudentConfigTable from "./StudentConfigTable";
 import InternshipAssignmentModal from "./InternshipAssignmentModal";
 import InternshipAssignmentStudentForm from "./InternshipAssignmentStudentForm";
+import "../../styles/InternshipsAssignment/TabContent.css";
+import type { StudentConfigDto } from "../../services/studentConfigService";
 
-export default function TabContent({ tabName }) {
+interface TabContentProps {
+    tabName: string;
+}
+
+export default function TabContent({ tabName }: TabContentProps) {
     const [studentOpen, setStudentOpen] = useState(false);
     const [teacherOpen, setTeacherOpen] = useState(false);
 
-    // Track update mode for each accordion
     const [studentUpdateMode, setStudentUpdateMode] = useState(false);
     const [teacherUpdateMode, setTeacherUpdateMode] = useState(false);
 
-    // Modal state
     const [showStudentModal, setShowStudentModal] = useState(false);
-    const [selectedConfig, setSelectedConfig] = useState(null);
-
-    const containerStyle = {
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "0 4px 4px 4px",
-        backgroundColor: "rgb(30, 45, 100)",
-        color: "white",
-    };
-
-    const accordionStyle = {
-        border: "1px solid #517c9e",
-        borderRadius: "4px",
-        overflow: "hidden",
-    };
-
-    const headerStyle = {
-        padding: "12px 16px",
-        cursor: "pointer",
-        fontWeight: 600,
-        backgroundColor: "rgb(80, 156, 219)",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-    };
-
-    const contentStyle = {
-        padding: "12px 16px",
-        backgroundColor: "rgb(25, 40, 95)",
-    };
-
-    const buttonStyle = {
-        marginLeft: "8px",
-        padding: "4px 8px",
-        backgroundColor: "rgb(21, 34, 89)",
-        color: "white",
-        border: "1px solid #517c9e",
-        borderRadius: "4px",
-        cursor: "pointer",
-        fontSize: "0.85rem",
-    };
+    const [selectedConfig, setSelectedConfig] = useState<StudentConfigDto | undefined>(undefined);
 
     return (
-        <div style={containerStyle}>
+        <div className="tab-container">
             <h2>Configurations for {tabName}</h2>
 
             {/* Student Config Accordion */}
-            <div style={accordionStyle}>
-                <div style={headerStyle} onClick={() => setStudentOpen(!studentOpen)}>
+            <div className="accordion">
+                <div className="accordion-header" onClick={() => setStudentOpen(!studentOpen)}>
                     <span>Student Config {studentOpen ? "▲" : "▼"}</span>
-                    <div>
+                    <div className="header-buttons">
                         <button
-                            style={buttonStyle}
+                            className="header-button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setStudentUpdateMode(!studentUpdateMode);
@@ -75,11 +37,12 @@ export default function TabContent({ tabName }) {
                         >
                             {studentUpdateMode ? "Exit Edit config" : "Edit mode"}
                         </button>
+
                         <button
-                            style={buttonStyle}
+                            className="header-button"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedConfig(null);
+                                setSelectedConfig(undefined);
                                 setShowStudentModal(true);
                             }}
                         >
@@ -87,12 +50,13 @@ export default function TabContent({ tabName }) {
                         </button>
                     </div>
                 </div>
+
                 {studentOpen && (
-                    <div style={contentStyle}>
+                    <div className="accordion-content">
                         <StudentConfigTable
                             tabName={tabName}
                             editMode={studentUpdateMode}
-                            onEdit={(cfg) => {
+                            onEdit={(cfg: StudentConfigDto) => {
                                 setSelectedConfig(cfg);
                                 setShowStudentModal(true);
                             }}
@@ -102,12 +66,12 @@ export default function TabContent({ tabName }) {
             </div>
 
             {/* Teacher Config Accordion */}
-            <div style={accordionStyle}>
-                <div style={headerStyle} onClick={() => setTeacherOpen(!teacherOpen)}>
+            <div className="accordion">
+                <div className="accordion-header" onClick={() => setTeacherOpen(!teacherOpen)}>
                     <span>Teacher Config {teacherOpen ? "▲" : "▼"}</span>
-                    <div>
+                    <div className="header-buttons">
                         <button
-                            style={buttonStyle}
+                            className="header-button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setTeacherUpdateMode(!teacherUpdateMode);
@@ -115,33 +79,32 @@ export default function TabContent({ tabName }) {
                         >
                             {teacherUpdateMode ? "Exit Edit config" : "Edit mode"}
                         </button>
-                        <button
-                            style={buttonStyle}
-                            onClick={(e) => e.stopPropagation()}
-                        >
+
+                        <button className="header-button" onClick={(e) => e.stopPropagation()}>
                             Add
                         </button>
                     </div>
                 </div>
+
                 {teacherOpen && (
-                    <div style={contentStyle}>
+                    <div className="accordion-content">
                         <p>Settings related to teachers go here.</p>
                         <p>Update mode is {teacherUpdateMode ? "ON" : "OFF"}</p>
-                        {/* Pass teacherUpdateMode to child components */}
                     </div>
                 )}
             </div>
 
             {/* Student Modal */}
             {showStudentModal && (
-                <InternshipAssignmentModal onClose={() => setShowStudentModal(false)}>
+                <InternshipAssignmentModal
+                    title={selectedConfig ? "Edit Student" : "Add Student"}
+                    onClose={() => setShowStudentModal(false)}
+                >
                     <InternshipAssignmentStudentForm
                         config={selectedConfig}
                         year={tabName}
                         onClose={() => setShowStudentModal(false)}
-                        onSave={() => {
-                            setShowStudentModal(false);
-                        }}
+                        onSave={() => setShowStudentModal(false)}
                     />
                 </InternshipAssignmentModal>
             )}

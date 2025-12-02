@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import StudentConfigService from "../../services/studentConfigService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
 import type { StudentConfigDto } from "../../services/studentConfigService";
@@ -12,7 +12,7 @@ interface Props {
 
 export default function StudentConfigForm({ config, year, onClose, onSave }: Props) {
     const [form, setForm] = useState<StudentConfigDto>({
-        id: config?.id,
+        id: config?.id ?? 0,
         studentId: config?.studentId ?? 0,
         schoolType: config?.schoolType ?? "GS",
         pdpI: config?.pdpI ?? false,

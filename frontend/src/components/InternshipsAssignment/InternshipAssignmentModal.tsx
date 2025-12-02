@@ -1,7 +1,16 @@
-import React from "react";
 import "../../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 
-export default function InternshipAssignmentModal({ title, children, onClose }) {
+interface InternshipAssignmentModalProps {
+    title?: string;
+    children: React.ReactNode;
+    onClose: () => void;
+}
+
+export default function InternshipAssignmentModal({
+    title,
+    children,
+    onClose,
+}: InternshipAssignmentModalProps) {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>

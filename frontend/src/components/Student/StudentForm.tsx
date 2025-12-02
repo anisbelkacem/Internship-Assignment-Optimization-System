@@ -270,7 +270,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     <input
                         id={`address-${key}`}
                         className="student-input"
-                        value={form.address[key as keyof Address]}
+                        value={(form.address ?? emptyAddress)[key as keyof Address]}
                         onChange={e => handleAddressChange(key as keyof Address, e.target.value, "address")}
                     />
                 </div>
@@ -283,7 +283,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     <input
                         id={`semester-${key}`}
                         className="student-input"
-                        value={form.addressSemester[key as keyof Address]}
+                        value={(form.addressSemester ?? emptyAddress)[key as keyof Address]}
                         onChange={e => handleAddressChange(key as keyof Address, e.target.value, "addressSemester")}
                     />
                 </div>

@@ -2,7 +2,7 @@ import apiService from './api';
 import type { SchoolType, Course } from './studentService';
 
 export interface StudentConfigDto {
-    id?: number;
+    id: number;
     studentId: number;
     year: string;
     schoolType: SchoolType;

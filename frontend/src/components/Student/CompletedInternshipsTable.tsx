@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CompletedInternship } from "../../services/studentService";
 import CompletedInternshipsService from "../../services/completedInternshipsService";
 
