@@ -268,7 +268,7 @@ export default function Pls() {
       lastName: pl.lastName ?? "",
       email: pl.email ?? "",
       mainSubject: pl.mainSubject ?? "",
-      schoolId: pl.school?.id ?? "",
+      schoolId: pl.schoolId ?? "",
       schoolYear: activeConfig?.schoolYear ?? "",
       maxPraktikaPerYear: activeConfig?.maxPraktikaPerYear ?? "",
       totalHoursCredit: activeConfig?.totalHoursCredit ?? "",
@@ -445,7 +445,7 @@ export default function Pls() {
                           {pl.firstName} {pl.lastName}
                         </td>
                         <td>{pl.mainSubject}</td>
-                        <td>{pl.school?.name ?? "-"}</td>
+                        <td>{pl.schoolName ?? "-"}</td>
                         <td>{pl.email}</td>
                         <td>{cfg?.schoolYear ?? "-"}</td>
                         <td>{cfg?.maxPraktikaPerYear ?? "-"}</td>

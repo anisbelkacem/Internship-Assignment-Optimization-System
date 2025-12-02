@@ -10,7 +10,9 @@ public record TeacherDto(
         String firstName,
         String lastName,
         Course mainSubject,
-        School school,
+        Long schoolId,
+        String schoolName,
+        String schoolZone,
         String email,
         List<TeacherPlConfigDto> plConfigs
 ) {

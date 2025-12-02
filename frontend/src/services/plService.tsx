@@ -1,12 +1,6 @@
-// src/services/plService.tsx
 import apiService from "./api";
 import API_BASE_URL from "../config/api";
 
-/**
- * Enums mirror the backend enums:
- * - Course.java
- * - PraktikumType.java
- */
 export enum Course {
   COMPUTER_SCIENCE = "COMPUTER_SCIENCE",
   ENGINEERING = "ENGINEERING",
@@ -25,7 +19,6 @@ export enum PraktikumType {
   SFP = "SFP",
 }
 
-// --- DTOs matching backend records / classes ---
 
 export interface SchoolRef {
   id: number;
@@ -45,17 +38,18 @@ export interface TeacherPlConfigDto {
   internshipPreferences: PraktikumType[];
 }
 
-export interface TeacherDto {
+export type TeacherDto = {
   teacherId: number;
   firstName: string;
   lastName: string;
   mainSubject: Course;
-  school: SchoolRef | null;
   email: string;
+  schoolId: number | null;
+  schoolName: string | null;
+  schoolZone: string | null;
   plConfigs: TeacherPlConfigDto[];
-}
+};
 
-// Request records as in TeacherRequest / TeacherPlConfigRequest
 
 export interface TeacherRequest {
   firstName: string;
@@ -84,7 +78,6 @@ export interface TeacherImportResult {
 class PlService {
   private base = "/api/pls";
 
-  // ---- Teacher / PL ----
 
   async getAllPls(): Promise<TeacherDto[]> {
     return apiService.get<TeacherDto[]>(this.base);
@@ -106,7 +99,6 @@ class PlService {
     return apiService.delete<void>(`${this.base}/${id}`);
   }
 
-  // ---- PL Configs (per teacher) ----
 
   async getConfigsForTeacher(teacherId: number): Promise<TeacherPlConfigDto[]> {
     return apiService.get<TeacherPlConfigDto[]>(
@@ -141,7 +133,6 @@ class PlService {
     );
   }
 
-  // ---- Excel Import (.xlsx) ----
   async importFromExcel(file: File): Promise<TeacherImportResult> {
     const formData = new FormData();
     formData.append("file", file);

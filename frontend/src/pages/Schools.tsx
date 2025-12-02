@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
 import schoolService, { SchoolType } from '../services/schoolService';
 import type { School, SchoolCreate } from '../services/schoolService';
@@ -175,6 +176,7 @@ export default function Schools() {
           
           console.log('Parsed Excel data:', jsonData);
           
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const schools: PreviewSchool[] = jsonData.map((row: any, index: number) => {
             const errors: string[] = [];
             
@@ -305,6 +307,7 @@ export default function Schools() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handlePreviewInputChange = (index: number, field: keyof SchoolCreate, value: any) => {
     setPreviewSchools(prev => {
       const updated = [...prev];
