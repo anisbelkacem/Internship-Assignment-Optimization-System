@@ -1,0 +1,209 @@
+/* === PLS PAGE WRAPPER === */
+
+.pls-table-section {
+  padding: 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  color: #111827;            /* force dark text inside this section */
+}
+
+/* === HEADER === */
+
+.pls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pls-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pls-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* === LAYOUT: TABLE + RIGHT PANEL === */
+
+.cards {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* Left side: table card */
+.pl-table {
+  flex: 3 1 0;
+  min-width: 0;
+}
+
+/* Right side: form + import */
+.right-panel {
+  flex: 2 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === CARD BASE STYLING === */
+
+.card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  box-sizing: border-box;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.card-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* === TABLE STYLING === */
+
+.pl-table {
+  overflow-x: auto; /* allow horizontal scroll on small screens */
+}
+
+.pl-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pl-table thead {
+  background: #f3f4f6;
+}
+
+.pl-table th,
+.pl-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.pl-table th {
+  font-weight: 600;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.pl-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+/* === BUTTONS === */
+
+.btn-primary {
+  background: #517c9e;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, transform 0.08s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #3f6480;
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-cancel {
+  background: transparent;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 7px 13px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+  transition: background-color 0.12s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #f3f4f6;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #1f2933;
+}
+
+.btn-ghost:hover {
+  text-decoration: underline;
+}
+
+/* Actions row under form */
+.form-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* === RESPONSIVE ONLY FOR PLS PAGE === */
+
+@media (max-width: 1200px) {
+  .cards {
+    flex-direction: column; /* stack table and right panel */
+  }
+
+  .pl-table,
+  .right-panel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .pls-table-section {
+    padding: 12px;
+  }
+
+  .pls-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .pl-table th,
+  .pl-table td {
+    padding: 6px 8px;
+  }
+}

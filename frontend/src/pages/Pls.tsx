@@ -9,6 +9,7 @@ import plService, {
   type TeacherRequest,
   type TeacherImportResult,
 } from "../services/plService";
+import "../styles/Pls/Pls.css";
 
 interface SchoolOption {
   id: number;
