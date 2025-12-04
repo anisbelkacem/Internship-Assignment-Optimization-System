@@ -66,7 +66,7 @@ class CompletedInternshipsRepositoryTest {
         ci.setStartDate(LocalDate.of(2024, 1, 1));
         ci.setEndDate(LocalDate.of(2024, 6, 30));
         ci.setDescription("Test internship");
-
+        ci.setType(PraktikumType.PDP_I);
         completedInternshipsRepository.save(ci);
 
         List<CompletedInternships> byTeacher =
@@ -116,6 +116,7 @@ class CompletedInternshipsRepositoryTest {
         ci.setCourse(Course.OTHER);
         ci.setStartDate(LocalDate.of(2023, 9, 1));
         ci.setEndDate(LocalDate.of(2024, 2, 28));
+        ci.setType(PraktikumType.SFP);
         completedInternshipsRepository.saveAndFlush(ci);
 
         List<CompletedInternships> found =

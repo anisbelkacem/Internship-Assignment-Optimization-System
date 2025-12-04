@@ -50,6 +50,7 @@ public class CompletedInternshipsService {
                 student,
                 teacher,
                 school,
+                dto.getType(),
                 dto.getCourse(),
                 dto.getStartDate(),
                 dto.getEndDate()
@@ -99,6 +100,9 @@ public class CompletedInternshipsService {
             School school = schoolRepository.findById(dto.getSchoolId())
                     .orElseThrow(() -> new NotFoundException("School", dto.getSchoolId()));
             internship.setSchool(school);
+        }
+        if (dto.getType() != null) {
+            internship.setType(dto.getType());
         }
 
         if (dto.getCourse() != null) {

@@ -144,16 +144,32 @@ public class TeacherService {
                 ))
                 .toList();
 
+        School school = teacher.getSchool();
+
+        Long schoolId = null;
+        String schoolName = null;
+        String schoolZone = null;
+
+        if (school != null) {
+            schoolId = school.getId();
+            schoolName = school.getName();
+            schoolZone = school.getZone();
+        }
+
         return new TeacherDto(
                 teacher.getTeacherId(),
                 teacher.getFirstName(),
                 teacher.getLastName(),
                 teacher.getMainSubject(),
-                teacher.getSchool(),
+                schoolId,
+                schoolName,
+                schoolZone,
                 teacher.getEmail(),
                 configDtos
         );
     }
+
+
 
     // Excel IMPORT / EXPORT for Teachers (PLs)
     @Transactional

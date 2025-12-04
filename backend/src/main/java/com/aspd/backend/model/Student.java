@@ -17,11 +17,19 @@ public class Student {
     private String lastName;
     private String email;
 
+    @Enumerated(EnumType.STRING)
     private SchoolType schoolType;
 
+    @Enumerated(EnumType.STRING)
     private Course mainCourse;
+
+    @Enumerated(EnumType.STRING)
     private Course prefCourse1;
+
+    @Enumerated(EnumType.STRING)
     private Course prefCourse2;
+
+    @Enumerated(EnumType.STRING)
     private Course prefCourse3;
 
     private boolean registred;

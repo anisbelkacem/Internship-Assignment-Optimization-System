@@ -1,0 +1,54 @@
+.config-table-wrapper {
+    overflow-x: auto;
+    background-color: rgb(30, 45, 100);
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.config-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: white;
+}
+
+.config-table th {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid #517c9e;
+}
+
+.config-table td {
+    padding: 8px;
+    border-bottom: 1px solid #517c9e;
+}
+
+.config-table tr {
+    transition: background 0.2s;
+}
+
+.config-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.edit-btn {
+    margin-right: 8px;
+    padding: 4px 8px;
+    background: #2b8df0;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.delete-btn {
+    padding: 4px 8px;
+    background: #d14d4d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.loading-text {
+    color: white;
+}
