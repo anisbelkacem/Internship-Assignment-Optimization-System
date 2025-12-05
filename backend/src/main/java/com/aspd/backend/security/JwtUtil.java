@@ -20,7 +20,6 @@ public class JwtUtil {
     private final String secret = "Aspd_Team3_Anis_Youssef_Hadir_Fekher_Hedi";
     private final Key key = Keys.hmacShaKeyFor(secret.getBytes());
 
-    // 24 hours using new API
     private final long expirationHours = 24;
 
     public String generateToken(String username, Map<String, Object> claims) {
