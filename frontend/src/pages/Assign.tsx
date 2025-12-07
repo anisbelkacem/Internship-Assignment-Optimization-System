@@ -1,0 +1,973 @@
+import { useState, useEffect } from "react";
+import studentConfigService from "../services/studentConfigService";
+import plService from "../services/plService";
+import studentService from "../services/studentService";
+import StudentConfigForm from "../components/InternshipsAssignment/InternshipAssignmentStudentForm";
+import TeacherConfigForm from "../components/InternshipsAssignment/TeacherConfigForm";
+import type { StudentConfigDto } from "../services/studentConfigService";
+import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
+import type { Student } from "../services/studentService";
+import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
+
+export default function InternshipAssignments() {
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [studentConfigs, setStudentConfigs] = useState<StudentConfigDto[]>([]);
+  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Student Config Modal States
+  const [showStudentConfigModal, setShowStudentConfigModal] = useState(false);
+  const [editingStudentConfig, setEditingStudentConfig] = useState<StudentConfigDto | null>(null);
+  const [showDeleteStudentModal, setShowDeleteStudentModal] = useState(false);
+  const [deletingStudentConfigId, setDeletingStudentConfigId] = useState<number | null>(null);
+
+  // Teacher Config Modal States
+  const [showTeacherConfigModal, setShowTeacherConfigModal] = useState(false);
+  const [editingTeacherConfig, setEditingTeacherConfig] = useState<{teacher: TeacherDto; config: TeacherPlConfigDto | null} | null>(null);
+  const [selectedTeacherForConfig, setSelectedTeacherForConfig] = useState<TeacherDto | null>(null);
+  const [showDeleteTeacherModal, setShowDeleteTeacherModal] = useState(false);
+  const [deletingTeacherConfig, setDeletingTeacherConfig] = useState<{teacherId: number; configId: number} | null>(null);
+
+  // Assignment Results States
+  const [showTeacherAssignments, setShowTeacherAssignments] = useState(false);
+  const [showStudentAssignments, setShowStudentAssignments] = useState(false);
+
+  // Student Configuration Modal State
+  const [showStudentConfigTable, setShowStudentConfigTable] = useState(false);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
+  // Teacher Configuration Modal State
+  const [showTeacherConfigTable, setShowTeacherConfigTable] = useState(false);
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+
+  // New Year Modal State
+  const [showNewYearModal, setShowNewYearModal] = useState(false);
+  const [newYearInput, setNewYearInput] = useState('');
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (selectedYear) {
+      fetchStudentConfigsByYear();
+    }
+  }, [selectedYear]);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const [yearsData, teachersData, studentsData] = await Promise.all([
+        studentConfigService.getAllYears(),
+        plService.getAllPls(),
+        studentService.getAllStudent(),
+      ]);
+      
+      setAvailableYears(yearsData);
+      setTeachers(teachersData);
+      setStudents(studentsData);
+      
+      if (yearsData.length > 0) {
+        setSelectedYear(yearsData[0]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudentConfigsByYear = async () => {
+    if (!selectedYear) return;
+    try {
+      const configs = await studentConfigService.getConfigsByYear(selectedYear);
+      console.log('Fetched configs for year', selectedYear, ':', configs);
+      setStudentConfigs(configs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load student configurations");
+    }
+  };
+
+  const getTeacherName = (teacher: TeacherDto): string => {
+    return `${teacher.firstName} ${teacher.lastName}`;
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedYear(e.target.value);
+  };
+
+  // Student Config CRUD Handlers
+  const handleOpenStudentConfigModal = (config?: StudentConfigDto) => {
+    setEditingStudentConfig(config || null);
+    setShowStudentConfigModal(true);
+  };
+
+  const handleCloseStudentConfigModal = () => {
+    setShowStudentConfigModal(false);
+    setEditingStudentConfig(null);
+  };
+
+  const handleDeleteStudentConfig = (id: number) => {
+    setDeletingStudentConfigId(id);
+    setShowDeleteStudentModal(true);
+  };
+
+  const handleConfirmDeleteStudentConfig = async () => {
+    if (!deletingStudentConfigId) {
+      return;
+    }
+
+    try {
+      await studentConfigService.deleteConfig(deletingStudentConfigId);
+      setSuccess("Student configuration deleted successfully!");
+      fetchStudentConfigsByYear();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete configuration");
+    } finally {
+      setShowDeleteStudentModal(false);
+      setDeletingStudentConfigId(null);
+    }
+  };
+
+  // Teacher Config CRUD Handlers
+  const handleOpenTeacherConfigModal = (teacher: TeacherDto, config?: TeacherPlConfigDto) => {
+    setSelectedTeacherForConfig(teacher);
+    setEditingTeacherConfig({teacher, config: config || null});
+    setShowTeacherConfigModal(true);
+  };
+
+  const handleCloseTeacherConfigModal = () => {
+    setShowTeacherConfigModal(false);
+    setEditingTeacherConfig(null);
+    setSelectedTeacherForConfig(null);
+  };
+
+  const handleDeleteTeacherConfig = (teacherId: number, configId: number) => {
+    setDeletingTeacherConfig({teacherId, configId});
+    setShowDeleteTeacherModal(true);
+  };
+
+  const handleConfirmDeleteTeacherConfig = async () => {
+    if (!deletingTeacherConfig) {
+      return;
+    }
+
+    try {
+      await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
+      setSuccess("Teacher configuration deleted successfully!");
+      await fetchInitialData(); // Refresh teachers with updated configs
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete configuration");
+    } finally {
+      setShowDeleteTeacherModal(false);
+      setDeletingTeacherConfig(null);
+    }
+  };
+
+  // New Year Handler
+  const handleCreateNewYear = () => {
+    setShowNewYearModal(true);
+  };
+
+  const handleConfirmNewYear = () => {
+    if (!newYearInput.trim()) {
+      setError("Please enter a valid year");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    if (availableYears.includes(newYearInput.trim())) {
+      setError("This year already exists");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // Add the new year to the list and select it
+    const updatedYears = [...availableYears, newYearInput.trim()].sort();
+    setAvailableYears(updatedYears);
+    setSelectedYear(newYearInput.trim());
+    setStudentConfigs([]); // Clear configs for new year
+    
+    setShowNewYearModal(false);
+    setNewYearInput('');
+    setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  return (
+    <div className="schools-container">
+      <div className="schools-header">
+        <h1>Praktikum Planning - {selectedYear || "Select Year"}</h1>
+        <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+          <select
+            className="form-select-small year-selector"
+            value={selectedYear}
+            onChange={handleYearChange}
+            style={{width: '150px'}}
+          >
+            <option value="">Select Year</option>
+            {availableYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          <button 
+            className="btn-primary"
+            onClick={handleCreateNewYear}
+            style={{whiteSpace: 'nowrap'}}
+          >
+            + New Year
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="alert alert-error">
+          {error}
+          <button onClick={() => setError(null)} className="alert-close">×</button>
+        </div>
+      )}
+
+      {success && (
+        <div className="alert alert-success">
+          {success}
+          <button onClick={() => setSuccess(null)} className="alert-close">×</button>
+        </div>
+      )}
+
+      {/* Student Configuration Section */}
+      <section className="config-section">
+        <div className="section-header">
+          <h2>Student Configuration</h2>
+          <button 
+            className="btn-primary"
+            onClick={() => setShowStudentConfigTable(true)}
+          >
+            Configure Students
+          </button>
+        </div>
+      </section>
+
+      {/* Teacher Configuration Section */}
+      <section className="config-section">
+        <div className="section-header">
+          <h2>Teacher Configuration</h2>
+          <button 
+            className="btn-primary"
+            onClick={() => setShowTeacherConfigTable(true)}
+          >
+            Configure Teachers
+          </button>
+        </div>
+      </section>
+
+      {/* Assignment for Teachers Results */}
+      <section className="config-section">
+        <div className="section-header">
+          <h2>Assignment for Teachers Results</h2>
+          <button 
+            className="btn-primary btn-auto-assign"
+            onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
+          >
+            🔄 {showTeacherAssignments ? "Clear" : "Auto Assign"}
+          </button>
+        </div>
+        <div className="table-container">
+          {!showTeacherAssignments ? (
+            <p className="empty-state">Click Auto Assign to generate teacher assignments</p>
+          ) : (
+            <table className="schools-table">
+              <thead>
+                <tr>
+                  <th>Teacher Name</th>
+                  <th>Internship Assignments</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Dr. Smith Johnson</td>
+                  <td>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                      <div>
+                        <strong>PDP-I</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Grundschule A, Mittelschule B
+                        </div>
+                      </div>
+                      <div>
+                        <strong>ZSP - Physics</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Grundschule C
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Prof. Maria Garcia</td>
+                  <td>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                      <div>
+                        <strong>PDP-II - German Literature</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Grundschule C, Mittelschule D
+                        </div>
+                      </div>
+                      <div>
+                        <strong>SFP - History</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Grundschule A
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn-edit" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Dr. Thomas Weber</td>
+                  <td>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                      <div>
+                        <strong>ZSP - Chemistry</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Mittelschule D, Grundschule A
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Anna Schmidt</td>
+                  <td>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                      <div>
+                        <strong>PDP-I</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Grundschule A
+                        </div>
+                      </div>
+                      <div>
+                        <strong>PDP-II - Biology</strong>
+                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                          Schools: Mittelschule B, Grundschule C
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn-edit" onClick={() => alert('Edit assignment for Anna Schmidt')}>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Dr. Michael Brown</td>
+                  <td>
+                    <div style={{color: '#f59e0b', fontStyle: 'italic'}}>
+                      No assignments yet
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+        </div>
+        {showTeacherAssignments && (
+          <div style={{marginTop: '20px', display: 'flex', justifyContent: 'flex-end'}}>
+            <button className="btn-primary" style={{padding: '12px 30px', fontSize: '1rem', backgroundColor: '#10b981'}}>
+              Validate
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Assignment Results */}
+      <section className="config-section">
+        <div className="section-header">
+          <h2>Assignment Results</h2>
+          <button 
+            className="btn-primary btn-auto-assign"
+            onClick={() => setShowStudentAssignments(!showStudentAssignments)}
+          >
+            🔄 {showStudentAssignments ? "Clear" : "Auto Assign"}
+          </button>
+        </div>
+        <div className="table-container">
+          {!showStudentAssignments ? (
+            <p className="empty-state">Click Auto Assign to generate student assignments</p>
+          ) : (
+            <table className="schools-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Assigned Teacher</th>
+                  <th>Praktikum Type</th>
+                  <th>School</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Emma Müller</td>
+                  <td>Dr. Smith Johnson</td>
+                  <td>PDP-I</td>
+                  <td>Grundschule A</td>
+                  <td>2025-03-01</td>
+                  <td>2025-03-15</td>
+                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Lukas Wagner</td>
+                  <td>Prof. Maria Garcia</td>
+                  <td>PDP-II</td>
+                  <td>Mittelschule B</td>
+                  <td>2025-03-05</td>
+                  <td>2025-03-20</td>
+                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Sophie Fischer</td>
+                  <td>Dr. Thomas Weber</td>
+                  <td>SFP</td>
+                  <td>Grundschule C</td>
+                  <td>2025-03-10</td>
+                  <td>2025-03-25</td>
+                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Max Schneider</td>
+                  <td>Anna Schmidt</td>
+                  <td>PDP-I</td>
+                  <td>Mittelschule D</td>
+                  <td>2025-03-08</td>
+                  <td>2025-03-22</td>
+                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Lisa Hoffmann</td>
+                  <td>Prof. Maria Garcia</td>
+                  <td>ZSP</td>
+                  <td>Mittelschule B</td>
+                  <td>2025-03-12</td>
+                  <td>2025-03-28</td>
+                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Jonas Becker</td>
+                  <td>Dr. Smith Johnson</td>
+                  <td>PDP-I</td>
+                  <td>Grundschule A</td>
+                  <td>2025-03-15</td>
+                  <td>2025-03-30</td>
+                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Mia Koch</td>
+                  <td>Anna Schmidt</td>
+                  <td>PDP-II</td>
+                  <td>Mittelschule D</td>
+                  <td>2025-03-18</td>
+                  <td>2025-04-02</td>
+                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
+                  <td>
+                    <button className="btn-edit">Edit</button>
+                  </td>
+                </tr>
+                
+              </tbody>
+            </table>
+          )}
+        </div>
+        {showStudentAssignments && (
+          <div style={{marginTop: '20px', display: 'flex', justifyContent: 'flex-end'}}>
+            <button className="btn-primary" style={{padding: '12px 30px', fontSize: '1rem', backgroundColor: '#10b981'}}>
+              Validate
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Teacher Configuration Table Modal */}
+      {showTeacherConfigTable && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{maxWidth: '95%', width: '95%', maxHeight: '90vh', height: '90vh'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+              <h2 style={{margin: 0}}>Teacher Configuration</h2>
+              <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search teachers..."
+                  value={teacherSearchTerm}
+                  onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                  style={{
+                    width: '280px',
+                    padding: '8px 14px',
+                    fontSize: '0.95rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#f8fafc',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    color: '#000000'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.backgroundColor = '#ffffff';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.backgroundColor = '#f8fafc';
+                    e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                  }}
+                />
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setShowTeacherConfigTable(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="table-container" style={{overflowX: 'auto'}}>
+              <table className="schools-table">
+                <thead>
+                  <tr>
+                    <th>Teacher Name</th>
+                    <th>Main Subject</th>
+                    <th>School Year</th>
+                    <th>Subject Specializations</th>
+                    <th>Internship Preferences</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teachers.filter(teacher => {
+                    const fullName = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
+                    return fullName.includes(teacherSearchTerm.toLowerCase());
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="empty-state">
+                        {teacherSearchTerm ? 'No teachers match your search' : 'No teachers found'}
+                      </td>
+                    </tr>
+                  ) : (
+                    teachers.filter(teacher => {
+                      const fullName = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
+                      return fullName.includes(teacherSearchTerm.toLowerCase());
+                    }).flatMap((teacher) => {
+                      const teacherConfigsForYear = teacher.plConfigs.filter(
+                        (config) => config.schoolYear === selectedYear
+                      );
+
+                      if (teacherConfigsForYear.length === 0) {
+                        return (
+                          <tr key={`teacher-${teacher.teacherId}`}>
+                            <td>{getTeacherName(teacher)}</td>
+                            <td>{teacher.mainSubject}</td>
+                            <td colSpan={3} className="empty-state">No configurations</td>
+                            <td>
+                              <button
+                                className="btn-primary btn-sm"
+                                onClick={() => handleOpenTeacherConfigModal(teacher)}
+                              >
+                                + Add Config
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      
+                      return teacherConfigsForYear.map((config, index) => (
+                        <tr key={`teacher-${teacher.teacherId}-config-${config.id}`}>
+                          {index === 0 && (
+                            <>
+                              <td rowSpan={teacherConfigsForYear.length}>{getTeacherName(teacher)}</td>
+                              <td rowSpan={teacherConfigsForYear.length}>{teacher.mainSubject}</td>
+                            </>
+                          )}
+                          <td>{config.schoolYear}</td>
+                          <td>{config.subjectSpecializations.join(", ") || "-"}</td>
+                          <td>{config.internshipPreferences.join(", ") || "-"}</td>
+                          <td>
+                            <div className="action-buttons">
+                              <button
+                                className="btn-secondary btn-sm"
+                                onClick={() => handleOpenTeacherConfigModal(teacher, config)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn-danger btn-sm"
+                                onClick={() => handleDeleteTeacherConfig(teacher.teacherId, config.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Configuration Table Modal */}
+      {showStudentConfigTable && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{maxWidth: '95%', width: '95%', maxHeight: '90vh', height: '90vh'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+              <h2 style={{margin: 0}}>Student Configuration</h2>
+              <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search students..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  style={{
+                    width: '280px',
+                    padding: '8px 14px',
+                    fontSize: '0.95rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#f8fafc',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    color: '#000000'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.backgroundColor = '#ffffff';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.backgroundColor = '#f8fafc';
+                    e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                  }}
+                />
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setShowStudentConfigTable(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="table-container" style={{overflowX: 'auto'}}>
+              <table className="schools-table">
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Year</th>
+                    <th>School Type</th>
+                    <th>Main Course</th>
+                    <th>Pref. Course 1</th>
+                    <th>Pref. Course 2</th>
+                    <th>Pref. Course 3</th>
+                    <th>PDP-I</th>
+                    <th>PDP-II</th>
+                    <th>ZSP</th>
+                    <th>SFP</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.filter(student => {
+                    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+                    return fullName.includes(studentSearchTerm.toLowerCase());
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={12} className="empty-state">
+                        {studentSearchTerm ? 'No students match your search' : 'No students found'}
+                      </td>
+                    </tr>
+                  ) : (
+                    students.filter(student => {
+                      const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+                      return fullName.includes(studentSearchTerm.toLowerCase());
+                    }).flatMap((student) => {
+                      const studentConfigsForYear = studentConfigs.filter(
+                        (config) => config.studentId === student.matriculationNbr && config.year === selectedYear
+                      );
+
+                      if (studentConfigsForYear.length === 0) {
+                        return (
+                          <tr key={`student-${student.matriculationNbr}`}>
+                            <td>{student.firstName} {student.lastName}</td>
+                            <td colSpan={10} className="empty-state">No configurations</td>
+                            <td>
+                              <button
+                                className="btn-primary btn-sm"
+                                onClick={() => {
+                                  setEditingStudentConfig({
+                                    studentId: student.matriculationNbr,
+                                    year: selectedYear,
+                                    schoolType: student.schoolType,
+                                    mainCourse: student.mainCourse,
+                                    prefCourse1: student.prefCourse1,
+                                    prefCourse2: student.prefCourse2,
+                                    prefCourse3: student.prefCourse3,
+                                    pdpI: false,
+                                    pdpII: false,
+                                    zsp: false,
+                                    sfp: false,
+                                  } as StudentConfigDto);
+                                  setShowStudentConfigModal(true);
+                                }}
+                              >
+                                + Add Config
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return studentConfigsForYear.map((config, index) => (
+                        <tr key={`student-${student.matriculationNbr}-config-${config.id}`}>
+                          {index === 0 && (
+                            <td rowSpan={studentConfigsForYear.length}>
+                              {student.firstName} {student.lastName}
+                            </td>
+                          )}
+                          <td>{config.year}</td>
+                          <td>{config.schoolType}</td>
+                          <td>{config.mainCourse}</td>
+                          <td>{config.prefCourse1 || "-"}</td>
+                          <td>{config.prefCourse2 || "-"}</td>
+                          <td>{config.prefCourse3 || "-"}</td>
+                          <td>
+                            <input type="checkbox" checked={config.pdpI} disabled />
+                          </td>
+                          <td>
+                            <input type="checkbox" checked={config.pdpII} disabled />
+                          </td>
+                          <td>
+                            <input type="checkbox" checked={config.zsp} disabled />
+                          </td>
+                          <td>
+                            <input type="checkbox" checked={config.sfp} disabled />
+                          </td>
+                          <td>
+                            <div className="action-buttons">
+                              <button
+                                className="btn-secondary btn-sm"
+                                onClick={() => handleOpenStudentConfigModal(config)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn-danger btn-sm"
+                                onClick={() => config.id && handleDeleteStudentConfig(config.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Year Modal */}
+      {showNewYearModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-small">
+            <h2>Create New Planning Year</h2>
+            <p>Enter the academic year (e.g., 2026)</p>
+            <div style={{marginBottom: '20px'}}>
+              <input
+                type="text"
+                className="student-config-input"
+                placeholder="e.g., 2026"
+                value={newYearInput}
+                onChange={(e) => setNewYearInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleConfirmNewYear();
+                  }
+                }}
+                autoFocus
+                style={{width: '100%', padding: '10px', fontSize: '1rem'}}
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowNewYearModal(false);
+                  setNewYearInput('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleConfirmNewYear}
+              >
+                Create Year
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Student Config Confirmation Modal */}
+      {showDeleteStudentModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-small">
+            <h2>Confirm Delete</h2>
+            <p>Are you sure you want to delete this student configuration?</p>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowDeleteStudentModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-danger"
+                onClick={handleConfirmDeleteStudentConfig}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Config Form Modal */}
+      {showStudentConfigModal && (
+        <div className="modal-overlay" onClick={handleCloseStudentConfigModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <StudentConfigForm
+              config={editingStudentConfig || undefined}
+              year={selectedYear}
+              onClose={handleCloseStudentConfigModal}
+              onSave={async () => {
+                const wasEditing = !!editingStudentConfig?.id;
+                handleCloseStudentConfigModal();
+                
+                // Refresh years list and configs
+                const yearsData = await studentConfigService.getAllYears();
+                setAvailableYears(yearsData);
+                await fetchStudentConfigsByYear();
+                
+                setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
+                setTimeout(() => setSuccess(null), 3000);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Teacher Config Confirmation Modal */}
+      {showDeleteTeacherModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-small">
+            <h2>Confirm Delete</h2>
+            <p>Are you sure you want to delete this teacher configuration?</p>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => setShowDeleteTeacherModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-danger"
+                onClick={handleConfirmDeleteTeacherConfig}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Teacher Config Form Modal */}
+      {showTeacherConfigModal && selectedTeacherForConfig && (
+        <div className="modal-overlay" onClick={handleCloseTeacherConfigModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <TeacherConfigForm
+              teacher={selectedTeacherForConfig}
+              config={editingTeacherConfig?.config || undefined}
+              selectedYear={selectedYear}
+              onClose={handleCloseTeacherConfigModal}
+              onSave={async () => {
+                handleCloseTeacherConfigModal();
+                await fetchInitialData();
+                setSuccess(editingTeacherConfig?.config ? "Teacher configuration updated!" : "Teacher configuration created!");
+                setTimeout(() => setSuccess(null), 3000);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

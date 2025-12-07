@@ -8,6 +8,7 @@ import Students from "./pages/Students";
 import Pls from "./pages/Pls";
 import Schools from "./pages/Schools";
 import InternshipAssignments from "./pages/InternshipAssignments";
+import Assign from "./pages/Assign";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 
@@ -25,7 +26,8 @@ export default function App() {
             <Route path="students" element={<Students />} />
             <Route path="pls" element={<Pls />} />
             <Route path="schools" element={<Schools />} />
-            <Route path="assignments" element={<InternshipAssignments />} />
+            <Route path="assignments" element={<Assign />} />/*InternshipAssignments*/
+            <Route path="assign" element={<InternshipAssignments />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
           </Route>
