@@ -92,11 +92,6 @@ export default function InternshipAssignments() {
     }
   };
 
-  const getStudentName = (studentId: number): string => {
-    const student = students.find(s => s.matriculationNbr === studentId);
-    return student ? `${student.firstName} ${student.lastName}` : `Student ${studentId}`;
-  };
-
   const getTeacherName = (teacher: TeacherDto): string => {
     return `${teacher.firstName} ${teacher.lastName}`;
   };
@@ -775,7 +770,7 @@ export default function InternshipAssignments() {
                                     pdpII: false,
                                     zsp: false,
                                     sfp: false,
-                                  });
+                                  } as StudentConfigDto);
                                   setShowStudentConfigModal(true);
                                 }}
                               >
