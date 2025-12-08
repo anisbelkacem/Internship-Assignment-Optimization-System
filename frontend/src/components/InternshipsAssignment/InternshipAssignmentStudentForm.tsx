@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import StudentConfigService from "../../services/studentConfigService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
