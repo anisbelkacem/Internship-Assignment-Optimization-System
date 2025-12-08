@@ -61,12 +61,12 @@
 }
 
 .modal-btn-primary {
-    background-color: #007bff;
+    background-color: #509CDB;
     color: white;
 }
 
 .modal-btn-primary:hover {
-    background-color: #0056b3;
+    background-color: #4189c7;
 }
 
 .modal-btn-cancel {
@@ -135,7 +135,7 @@
 /* ------------------ Buttons ------------------ */
 .btn-primary {
     padding: 0.75rem 1.5rem;
-    background-color: #1e3a8a;
+    background-color: #509CDB;
     color: white;
     border: none;
     border-radius: 0.5rem;
@@ -149,7 +149,7 @@
 }
 
 .btn-primary:hover {
-    background-color: #1e40af;
+    background-color: #4189c7;
 }
 
 .btn-auto-assign {

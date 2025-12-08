@@ -54,17 +54,16 @@ const Header: FC = () => {
             <button className="btn btn-primary">Export PDF</button>
 
             <div className="avatar">
-              <img
-                src={`data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24'><rect width='24' height='24' rx='12' fill='%23cfd8dc'/><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z' fill='%236b6b6b'/><path d='M4 20c0-2.21 3.58-4 8-4s8 1.79 8 4v1H4v-1z' fill='%236b6b6b'/></svg>`}
-                alt="Konto"
-              />
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="#424242" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" fill="#424242"/>
+                <path d="M4 20c0-2.21 3.58-4 8-4s8 1.79 8 4v1H4v-1z" fill="#424242"/>
+              </svg>
             </div>
 
             <div className="notif">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18.6 14.6V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v3.6c0 .538-.214 1.055-.595 1.445L4 17h11z" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="#424242" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#424242"/>
               </svg>
-              <span className="notif-dot" />
             </div>
 
             <button 
@@ -74,11 +73,16 @@ const Header: FC = () => {
                 cursor: 'pointer', 
                 background: 'none', 
                 border: 'none',
-                color: 'inherit',
-                font: 'inherit'
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
+              aria-label="Abmelden"
             >
-              Abmelden
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="#424242" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" fill="#424242"/>
+              </svg>
             </button>
           </div>
         </div>
