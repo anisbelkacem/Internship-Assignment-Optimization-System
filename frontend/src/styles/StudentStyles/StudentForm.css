@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700&display=swap');
+
 /* StudentForm.css */
 
 .student-form-container {
+    font-family: 'Kumbh Sans', sans-serif;
     display: grid;
     grid-template-columns: 1fr; /* default single column for mobile */
     gap: 20px 30px;
@@ -41,7 +44,7 @@
     padding: 10px 12px;
     border: 1px solid #ccc;
     border-radius: 6px;
-    font-size: 16px;
+    font-size: 12px;
     width: 100%;
     box-sizing: border-box;
     transition: border-color 0.2s;
@@ -87,11 +90,11 @@ textarea.student-input {
 }
 
 .student-btn {
-    padding: 10px 20px;
-    background-color: #007bff;
+    padding: 10px 16px !important ;
+    background-color: #509CDB;
     color: #fff;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 15px !important;
+    font-weight: 400;
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -99,16 +102,16 @@ textarea.student-input {
 }
 
 .student-btn:hover {
-    background-color: #0056b3;
+    background-color: #509CDB;
 }
 
 .student-btn-cancel {
-    background-color: #ccc;
+    background-color: #EFEFEF;
     color: #333;
 }
 
 .student-btn-cancel:hover {
-    background-color: #999;
+    background-color: #d9d9d9;
 }
 
 /* Two-column layout for larger screens */

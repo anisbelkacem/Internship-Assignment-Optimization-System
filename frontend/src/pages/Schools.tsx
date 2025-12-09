@@ -430,7 +430,7 @@ export default function Schools() {
           <button className="btn-import" onClick={() => setShowImportModal(true)}>
              Excel importieren
           </button>
-          <button className="btn-primary" onClick={() => handleOpenModal()}>
+          <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
             <span>+</span> Schule hinzufügen
           </button>
         </div>
