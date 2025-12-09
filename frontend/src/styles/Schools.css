@@ -27,8 +27,8 @@
 }
 
 .btn-primary {
-  padding: 0.75rem 1.5rem;
-  background-color: #1e3a8a;
+  padding: 0.5rem 1rem;
+  background-color: #509CDB;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -42,7 +42,11 @@
 }
 
 .btn-primary:hover {
-  background-color: #1e40af;
+  background-color: #4189c7;
+}
+
+.btn-add-school {
+  min-width: 220px !important;
 }
 
 .btn-secondary {
@@ -78,10 +82,10 @@
 }
 
 .btn-import {
-  padding: 0.75rem 1.5rem;
-  background-color: #10b981;
-  color: white;
-  border: none;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  color: black;
+  border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   cursor: pointer;
   font-weight: 600;
@@ -93,7 +97,7 @@
 }
 
 .btn-import:hover {
-  background-color: #059669;
+  background-color: #f9fafb;
 }
 
 .loading-container {

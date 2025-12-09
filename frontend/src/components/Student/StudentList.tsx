@@ -50,7 +50,7 @@ const StudentList: React.FC = () => {
 
     return (
             <div className="student-list-container">
-                <h2 className="student-list-title">Studierendet</h2>
+                <h2 className="student-list-title">Studierende</h2>
 
                 <div className="student-list-controls">
                     <button className="student-btn" onClick={() => setEditMode(!editMode)}>

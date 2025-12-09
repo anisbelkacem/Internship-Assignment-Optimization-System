@@ -1,17 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700&display=swap');
+
 /* StudentList.css */
 /* Container */
 .student-list-container {
+    font-family: 'Kumbh Sans', sans-serif;
     padding: 20px;
-    background-color: rgb(21, 34, 89) ; /* light blue */
+    background-color: rgb(255, 255, 255) ; /* light blue */
     border-radius: 12px;
-    max-width: 900px;
+    max-width: 1200px;
     margin: 20px auto;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+     border: 1px solid #E5E7EB;
 }
 
 /* Title */
 .student-list-title {
-    font-size: 24px;
+    font-size: 2rem;
     margin-bottom: 15px;
     text-align: center;
 }
@@ -22,30 +26,33 @@
     justify-content: center;
     gap: 10px;
     margin-bottom: 20px;
+    margin-top: 25px;
 }
 
-/* Buttons */
-.student-btn {
-    padding: 8px 16px;
-    border: none;
+/* Top controls (Edit/Create) */
+.student-list-controls .student-btn {
+    padding: 12px 22px;
+    border: 1px solid #3b82f6;
     border-radius: 8px;
-    background-color: rgb(80, 156, 219);
-    color: white;
-    font-weight: bold;
+    background-color: white;
+    color: #3b82f6;
+    font-weight: 450;
     cursor: pointer;
-    transition: 0.2s;
+    transition: none;
 }
 
-.student-btn:hover {
-    background-color: #005fa3;
+.student-list-controls .student-btn:hover {
+    background-color: white;
 }
 
-.student-btn-create {
-    background-color: #00a86b;
+.student-list-controls .student-btn-create {
+    background-color: white;
+    border: 1px solid #ef4444;
+    color: #ef4444;
 }
 
-.student-btn-create:hover {
-    background-color: #00774f;
+.student-list-controls .student-btn-create:hover {
+    background-color: white;
 }
 
 .student-btn-delete {
@@ -103,19 +110,20 @@
 }
 
 .student-btn-delete {
-    background-color: #cc4f4f;
-    color: #fff;
+    background-color: #ffffff;
+    color: #509CDB;
+    border: 1px solid #509CDB;
 }
 
 .student-btn-delete:hover {
-    background-color: #a33737;
+    background-color: #EFEFEF;
 }
 
 .student-btn-update {
-    background-color: #4a90e2;
+    background-color: #509CDB;
     color: #fff;
 }
 
 .student-btn-update:hover {
-    background-color: #3571b8;
+    background-color: #509CDB;
 }
