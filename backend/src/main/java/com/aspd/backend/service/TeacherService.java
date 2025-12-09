@@ -320,11 +320,19 @@ public class TeacherService {
         String firstName = readString(row, headerIndex.get("firstname"));
         String lastName = readString(row, headerIndex.get("lastname"));
         String email = readString(row, headerIndex.get("email"));
-        String mainSubjectRaw = readString(row, headerIndex.get("mainsubject"));
-        String schoolIdRaw = readString(row, headerIndex.get("schoolid"));
+
+        Integer mainSubjectIdx = headerIndex.get("mainsubject");
+        Integer schoolIdIdx = headerIndex.get("schoolid");
+        Integer schoolNameIdx = headerIndex.get("schoolname");
+
+        String mainSubjectRaw = readString(row, mainSubjectIdx);
+        String schoolIdRaw = readString(row, schoolIdIdx);
+        String schoolNameRaw = readString(row, schoolNameIdx);
 
         if (isBlank(firstName) || isBlank(lastName) || isBlank(email)) {
-            throw new InvalidDataException("Required fields missing or invalid (firstName, lastName, email)");
+            throw new InvalidDataException(
+                    "Required fields missing or invalid (firstName, lastName, email)"
+            );
         }
         if (isBlank(mainSubjectRaw)) {
             throw new InvalidDataException("mainSubject is required");
@@ -334,8 +342,11 @@ public class TeacherService {
         try {
             mainSubject = Course.valueOf(mainSubjectRaw.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            throw new InvalidDataException("mainSubject", mainSubjectRaw,
-                    "must be one of: " + List.of(Course.values()));
+            throw new InvalidDataException(
+                    "mainSubject",
+                    mainSubjectRaw,
+                    "must be one of: " + List.of(Course.values())
+            );
         }
 
         Teacher teacher = new Teacher();
@@ -344,20 +355,42 @@ public class TeacherService {
         teacher.setEmail(email.trim());
         teacher.setMainSubject(mainSubject);
 
+        // ---- NEW: resolve School via ID OR Name ----
+        School school = null;
+
+        // 1) Try schoolId if present
         if (!isBlank(schoolIdRaw)) {
             try {
                 Long schoolId = Long.valueOf(schoolIdRaw.trim());
-                School school = schoolRepository.findById(schoolId)
-                        .orElseThrow(() -> new InvalidDataException("schoolId", schoolId,
-                                "School not found"));
-                teacher.setSchool(school);
+                school = schoolRepository.findById(schoolId)
+                        .orElseThrow(() -> new InvalidDataException(
+                                "schoolId",
+                                schoolId,
+                                "School not found"
+                        ));
             } catch (NumberFormatException ex) {
                 throw new InvalidDataException("schoolId", schoolIdRaw, "must be a valid number");
             }
         }
 
+        // 2) If no school from ID, try schoolName (optional column)
+        if (school == null && !isBlank(schoolNameRaw)) {
+            school = schoolRepository.findByNameIgnoreCase(schoolNameRaw.trim())
+                    .orElseThrow(() -> new InvalidDataException(
+                            "schoolName",
+                            schoolNameRaw,
+                            "School not found"
+                    ));
+        }
+
+        // if neither id nor name given/found, school stays null → allowed
+        if (school != null) {
+            teacher.setSchool(school);
+        }
+
         return teacher;
     }
+
 
 
     private String headerString(Cell cell) {
