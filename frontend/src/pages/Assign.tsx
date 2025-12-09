@@ -280,7 +280,7 @@ export default function InternshipAssignments() {
             className="btn-primary btn-auto-assign"
             onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
           >
-            🔄 {showTeacherAssignments ? "Clear" : "Auto Assign"}
+            {showTeacherAssignments ? "Clear" : "Auto Assign"}
           </button>
         </div>
         <div className="table-container">
@@ -420,7 +420,7 @@ export default function InternshipAssignments() {
             className="btn-primary btn-auto-assign"
             onClick={() => setShowStudentAssignments(!showStudentAssignments)}
           >
-            🔄 {showStudentAssignments ? "Clear" : "Auto Assign"}
+            {showStudentAssignments ? "Clear" : "Auto Assign"}
           </button>
         </div>
         <div className="table-container">
