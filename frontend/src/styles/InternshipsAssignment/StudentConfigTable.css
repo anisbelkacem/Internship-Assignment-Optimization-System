@@ -9,12 +9,49 @@
     width: 100%;
     border-collapse: collapse;
     color: white;
+    table-layout: auto; /* allow natural width growth; will overflow-x in wrapper */
 }
 
 .config-table th {
     padding: 8px;
     text-align: left;
     border-bottom: 2px solid #517c9e;
+    font-size: 10px !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #a8b5c8;
+    white-space: nowrap !important; /* keep header on a single line */
+    word-break: normal; /* do not break words */
+    hyphens: manual; /* do not auto-hyphenate */
+    overflow: visible;
+}
+
+/* Provide breathing room for longer header labels */
+.config-table th,
+.config-table td {
+    max-width: none;
+}
+
+/* Suggested minimum widths to keep headers on one line without cramping */
+.config-table th:nth-child(7) { /* MAIN COURSE */
+    min-width: 140px;
+}
+.config-table th:nth-child(8) { /* PREFERRED COURSES */
+    min-width: 170px;
+}
+.config-table th:nth-child(9) { /* ACTIONS (when editMode=true) */
+    min-width: 110px;
+}
+
+/* Larger text for internship type headers - PDP-I, PDP-II, ZSP, SFP */
+.config-table th:nth-child(9),
+.config-table th:nth-child(10),
+.config-table th:nth-child(11),
+.config-table th:nth-child(12) {
+    font-size: 14px !important;
+    color: #ffffff;
+    font-weight: 700;
 }
 
 .config-table td {
@@ -32,23 +69,43 @@
 
 .edit-btn {
     margin-right: 8px;
-    padding: 4px 8px;
+    padding: 4px 10px;
     background: #2b8df0;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .delete-btn {
-    padding: 4px 8px;
+    padding: 4px 10px;
     background: #d14d4d;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .loading-text {
     color: white;
+}
+
+/* Overrides to align Student Config with Praktikumsplanung styles */
+.student-config-table th {
+    white-space: nowrap;
+}
+.student-config-table th:nth-child(7) { /* MAIN COURSE */
+    min-width: 140px;
+}
+.student-config-table th:nth-child(8) { /* PREFERRED COURSES */
+    min-width: 170px;
+}
+.student-config-table th:nth-child(9) { /* ACTIONS */
+    min-width: 110px;
 }

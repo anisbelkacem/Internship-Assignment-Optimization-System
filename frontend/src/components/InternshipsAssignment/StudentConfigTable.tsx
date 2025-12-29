@@ -29,19 +29,19 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
     if (loading) return <p className="loading-text">Loading configs...</p>;
 
     return (
-        <div className="config-table-wrapper">
-            <table className="config-table">
+        <div className="table-container student-config-table">
+            <table className="schools-table">
                 <thead>
                     <tr>
-                        <th>Student ID</th>
-                        <th>School Type</th>
-                        <th>PDP I</th>
-                        <th>PDP II</th>
-                        <th>ZSP</th>
-                        <th>SFP</th>
-                        <th>Main Course</th>
-                        <th>Preferred Courses</th>
-                        {editMode && <th>Actions</th>}
+                        <th style={{ whiteSpace: 'nowrap' }}>Student ID</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>School Type</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>PDP I</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>PDP II</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>ZSP</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>SFP</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Main Course</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Preferred Courses</th>
+                        {editMode && <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>Actions</th>}
                     </tr>
                 </thead>
 
@@ -58,9 +58,9 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
                             <td>{c.prefCourse1}, {c.prefCourse2}, {c.prefCourse3}</td>
 
                             {editMode && (
-                                <td>
+                                <td style={{ textAlign: 'center' }}>
                                     <button
-                                        className="edit-btn"
+                                        className="btn btn-sm"
                                         onClick={() => onEdit(c)}
                                     >
                                         Edit
@@ -68,7 +68,8 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
 
                                     {c.id !== undefined && (
                                         <button
-                                            className="delete-btn"
+                                            className="btn btn-sm"
+                                            style={{ marginLeft: '8px', backgroundColor: '#d14d4d' }}
                                             onClick={() => handleDelete(c.id)}
                                         >
                                             Delete

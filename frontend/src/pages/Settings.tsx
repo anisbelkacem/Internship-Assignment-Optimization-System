@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import userService, { Permission } from '../services/userService';
-import type { User, UserCreate} from '../services/userService';
+import type { User, UserCreate } from '../services/userService';
 
 import '../styles/Users.css';
 
@@ -131,86 +131,89 @@ export default function Settings() {
   }
 
   return (
-    <div className="users-container">
+    <section className="section-container settings-section">
       {error && (
-        <div className="error-container">
+        <div className="inline-alert error">
           <strong>Fehler:</strong> {error}
-          <button onClick={fetchUsers} className="btn-secondary" style={{ marginLeft: '1rem' }}>
+          <button onClick={fetchUsers} className="btn btn-ghost btn-sm" style={{ marginLeft: 8 }}>
             Erneut versuchen
           </button>
         </div>
       )}
 
-      <div className="users-header">
-        <div className="users-header-content">
-          <h1>Benutzerverwaltung</h1>
-          <p>Verwalten Sie alle Benutzer im System</p>
+      <div className="section-header">
+        <div>
+          <h2>Benutzerverwaltung</h2>
+          <p className="settings-subtitle">Verwalten Sie alle Benutzer im System.</p>
         </div>
-        <button className="btn-primary" onClick={() => handleOpenModal()}>
-          + Neuer Benutzer
-        </button>
+        <div className="section-header-actions">
+          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+            Nutzer anlegen
+          </button>
+        </div>
       </div>
 
-      {users.length === 0 ? (
-        <div className="empty-state">
-          <p style={{ color: '#6b7280', fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-            Keine Benutzer gefunden
-          </p>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-            Fügen Sie einen neuen Benutzer hinzu, um zu beginnen
-          </p>
+      <div className="table-card">
+        <div className="table-card-header">
+          <div className="table-card-title">
+            <h3>Benutzerliste</h3>
+            <span className="table-card-subtitle">Alle Konten mit Berechtigungen</span>
+          </div>
+          <span className="table-count">{users.length} Nutzer</span>
         </div>
-      ) : (
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>E-Mail</th>
-                <th>Berechtigungen</th>
-                <th style={{ textAlign: 'right' }}>Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="user-name">{user.firstName} {user.lastName}</div>
-                  </td>
-                  <td>
-                    <div className="user-email">{user.email}</div>
-                  </td>
-                  <td>
-                    {user.permissions.map(perm => (
-                      <span key={perm} className="badge badge-permission">
-                        {getPermissionLabel(perm)}
-                      </span>
-                    ))}
-                  </td>
-                  <td>
-                    <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
-                      <button className="btn-secondary" onClick={() => handleOpenModal(user)}>
-                        Bearbeiten
-                      </button>
-                      <button className="btn-danger" onClick={() => handleDelete(user.id)}>
-                        Löschen
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
-      <div className="users-summary">
+        {users.length === 0 ? (
+          <p className="table-empty">Keine Benutzer gefunden. Legen Sie einen neuen Nutzer an, um zu beginnen.</p>
+        ) : (
+          <div className="table-container">
+            <table className="settings-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>E-Mail</th>
+                  <th>Berechtigungen</th>
+                  <th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td className="cell-strong">{user.firstName} {user.lastName}</td>
+                    <td className="cell-muted">{user.email}</td>
+                    <td>
+                      <div className="pill-list">
+                        {user.permissions.map((perm) => (
+                          <span key={perm} className="pill">
+                            {getPermissionLabel(perm)}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleOpenModal(user)}>
+                          Bearbeiten
+                        </button>
+                        <button className="btn btn-ghost btn-sm danger" onClick={() => handleDelete(user.id)}>
+                          Löschen
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-summary">
         <span className="summary-text">
           Gesamt: <strong>{users.length}</strong> Benutzer
         </span>
         <div className="summary-stats">
-          {Object.values(Permission).map(permission => {
-            const count = users.filter(u => u.permissions.includes(permission)).length;
+          {Object.values(Permission).map((permission) => {
+            const count = users.filter((u) => u.permissions.includes(permission)).length;
             return count > 0 ? (
               <div key={permission} className="stat-item">
                 {getPermissionLabel(permission)}: {count}
@@ -220,17 +223,16 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingUser ? 'Benutzer bearbeiten' : 'Neuer Benutzer'}</h2>
             </div>
-            
-            <div className="modal-body">
+
+            <div className="modal-body settings-form">
               <div className="form-group">
-                <label className="form-label">Vorname *</label>
+                <label className="form-label required">Vorname</label>
                 <input
                   type="text"
                   className="form-input"
@@ -241,7 +243,7 @@ export default function Settings() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Nachname *</label>
+                <label className="form-label required">Nachname</label>
                 <input
                   type="text"
                   className="form-input"
@@ -252,7 +254,7 @@ export default function Settings() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">E-Mail *</label>
+                <label className="form-label required">E-Mail</label>
                 <input
                   type="email"
                   className="form-input"
@@ -263,8 +265,8 @@ export default function Settings() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Passwort {editingUser ? '(leer lassen, um beizubehalten)' : '*'}
+                <label className="form-label required">
+                  Passwort {editingUser ? '(leer lassen, um beizubehalten)' : ''}
                 </label>
                 <input
                   type="password"
@@ -278,7 +280,7 @@ export default function Settings() {
               <div className="form-group">
                 <label className="form-label">Berechtigungen auswählen *</label>
                 <div className="checkbox-group">
-                  {Object.values(Permission).map(permission => (
+                  {Object.values(Permission).map((permission) => (
                     <div key={permission} className="checkbox-item">
                       <input
                         type="checkbox"
@@ -296,16 +298,16 @@ export default function Settings() {
             </div>
 
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={handleCloseModal}>
+              <button className="btn btn-ghost" onClick={handleCloseModal}>
                 Abbrechen
               </button>
-              <button className="btn-primary" onClick={handleSubmit}>
+              <button className="btn btn-primary" onClick={handleSubmit}>
                 {editingUser ? 'Aktualisieren' : 'Erstellen'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

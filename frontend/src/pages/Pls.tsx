@@ -5,7 +5,6 @@ import plService, {
   type TeacherDto,
 } from "../services/plService";
 import "../styles/Pls/Pls.css";
-import "../styles/Schools.css"; 
 
 import PlFormModal, {
   type PlFormValues,
@@ -197,131 +196,104 @@ export default function Pls() {
   const hasPls = useMemo(() => pls.length > 0, [pls]);
 
   return (
-    <section className="pls-table-section">
-      {/* Page header */}
-      <div className="pls-header">
+    <section className="section-container pls-section">
+      <div className="section-header">
         <div>
           <h2>PL-Management</h2>
-          <p style={{ fontSize: 13, color: "#6f7276", marginTop: 4 }}>
+          <p className="pls-subtitle">
             Betreuer mit Fächerspezialisierungen, Arbeitslast und
             Praktikumspräferenzen verwalten.
           </p>
         </div>
-        <div className="pls-actions" style={{ gap: 8 }}>
+        <div className="section-header-actions">
           <button
             type="button"
-            className="btn-primary"
+            className="btn btn-ghost"
             onClick={handleOpenImportModal}
           >
             PLs importieren
           </button>
           <button
             type="button"
-            className="btn-primary"
+            className="btn btn-primary"
             onClick={() => handleOpenFormModal()}
           >
-            Neuen PL hinzufügen
+            PL hinzufügen
           </button>
         </div>
       </div>
 
-      {/* Messages */}
-      {error && (
-        <div
-          style={{
-            padding: "10px 12px",
-            backgroundColor: "#fee2e2",
-            borderRadius: 8,
-            color: "#b91c1c",
-            fontSize: 13,
-            marginBottom: 12,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="inline-alert error">{error}</div>}
+      {success && <div className="inline-alert success">{success}</div>}
 
-      {success && (
-        <div
-          style={{
-            padding: "10px 12px",
-            backgroundColor: "#ecfdf3",
-            borderRadius: 8,
-            color: "#15803d",
-            fontSize: 13,
-            marginBottom: 12,
-          }}
-        >
-          {success}
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="cards">
-        <div className="card pl-table">
-          <div className="card-header">
+      <div className="table-card">
+        <div className="table-card-header">
+          <div className="table-card-title">
             <h3>Betreuerliste</h3>
-            <span className="card-count">
-              {pls.length} {pls.length === 1 ? "Eintrag" : "Einträge"}
+            <span className="table-card-subtitle">
+              Übersicht aller Praktikumsleitungen
             </span>
           </div>
+          <span className="table-count">
+            {pls.length} {pls.length === 1 ? "Eintrag" : "Einträge"}
+          </span>
+        </div>
 
-          {loading && <p>Lade Daten...</p>}
+        {loading && <p className="table-status">Lade Daten...</p>}
 
-          {!loading && !hasPls && (
-            <p style={{ fontSize: 14, color: "#6f7276" }}>
-              Es sind noch keine PLs erfasst. Nutzen Sie oben{" "}
-              <strong>„Neuen PL hinzufügen“</strong>, um einen Betreuer
-              anzulegen.
-            </p>
-          )}
+        {!loading && !hasPls && (
+          <p className="table-empty">
+            Es sind noch keine PLs erfasst. Nutzen Sie oben
+            <strong> „Neuen PL hinzufügen“</strong>, um einen Betreuer
+            anzulegen.
+          </p>
+        )}
 
-          {!loading && hasPls && (
-            <div className="pl-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Hauptfach</th>
-                    <th>Schule</th>
-                    <th>E-Mail</th>
-                    <th>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pls.map((pl) => (
-                    <tr key={pl.teacherId}>
-                      <td>
-                        {pl.firstName} {pl.lastName}
-                      </td>
-                      <td>{pl.mainSubject}</td>
-                      <td>{pl.schoolName ?? "-"}</td>
-                      <td>{pl.email}</td>
-                      <td>
+        {!loading && hasPls && (
+          <div className="table-container">
+            <table className="pls-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Hauptfach</th>
+                  <th>Schule</th>
+                  <th>E-Mail</th>
+                  <th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pls.map((pl) => (
+                  <tr key={pl.teacherId}>
+                    <td>
+                      {pl.firstName} {pl.lastName}
+                    </td>
+                    <td>{pl.mainSubject}</td>
+                    <td>{pl.schoolName ?? "-"}</td>
+                    <td>{pl.email}</td>
+                    <td>
+                      <div className="table-actions">
                         <button
                           type="button"
-                          className="btn-ghost"
+                          className="btn btn-ghost btn-sm"
                           onClick={() => handleEdit(pl)}
                         >
                           Bearbeiten
                         </button>
-                        {"  "}
                         <button
                           type="button"
-                          className="btn-ghost"
-                          style={{ color: "#b91c1c" }}
+                          className="btn btn-ghost btn-sm danger"
                           onClick={() => handleDelete(pl)}
                         >
                           Löschen
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* PL create/edit modal */}

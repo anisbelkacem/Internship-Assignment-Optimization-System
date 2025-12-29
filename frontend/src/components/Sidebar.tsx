@@ -1,28 +1,37 @@
 import type { FC } from "react";
-import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/Uni.png";
 
 const Sidebar: FC = () => {
-  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [expandedSubmenu, setExpandedSubmenu] = useState<string | null>(null);
+  const location = useLocation();
 
-  useEffect(() => {
-    const listener = () => setOpen((v) => !v);
-    window.addEventListener("toggleSidebar", listener as EventListener);
-    return () => window.removeEventListener("toggleSidebar", listener as EventListener);
-  }, []);
+  const toggleSidebar = () => {
+    setCollapsed(!collapsed);
+    document.body.classList.toggle('sidebar-collapsed');
+  };
 
-  const close = () => setOpen(false);
+  const toggleSubmenu = (menuId: string) => {
+    setExpandedSubmenu(expandedSubmenu === menuId ? null : menuId);
+  };
+
+  const isAssignmentsActive = location.pathname === '/assignments';
 
   return (
-    <aside className={`app-sidebar ${open ? "open" : ""}`}>
-      <div className="sidebar-top">
-        <img src={logo} alt="Universitätslogo" className="sidebar-logo" />
-        <div className="sidebar-brand">
-          Praktikumsamt
-          <span className="small">Universität Passau</span>
+    <>
+      <button className="sidebar-expand-dots" onClick={toggleSidebar} aria-label="Sidebar anzeigen">
+        <span>⋮</span>
+      </button>
+      <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-top">
+          <img src={logo} alt="Universitätslogo" className="sidebar-logo" />
+          <div className="sidebar-brand">
+            Praktikumsamt
+            <span className="small">Universität Passau</span>
+          </div>
         </div>
-      </div>
       <div className="aside-divider" />
       <nav>
         <ul>
@@ -70,8 +79,12 @@ const Sidebar: FC = () => {
               Schulen
             </NavLink>
           </li>
-          <li>
-            <NavLink to="/assignments" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+          <li className={`submenu-item ${isAssignmentsActive ? 'active' : ''}`}>
+            <button 
+              className="submenu-toggle"
+              onClick={() => toggleSubmenu('assignments')}
+              aria-expanded={expandedSubmenu === 'assignments'}
+            >
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                   <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
@@ -79,7 +92,27 @@ const Sidebar: FC = () => {
                 </svg>
               </span>
               Praktikumsplanung
-            </NavLink>
+              <span className={`chevron ${expandedSubmenu === 'assignments' ? 'expanded' : ''}`}>▼</span>
+            </button>
+            {expandedSubmenu === 'assignments' && (
+              <ul className="submenu">
+                <li>
+                  <NavLink to="/assignments" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                    Zuweisungen
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/assignments?tab=pl-config" className={location.pathname === '/assignments' && location.search === '?tab=pl-config' ? "nav-link active" : "nav-link"}>
+                    PL-Config
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/assignments?tab=student-config" className={location.pathname === '/assignments' && location.search === '?tab=student-config' ? "nav-link active" : "nav-link"}>
+                    Studenten-Config
+                  </NavLink>
+                </li>
+              </ul>
+            )}
           </li>
           <li>
             <NavLink to="/reports" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
@@ -105,10 +138,14 @@ const Sidebar: FC = () => {
           </li>
         </ul>
       </nav>
-
-      {/* backdrop for small screens */}
-      <div className="sidebar-backdrop" style={{ display: open ? "block" : "none" }} onClick={close} />
+      <button className="sidebar-toggle-bottom" onClick={toggleSidebar} aria-label="Collapse sidebar">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="8" height="18" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M13 7h8M13 12h8M13 17h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
     </aside>
+    </>
   );
 };
 

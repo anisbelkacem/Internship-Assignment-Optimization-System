@@ -2,51 +2,53 @@ import type { FC } from "react";
 
 const RightPanel: FC = () => (
   <div className="right-panel">
-    <div className="card zones-card">
-      <div className="card-header">
-        <h3>Schulen & Zonen</h3>
-        <div className="card-count">100 Schulen</div>
+    {/* Quick Actions Panel */}
+    <div className="section-container">
+      <div className="section-header">
+        <h2>⚡ Schnellaktionen</h2>
       </div>
-
-      <div className="zone-row">
-        <div className="zone-info">
-          <div className="zone-title">GS St. Nikola</div>
-          <div className="zone-sub">Zone 1 • ÖPNV: Yes</div>
-        </div>
-        <div className="badge">5 PLs</div>
+      <div className="quick-actions-list">
+        <button className="quick-action-btn">
+          <span className="card-icon">➕</span>
+          <span className="action-text">Neue Zuweisung starten</span>
+        </button>
+        <button className="quick-action-btn">
+          <span className="card-icon">📥</span>
+          <span className="action-text">Studierendenliste importieren</span>
+        </button>
+        <button className="quick-action-btn">
+          <span className="card-icon">📄</span>
+          <span className="action-text">Planungsbriefe generieren</span>
+        </button>
       </div>
-
-      <div className="zone-row">
-        <div className="zone-info">
-          <div className="zone-title">MS Hohenau</div>
-          <div className="zone-sub">Zone 3 • ÖPNV: No</div>
-        </div>
-        <div className="badge">2 PLs</div>
-      </div>
-
-      <button className="btn btn-primary full">Map View (placeholder)</button>
     </div>
 
-    <div className="card quick-reports">
-      <h3>Quick Reports</h3>
-      <div className="report-row">
-        <div className="report-inner">
-          <div className="report-info">
-            <div className="report-title">Vorjahr Einsatzplanung</div>
-            <div className="report-sub">Historie mit PL-Zuweisungen</div>
+    {/* Map Section */}
+    <div className="section-container">
+      <div className="section-header">
+        <h2>🗺️ Schulen & Zonen</h2>
+        <span className="badge">100 Schulen</span>
+      </div>
+
+      <div className="school-list">
+        <div className="school-item">
+          <div className="card-content">
+            <h3>GS St. Nikola</h3>
+            <p>Zone 1 • ÖPNV: Yes</p>
           </div>
-          <button className="btn report-download">Download</button>
+          <span className="badge primary">5 PLs</span>
+        </div>
+
+        <div className="school-item">
+          <div className="card-content">
+            <h3>MS Hohenau</h3>
+            <p>Zone 3 • ÖPNV: No</p>
+          </div>
+          <span className="badge primary">2 PLs</span>
         </div>
       </div>
-      <div className="report-row">
-        <div className="report-inner">
-          <div className="report-info">
-            <div className="report-title">Ermäßigungsstunden Übersicht</div>
-            <div className="report-sub">Zuweisung pro Schulamt</div>
-          </div>
-          <button className="btn report-download">Download</button>
-        </div>
-      </div>
+
+      <button className="btn btn-primary btn-full">Kartenansicht öffnen</button>
     </div>
   </div>
 );

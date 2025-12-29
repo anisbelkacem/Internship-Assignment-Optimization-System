@@ -83,43 +83,47 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </h3>
 
             <div className="student-field">
-                <label htmlFor="matriculationNbr">Matriculation Number</label>
+                <label className="required" htmlFor="matriculationNbr">Matriculation Number</label>
                 <input
                     id="matriculationNbr"
                     className="student-input"
                     type="number"
                     value={form.matriculationNbr}
                     onChange={e => handleChange("matriculationNbr", Number(e.target.value))}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="firstName">First Name</label>
+                <label className="required" htmlFor="firstName">First Name</label>
                 <input
                     id="firstName"
                     className="student-input"
                     value={form.firstName}
                     onChange={e => handleChange("firstName", e.target.value)}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="lastName">Last Name</label>
+                <label className="required" htmlFor="lastName">Last Name</label>
                 <input
                     id="lastName"
                     className="student-input"
                     value={form.lastName}
                     onChange={e => handleChange("lastName", e.target.value)}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="email">Email</label>
+                <label className="required" htmlFor="email">Email</label>
                 <input
                     id="email"
                     className="student-input"
                     value={form.email}
                     onChange={e => handleChange("email", e.target.value)}
+                    required
                 />
             </div>
 
@@ -155,12 +159,13 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="schoolType">School Type</label>
+                <label className="required" htmlFor="schoolType">School Type</label>
                 <select
                     id="schoolType"
                     className="student-input"
                     value={form.schoolType}
                     onChange={e => handleChange("schoolType", e.target.value as SchoolType)}
+                    required
                 >
                     <option value="GS">GS</option>
                     <option value="HS">MS</option>
@@ -168,78 +173,79 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="mainCourse">Main Course</label>
+                <label className="required" htmlFor="mainCourse">Main Course</label>
                 <select
                     id="mainCourse"
                     className="student-input"
                     value={form.mainCourse}
                     onChange={e => handleChange("mainCourse", e.target.value as Course)}
+                    required
                 >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
+                    <option value="COMPUTER_SCIENCE">Computer Science</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="BUSINESS">Business</option>
+                    <option value="MEDICINE">Medicine</option>
+                    <option value="LAW">Law</option>
+                    <option value="ARTS">Arts</option>
+                    <option value="SCIENCES">Sciences</option>
+                    <option value="OTHER">Other</option>
                 </select>
             </div>
 
             <div className="student-field">
-                <label htmlFor="prefCourse1">Preferred Course 1</label>
+                <label htmlFor="prefCourse1">Course 1</label>
                 <select
                     id="prefCourse1"
                     className="student-input"
                     value={form.prefCourse1}
                     onChange={e => handleChange("prefCourse1", e.target.value as Course)}
                 >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
+                    <option value="COMPUTER_SCIENCE">Computer Science</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="BUSINESS">Business</option>
+                    <option value="MEDICINE">Medicine</option>
+                    <option value="LAW">Law</option>
+                    <option value="ARTS">Arts</option>
+                    <option value="SCIENCES">Sciences</option>
+                    <option value="OTHER">Other</option>
                 </select>
             </div>
 
             <div className="student-field">
-                <label htmlFor="prefCourse2">Preferred Course 2</label>
+                <label htmlFor="prefCourse2">Course 2</label>
                 <select
                     id="prefCourse2"
                     className="student-input"
                     value={form.prefCourse2}
                     onChange={e => handleChange("prefCourse2", e.target.value as Course)}
                 >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
+                    <option value="COMPUTER_SCIENCE">Computer Science</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="BUSINESS">Business</option>
+                    <option value="MEDICINE">Medicine</option>
+                    <option value="LAW">Law</option>
+                    <option value="ARTS">Arts</option>
+                    <option value="SCIENCES">Sciences</option>
+                    <option value="OTHER">Other</option>
                 </select>
             </div>
 
             <div className="student-field">
-                <label htmlFor="prefCourse3">Preferred Course 3</label>
+                <label htmlFor="prefCourse3">Course 3</label>
                 <select
                     id="prefCourse3"
                     className="student-input"
                     value={form.prefCourse3}
                     onChange={e => handleChange("prefCourse3", e.target.value as Course)}
                 >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
+                    <option value="COMPUTER_SCIENCE">Computer Science</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="BUSINESS">Business</option>
+                    <option value="MEDICINE">Medicine</option>
+                    <option value="LAW">Law</option>
+                    <option value="ARTS">Arts</option>
+                    <option value="SCIENCES">Sciences</option>
+                    <option value="OTHER">Other</option>
                 </select>
             </div>
 
@@ -290,10 +296,10 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             ))}
 
             <div className="student-form-actions">
-                <button className="student-btn" onClick={handleSubmit}>
+                <button className="btn btn-primary" onClick={handleSubmit}>
                     {student ? "Update" : "Create"}
                 </button>
-                <button className="student-btn student-btn-cancel" onClick={onClose}>
+                <button className="btn btn-secondary" onClick={onClose}>
                     Cancel
                 </button>
             </div>
