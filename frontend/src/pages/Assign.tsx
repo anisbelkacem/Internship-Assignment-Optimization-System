@@ -41,12 +41,7 @@ export default function InternshipAssignments() {
   const [showTeacherAssignments, setShowTeacherAssignments] = useState(false);
   const [showStudentAssignments, setShowStudentAssignments] = useState(false);
 
-  // Student Configuration Modal State
-  const [showStudentConfigTable, setShowStudentConfigTable] = useState(false);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
-
-  // Teacher Configuration Modal State
-  const [showTeacherConfigTable, setShowTeacherConfigTable] = useState(false);
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
 
   // New Year Modal State
@@ -267,141 +262,157 @@ export default function InternshipAssignments() {
           {/* Assignment for Teachers Results */}
           <section className="section-container">
             <div className="section-header">
-              <h2>Assignment for Teachers Results</h2>
+              <div>
+                <h2>Assignment for Teachers Results</h2>
+                <p style={{color: '#6f7276', fontSize: '13px', marginTop: '4px'}}>
+                  Übersicht der Lehrerzuweisungen
+                </p>
+              </div>
               <button 
                 className="btn btn-primary"
                 onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
               >
-                {showTeacherAssignments ? "Clear" : "Auto Assign"}
+                {showTeacherAssignments ? "Löschen" : "Zuweisen"}
               </button>
             </div>
-            <div className="table-container">
+
+            <div className="table-card">
+              <div className="table-card-header">
+                <div className="table-card-title">
+                  <h3>Lehrerzuweisungen</h3>
+                  <span className="table-card-subtitle">Alle Praktikumszuweisungen für Lehrkräfte</span>
+                </div>
+              </div>
+
               {!showTeacherAssignments ? (
-                <p className="empty-state">Click Auto Assign to generate teacher assignments</p>
+                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
               ) : (
-                <table className="schools-table">
-              <thead>
-                <tr>
-                  <th>Teacher Name</th>
-                  <th>Internship Assignments</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Dr. Smith Johnson</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-I</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A, Mittelschule B
-                        </div>
-                      </div>
-                      <div>
-                        <strong>ZSP - Physics</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule C
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Prof. Maria Garcia</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-II - German Literature</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule C, Mittelschule D
-                        </div>
-                      </div>
-                      <div>
-                        <strong>SFP - History</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dr. Thomas Weber</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>ZSP - Chemistry</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Mittelschule D, Grundschule A
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Anna Schmidt</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-I</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A
-                        </div>
-                      </div>
-                      <div>
-                        <strong>PDP-II - Biology</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Mittelschule B, Grundschule C
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Anna Schmidt')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dr. Michael Brown</td>
-                  <td>
-                    <div style={{color: '#f59e0b', fontStyle: 'italic'}}>
-                      No assignments yet
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        </div>
-        {showTeacherAssignments && (
-          <div style={{marginTop: '20px', display: 'flex', justifyContent: 'flex-end'}}>
-            <button className="btn btn-primary" style={{padding: '12px 30px', fontSize: '1rem', backgroundColor: '#10b981'}}>
-              Validate
-            </button>
-          </div>
-        )}
+                <div className="table-container">
+                  <table className="schools-table">
+                    <thead>
+                      <tr>
+                        <th>Lehrername</th>
+                        <th>Praktikumszuweisungen</th>
+                        <th>Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Dr. Smith Johnson</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-I</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A, Mittelschule B
+                              </div>
+                            </div>
+                            <div>
+                              <strong>ZSP - Physics</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule C
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Prof. Maria Garcia</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-II - German Literature</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule C, Mittelschule D
+                              </div>
+                            </div>
+                            <div>
+                              <strong>SFP - History</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Dr. Thomas Weber</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>ZSP - Chemistry</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Mittelschule D, Grundschule A
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Anna Schmidt</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-I</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A
+                              </div>
+                            </div>
+                            <div>
+                              <strong>PDP-II - Biology</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Mittelschule B, Grundschule C
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Anna Schmidt')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Dr. Michael Brown</td>
+                        <td>
+                          <div style={{color: '#d97706', fontStyle: 'italic'}}>
+                            Noch keine Zuweisungen
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {showTeacherAssignments && (
+              <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
+                <button className="btn btn-primary" style={{backgroundColor: '#15803d'}}>
+                  Überprüfen
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Assignment Results - Student */}
@@ -417,7 +428,7 @@ export default function InternshipAssignments() {
                 className="btn btn-primary"
                 onClick={() => setShowStudentAssignments(!showStudentAssignments)}
               >
-                {showStudentAssignments ? "Löschen" : "Automatisch zuweisen"}
+                {showStudentAssignments ? "Löschen" : "Zuweisen"}
               </button>
             </div>
 
@@ -430,7 +441,7 @@ export default function InternshipAssignments() {
               </div>
 
               {!showStudentAssignments ? (
-                <p className="table-empty">Klicken Sie auf „Automatisch zuweisen", um Zuweisungen zu generieren</p>
+                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
               ) : (
                 <div className="table-container">
                   <table className="schools-table">

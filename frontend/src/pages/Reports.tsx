@@ -1,20 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import "../styles/Reports.css";
 
 type Status = "Assigned" | "Not Assigned" | "Completed";
-
-interface InternshipRecord {
-  id: number;
-  studentName: string;
-  teacher: string;
-  internshipType: string;
-  schoolName: string;
-  status: Status;
-  date: string;
-  semester: string;
-  district: string;
-  zone: 1 | 2 | 3;
-}
 
 interface TrendPoint {
   year: number;
@@ -27,14 +14,6 @@ interface WorkloadEntry {
   label: string;
   value: number;
 }
-
-const mockInternships: InternshipRecord[] = [
-  { id: 1, studentName: "Max Miller", teacher: "Dr. Schmidt", internshipType: "PDP I", schoolName: "Passau GS", status: "Assigned", date: "15/12/2025", semester: "WiSe 24/25", district: "Passau", zone: 1 },
-  { id: 2, studentName: "Anna Weber", teacher: "Prof. Bauer", internshipType: "PDP II", schoolName: "Deggendorf MS", status: "Assigned", date: "14/12/2025", semester: "SoSe 24", district: "Deggendorf", zone: 2 },
-  { id: 3, studentName: "Thomas König", teacher: "Unassigned", internshipType: "SFP", schoolName: "Regen GS", status: "Not Assigned", date: "13/12/2025", semester: "WiSe 24/25", district: "Regen", zone: 1 },
-  { id: 4, studentName: "Lisa Fischer", teacher: "Dr. Wagner", internshipType: "ZSP", schoolName: "Freyung MS", status: "Completed", date: "12/12/2025", semester: "WiSe 24/25", district: "Freyung", zone: 3 },
-  { id: 5, studentName: "Paul Hoffmann", teacher: "Unassigned", internshipType: "PDP I", schoolName: "Landau GS", status: "Not Assigned", date: "11/12/2025", semester: "WiSe 24/25", district: "Landau", zone: 2 },
-];
 
 const trendData: TrendPoint[] = [
   { year: 2022, planned: 820, completed: 790, budgetUsed: 185 },
@@ -59,18 +38,6 @@ export default function Reports() {
   const internshipTypes = ["PDP I", "PDP II", "SFP", "ZSP"];
   const zones = ["1", "2", "3"];
   const statuses: Status[] = ["Assigned", "Not Assigned", "Completed"];
-
-  const filtered = useMemo(
-    () =>
-      mockInternships.filter((r) =>
-        (!semester || r.semester === semester) &&
-        (!district || r.district === district) &&
-        (!internshipType || r.internshipType === internshipType) &&
-        (!zone || String(r.zone) === zone) &&
-        (!status || r.status === status)
-      ),
-    [semester, district, internshipType, zone, status]
-  );
 
   return (
     <div className="reports-root">      {/* Critical Alerts Summary */}

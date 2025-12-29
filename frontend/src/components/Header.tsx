@@ -1,26 +1,11 @@
 import type { FC } from "react";
-import { useMemo, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const Header: FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const { title, subtitle } = useMemo(() => {
-    const map: Record<string, { title: string; subtitle?: string }> = {
-      "/": { title: "Dashboard", subtitle: "Planning Overview" },
-      "/dashboard": { title: "Dashboard", subtitle: "Planning Overview" },
-      "/students": { title: "Students" },
-      "/pls": { title: "Teachers (PLs)" },
-      "/schools": { title: "Schools" },
-      "/assignments": { title: "Internship Assignments" },
-      "/reports": { title: "Reports" },
-      "/settings": { title: "Settings" },
-    };
-    return map[location.pathname] ?? { title: location.pathname.replace("/", "") || "" };
-  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
