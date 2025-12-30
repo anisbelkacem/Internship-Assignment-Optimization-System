@@ -1,6 +1,6 @@
 package com.aspd.backend.model;
 
-public enum Course {
+public enum CourseEnum {
     //place holders for now;
     COMPUTER_SCIENCE,
     ENGINEERING,

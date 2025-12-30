@@ -1,7 +1,6 @@
 package com.aspd.backend.dto;
 
 import com.aspd.backend.model.Address;
-import com.aspd.backend.model.Course;
 import com.aspd.backend.model.SchoolType;
 
 import jakarta.persistence.*;
@@ -22,18 +21,10 @@ public class StudentDto {
     @Enumerated(EnumType.STRING)
     private SchoolType schoolType;
 
-    @Enumerated(EnumType.STRING)
-    private Course mainCourse;
-
-    @Enumerated(EnumType.STRING)
-    private Course prefCourse1;
-
-    @Enumerated(EnumType.STRING)
-    private Course prefCourse2;
-    
-    
-    @Enumerated(EnumType.STRING)
-    private Course prefCourse3;
+    private Long mainCourseId;
+    private Long prefCourse1Id;
+    private Long prefCourse2Id;
+    private Long prefCourse3Id;
 
     private boolean registred;
     private boolean oriented;

@@ -3,6 +3,7 @@ package com.aspd.backend.service;
 import com.aspd.backend.common.exception.NotFoundException;
 import com.aspd.backend.dto.StudentDto;
 import com.aspd.backend.model.Student;
+import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,8 +15,11 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
 
-    public StudentService(StudentRepository studentRepository) {
+    private final CourseRepository courseRepository;
+
+    public StudentService(StudentRepository studentRepository, CourseRepository courseRepository) {
         this.studentRepository = studentRepository;
+        this.courseRepository = courseRepository;
     }
 
     public List<Student> getAllStudents() {
@@ -33,10 +37,10 @@ public class StudentService {
         student.setLastName(dto.getLastName());
         student.setEmail(dto.getEmail());
         student.setSchoolType(dto.getSchoolType());
-        student.setMainCourse(dto.getMainCourse());
-        student.setPrefCourse1(dto.getPrefCourse1());
-        student.setPrefCourse2(dto.getPrefCourse2());
-        student.setPrefCourse3(dto.getPrefCourse3());
+        student.setMainCourse(courseRepository.findById(dto.getMainCourseId()).orElseThrow());
+        student.setPrefCourse1(courseRepository.findById(dto.getPrefCourse1Id()).orElseThrow());
+        student.setPrefCourse2(courseRepository.findById(dto.getPrefCourse2Id()).orElseThrow());
+        student.setPrefCourse3(courseRepository.findById(dto.getPrefCourse3Id()).orElseThrow());
         student.setRegistred(dto.isRegistred());
         student.setOriented(dto.isOriented());
         student.setAddress(dto.getAddress());
@@ -54,10 +58,14 @@ public class StudentService {
             student.setLastName(dto.getLastName());
             student.setEmail(dto.getEmail());
             student.setSchoolType(dto.getSchoolType());
-            student.setMainCourse(dto.getMainCourse());
-            student.setPrefCourse1(dto.getPrefCourse1());
-            student.setPrefCourse2(dto.getPrefCourse2());
-            student.setPrefCourse3(dto.getPrefCourse3());
+            student.setMainCourse(courseRepository.findById(dto.getMainCourseId())
+                    .orElseThrow(() -> new NotFoundException("Course", dto.getMainCourseId())));
+            student.setPrefCourse1(courseRepository.findById(dto.getPrefCourse1Id())
+                    .orElseThrow(() -> new NotFoundException("Course", dto.getPrefCourse1Id())));
+            student.setPrefCourse2(courseRepository.findById(dto.getPrefCourse2Id())
+                    .orElseThrow(() -> new NotFoundException("Course", dto.getPrefCourse2Id())));
+            student.setPrefCourse3(courseRepository.findById(dto.getPrefCourse3Id())
+                    .orElseThrow(() -> new NotFoundException("Course", dto.getPrefCourse3Id())));
             student.setRegistred(dto.isRegistred());
             student.setOriented(dto.isOriented());
             student.setAddress(dto.getAddress());
