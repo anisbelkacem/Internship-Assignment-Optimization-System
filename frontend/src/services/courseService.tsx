@@ -8,6 +8,8 @@ export interface Course {
 
 export interface CourseCreate {
   name: string;
+  active: boolean;
+
 }
 
 class CourseService {
@@ -27,7 +29,7 @@ class CourseService {
     return apiService.put<Course>(`/api/courses/${id}`, course);
   }
 
-  async deleteCourse(id: number): Promise<void> {
+  async deactivateCourse(id: number): Promise<void> {
     return apiService.delete<void>(`/api/courses/${id}`);
   }
 }

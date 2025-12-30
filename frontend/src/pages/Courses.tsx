@@ -11,9 +11,10 @@ export default function Courses() {
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   
-  const [formData, setFormData] = useState<CourseCreate>({
-    name: '',
-  });
+const [formData, setFormData] = useState<CourseCreate>({
+  name: '',
+  active: true,
+});
 
   useEffect(() => {
     fetchCourses();
@@ -34,20 +35,22 @@ export default function Courses() {
     }
   };
 
-  const handleOpenModal = (course?: Course) => {
-    if (course) {
-      setEditingCourse(course);
-      setFormData({
-        name: course.name,
-      });
-    } else {
-      setEditingCourse(null);
-      setFormData({
-        name: '',
-      });
-    }
-    setShowModal(true);
-  };
+const handleOpenModal = (course?: Course) => {
+  if (course) {
+    setEditingCourse(course);
+    setFormData({
+      name: course.name,
+      active: course.active,
+    });
+  } else {
+    setEditingCourse(null);
+    setFormData({
+      name: '',
+      active: true, // default new course = active
+    });
+  }
+  setShowModal(true);
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -77,18 +80,21 @@ export default function Courses() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Möchten Sie diesen Kurs wirklich löschen?')) {
-      return;
-    }
-    try {
-      await courseService.deleteCourse(id);
-      fetchCourses();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Löschen des Kurses';
-      setError(errorMessage);
-    }
-  };
+const handleDeactivate = async (id: number) => {
+  if (!window.confirm('Möchten Sie diesen Kurs wirklich deaktivieren?')) {
+    return;
+  }
+
+  try {
+    await courseService.deactivateCourse(id);
+    fetchCourses();
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Fehler beim Deaktivieren des Kurses';
+    setError(errorMessage);
+  }
+};
+
 
   if (loading) {
     return (
@@ -133,39 +139,64 @@ export default function Courses() {
         <div className="users-table-container">
           <table className="users-table">
             <thead>
-              <tr>
+            <tr>
                 <th>Kursname</th>
+                <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Aktionen</th>
-              </tr>
+            </tr>
             </thead>
             <tbody>
-              {courses.map((course) => (
-                <tr key={course.id}>
-                  <td>
-                    <div className="user-name">{course.name}</div>
-                  </td>
-                  <td>
-                    <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
-                      <button className="btn-secondary" onClick={() => handleOpenModal(course)}>
-                        Bearbeiten
-                      </button>
-                      <button className="btn-danger" onClick={() => handleDelete(course.id)}>
-                        Löschen
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+  {courses.map((course) => (
+    <tr key={course.id}>
+      <td>
+        <div className="user-name">{course.name}</div>
+      </td>
+
+      <td>
+        <span
+          style={{
+            padding: '0.25rem 0.5rem',
+            borderRadius: '0.375rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            color: course.active ? '#065f46' : '#991b1b',
+            backgroundColor: course.active ? '#d1fae5' : '#fee2e2',
+          }}
+        >
+          {course.active ? 'Aktiv' : 'Inaktiv'}
+        </span>
+      </td>
+
+      <td>
+        <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn-secondary" onClick={() => handleOpenModal(course)}>
+            Bearbeiten
+          </button>
+
+          {course.active && (
+            <button
+              className="btn-warning"
+              onClick={() => handleDeactivate(course.id)}
+            >
+              Deaktivieren
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
           </table>
         </div>
       )}
 
-      <div className="users-summary">
-        <span className="summary-text">
-          Gesamt: <strong>{courses.length}</strong> Kurse
-        </span>
-      </div>
+    <div className="users-summary">
+    <span className="summary-text">
+        Gesamt: <strong>{courses.length}</strong> Kurse | Aktiv:{' '}
+        <strong>{courses.filter(c => c.active).length}</strong>
+    </span>
+    </div>
 
       {/* Modal */}
       {showModal && (
@@ -182,11 +213,27 @@ export default function Courses() {
                   type="text"
                   className="form-input"
                   value={formData.name}
-                  onChange={(e) => setFormData({ name: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="z.B. Mathematik, Deutsch, Englisch"
                 />
               </div>
+            </div>
+
+            {/* Aktiv / Inaktiv */}
+            <div className="form-group">
+                <label className="form-checkbox">
+                <input
+                    type="checkbox"
+                    checked={formData.active}
+                    onChange={(e) =>
+                    setFormData({ ...formData, active: e.target.checked })
+                    }
+                />
+                <span style={{ marginLeft: '0.5rem' }}>
+                    Kurs ist aktiv
+                </span>
+                </label>
             </div>
 
             <div className="modal-footer">
