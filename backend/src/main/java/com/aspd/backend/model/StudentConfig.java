@@ -24,17 +24,22 @@ public class StudentConfig {
     private String year;
 
     // Identical copies of student's courses
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_course_id")
     private Course mainCourse;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course1_id")
     private Course prefCourse1;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course2_id")
     private Course prefCourse2;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course3_id")
     private Course prefCourse3;
+
     @Enumerated(EnumType.STRING)
     private SchoolType schoolType;
 

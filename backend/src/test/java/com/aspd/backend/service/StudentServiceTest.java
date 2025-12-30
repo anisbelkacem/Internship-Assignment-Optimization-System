@@ -2,7 +2,9 @@ package com.aspd.backend.service;
 
 import com.aspd.backend.dto.StudentDto;
 import com.aspd.backend.model.Address;
+import com.aspd.backend.model.Course;
 import com.aspd.backend.model.Student;
+import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,11 +19,14 @@ class StudentServiceTest {
 
     private StudentRepository studentRepository;
     private StudentService studentService;
+    private CourseRepository courseRepository;
+
 
     @BeforeEach
     void setup() {
         studentRepository = mock(StudentRepository.class);
-        studentService = new StudentService(studentRepository);
+        courseRepository = mock(CourseRepository.class);
+        studentService = new StudentService(studentRepository, courseRepository);
     }
 
     @Test
@@ -45,6 +50,16 @@ class StudentServiceTest {
         dto.setFirstName("John");
         dto.setAddress(new Address());
         dto.setAddressSemester(new Address());
+
+        dto.setMainCourseId(1L);
+        dto.setPrefCourse1Id(2L);
+        dto.setPrefCourse2Id(3L);
+        dto.setPrefCourse3Id(4L);
+
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(new Course("MAIN")));
+        when(courseRepository.findById(2L)).thenReturn(Optional.of(new Course("PREF1")));
+        when(courseRepository.findById(3L)).thenReturn(Optional.of(new Course("PREF2")));
+        when(courseRepository.findById(4L)).thenReturn(Optional.of(new Course("PREF3")));
 
         ArgumentCaptor<Student> captor = ArgumentCaptor.forClass(Student.class);
 
@@ -71,6 +86,19 @@ class StudentServiceTest {
         dto.setFirstName("New");
         dto.setAddress(new Address());
         dto.setAddressSemester(new Address());
+
+        // Set course IDs
+        dto.setMainCourseId(1L);
+        dto.setPrefCourse1Id(2L);
+        dto.setPrefCourse2Id(3L);
+        dto.setPrefCourse3Id(4L);
+
+        // Mock course repository
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(new Course("MAIN")));
+        when(courseRepository.findById(2L)).thenReturn(Optional.of(new Course("PREF1")));
+        when(courseRepository.findById(3L)).thenReturn(Optional.of(new Course("PREF2")));
+        when(courseRepository.findById(4L)).thenReturn(Optional.of(new Course("PREF3")));
+
 
         when(studentRepository.findById(5)).thenReturn(Optional.of(student));
         when(studentRepository.save(any(Student.class)))

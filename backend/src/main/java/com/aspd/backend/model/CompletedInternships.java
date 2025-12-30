@@ -32,8 +32,8 @@ public class CompletedInternships {
     @Column(nullable = false)
     private PraktikumType type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
     @Column(nullable = false)

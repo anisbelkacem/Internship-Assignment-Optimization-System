@@ -1,7 +1,6 @@
 package com.aspd.backend.dto;
 
 import com.aspd.backend.model.Course;
-import com.aspd.backend.model.School;
 
 import java.util.List;
 
