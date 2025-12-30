@@ -11,6 +11,7 @@ import InternshipAssignments from "./pages/InternshipAssignments";
 import Assign from "./pages/Assign";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Courses from "./pages/Courses";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="assign" element={<InternshipAssignments />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="courses" element={<Courses />} />
           </Route>
           
           {/* Catch all */}
