@@ -17,6 +17,7 @@ public class CourseController {
     }
 
     @PreAuthorize("hasAnyAuthority('VIEW')")
+    @GetMapping
     public List<Course> getAllCourses() {
         return courseService.getAllCourses();
     }
