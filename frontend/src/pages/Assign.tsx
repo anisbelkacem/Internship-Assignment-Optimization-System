@@ -617,7 +617,7 @@ export default function InternshipAssignments() {
                         return (
                           <tr key={`teacher-${teacher.teacherId}`}>
                             <td>{getTeacherName(teacher)}</td>
-                            <td>{teacher.mainSubject}</td>
+                            <td>{teacher.mainSubject.name}</td>
                             <td colSpan={3} className="empty-state">No configurations</td>
                             <td>
                               <button
@@ -636,7 +636,7 @@ export default function InternshipAssignments() {
                           {index === 0 && (
                             <>
                               <td rowSpan={teacherConfigsForYear.length}>{getTeacherName(teacher)}</td>
-                              <td rowSpan={teacherConfigsForYear.length}>{teacher.mainSubject}</td>
+                              <td rowSpan={teacherConfigsForYear.length}>{teacher.mainSubject.name}</td>
                             </>
                           )}
                           <td>{config.schoolYear}</td>

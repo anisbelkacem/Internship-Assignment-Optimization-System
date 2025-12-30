@@ -1,15 +1,20 @@
 import apiService from "./api";
 import API_BASE_URL from "../config/api";
 
-export enum Course {
-  COMPUTER_SCIENCE = "COMPUTER_SCIENCE",
-  ENGINEERING = "ENGINEERING",
-  BUSINESS = "BUSINESS",
-  MEDICINE = "MEDICINE",
-  LAW = "LAW",
-  ARTS = "ARTS",
-  SCIENCES = "SCIENCES",
-  OTHER = "OTHER",
+// export enum Course {
+//   COMPUTER_SCIENCE = "COMPUTER_SCIENCE",
+//   ENGINEERING = "ENGINEERING",
+//   BUSINESS = "BUSINESS",
+//   MEDICINE = "MEDICINE",
+//   LAW = "LAW",
+//   ARTS = "ARTS",
+//   SCIENCES = "SCIENCES",
+//   OTHER = "OTHER",
+// }
+export interface Course {
+  id: number;
+  name: string;
+  active?: boolean;
 }
 
 export enum PraktikumType {

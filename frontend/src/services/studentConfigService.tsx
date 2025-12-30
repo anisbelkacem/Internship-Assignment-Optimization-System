@@ -1,5 +1,7 @@
 import apiService from './api';
-import type { SchoolType, Course } from './studentService';
+import type { Course } from './courseService';
+import type { SchoolType } from './studentService';
+
 
 export interface StudentConfigDto {
     id: number;

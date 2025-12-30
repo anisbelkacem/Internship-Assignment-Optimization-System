@@ -1,7 +1,10 @@
-import React, { useState } from "react";
-import type { Student, Address, SchoolType, Course } from "../../services/studentService";
+import React, { useEffect, useState } from "react";
+import type { Student, Address, SchoolType } from "../../services/studentService";
+import courseService from "../../services/courseService";
+import type { Course } from "../../services/courseService";
 import StudentService from "../../services/studentService";
 import "../../styles/StudentStyles/StudentForm.css";
+
 
 interface Props {
     student?: Student | null;
@@ -25,10 +28,10 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
         lastName: student?.lastName || "",
         email: student?.email || "",
         schoolType: student?.schoolType || "GS",
-        mainCourse: student?.mainCourse || "COMPUTER_SCIENCE",
-        prefCourse1: student?.prefCourse1 || "COMPUTER_SCIENCE",
-        prefCourse2: student?.prefCourse2 || "COMPUTER_SCIENCE",
-        prefCourse3: student?.prefCourse3 || "COMPUTER_SCIENCE",
+        mainCourseId: student?.mainCourseId ?? null,
+        prefCourse1Id: student?.prefCourse1Id ?? null,
+        prefCourse2Id: student?.prefCourse2Id ?? null,
+        prefCourse3Id: student?.prefCourse3Id ?? null,
         registred: student?.registred || false,
         oriented: student?.oriented || false,
         address: student?.address || { ...emptyAddress },
@@ -37,6 +40,17 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
         birthDate: student?.birthDate || "",
         description: student?.description || "",
     });
+
+    const [courses, setCourses] = useState<Course[]>([]);
+
+    useEffect(() => {
+        courseService.getAllCourses()
+            .then(data => {
+                setCourses(data.filter(course => course.active));
+            })
+            .catch(err => console.error("Failed to load courses", err));
+    }, []);
+    
 
     const handleChange = (key: keyof Student, value: any) => {
         setForm(prev => ({ ...prev, [key]: value }));
@@ -168,80 +182,82 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="mainCourse">Main Course</label>
-                <select
-                    id="mainCourse"
-                    className="student-input"
-                    value={form.mainCourse}
-                    onChange={e => handleChange("mainCourse", e.target.value as Course)}
-                >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
-                </select>
+            <label htmlFor="mainCourse">Main Course</label>
+            <select
+                id="mainCourse"
+                className="student-input"
+                value={form.mainCourseId ?? ""}
+                onChange={e =>
+                handleChange("mainCourseId", Number(e.target.value))
+                }
+            >
+                <option value="">-- Select course --</option>
+                {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                    {course.name}
+                </option>
+                ))}
+            </select>
             </div>
 
             <div className="student-field">
                 <label htmlFor="prefCourse1">Preferred Course 1</label>
-                <select
-                    id="prefCourse1"
-                    className="student-input"
-                    value={form.prefCourse1}
-                    onChange={e => handleChange("prefCourse1", e.target.value as Course)}
-                >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
-                </select>
+
+            <select
+            id="prefCourse1"
+            className="student-input"
+            value={form.prefCourse1Id ?? ""}
+            onChange={e =>
+                handleChange("prefCourse1Id", Number(e.target.value))
+            }
+            >
+            <option value="">-- Select course --</option>
+            {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                {course.name}
+                </option>
+            ))}
+            </select>
             </div>
 
-            <div className="student-field">
-                <label htmlFor="prefCourse2">Preferred Course 2</label>
-                <select
-                    id="prefCourse2"
-                    className="student-input"
-                    value={form.prefCourse2}
-                    onChange={e => handleChange("prefCourse2", e.target.value as Course)}
-                >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
-                </select>
-            </div>
+        <div className="student-field">
+            <label htmlFor="prefCourse2">Preferred Course 2</label>
+            <select
+                id="prefCourse2"
+                className="student-input"
+                value={form.prefCourse2Id ?? ""}
+                onChange={e =>
+                    handleChange("prefCourse2Id", Number(e.target.value))
+                }
+            >
+                <option value="">-- Select course --</option>
+                {courses.map(course => (
+                    <option key={course.id} value={course.id}>
+                        {course.name}
+                    </option>
+                ))}
+            </select>
+        </div>
 
-            <div className="student-field">
-                <label htmlFor="prefCourse3">Preferred Course 3</label>
-                <select
-                    id="prefCourse3"
-                    className="student-input"
-                    value={form.prefCourse3}
-                    onChange={e => handleChange("prefCourse3", e.target.value as Course)}
-                >
-                    <option value="COMPUTER_SCIENCE">COMPUTER_SCIENCE</option>
-                    <option value="ENGINEERING">ENGINEERING</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="MEDICINE">MEDICINE</option>
-                    <option value="LAW">LAW</option>
-                    <option value="ARTS">ARTS</option>
-                    <option value="SCIENCES">SCIENCES</option>
-                    <option value="OTHER">OTHER</option>
-                </select>
-            </div>
+        <div className="student-field">
+            <label htmlFor="prefCourse3">Preferred Course 3</label>
+            <select
+                id="prefCourse3"
+                className="student-input"
+                value={form.prefCourse3Id ?? ""}
+                onChange={e =>
+                    handleChange("prefCourse3Id", Number(e.target.value))
+                }
+            >
+                <option value="">-- Select course --</option>
+                {courses.map(course => (
+                    <option key={course.id} value={course.id}>
+                        {course.name}
+                    </option>
+                ))}
+            </select>
+        </div>
+
 
             <div className="student-checkbox-row">
                 <input
