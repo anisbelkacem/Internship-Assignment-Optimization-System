@@ -3,8 +3,7 @@ import apiService from './api';
 export interface Course {
   id: number;
   name: string;
-  createdAt?: string;
-  updatedAt?: string;
+ active: boolean;
 }
 
 export interface CourseCreate {
