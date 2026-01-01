@@ -775,10 +775,6 @@ const handleConfirmNewYear = () => {
             config.year === selectedYear
         );
 
-        // helper: convert courseId -> Course reference
-        const toCourseRef = (id?: number | null) =>
-          id ? ({ id } as any) : null;
-
 if (studentConfigsForYear.length === 0) {
   return (
     <tr key={`student-${student.matriculationNbr}`}>

@@ -54,8 +54,13 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
                             <td>{c.pdpII ? "✔" : "✖"}</td>
                             <td>{c.zsp ? "✔" : "✖"}</td>
                             <td>{c.sfp ? "✔" : "✖"}</td>
-                            <td>{c.mainCourse}</td>
-                            <td>{c.prefCourse1}, {c.prefCourse2}, {c.prefCourse3}</td>
+                            {/* Fix: Access the name property of Course objects */}
+                            <td>{c.mainCourse?.name ?? "-"}</td>
+                            <td>
+                                {[c.prefCourse1, c.prefCourse2, c.prefCourse3]
+                                    .map(course => course?.name ?? "-")
+                                    .join(", ")}
+                            </td>
 
                             {editMode && (
                                 <td>
