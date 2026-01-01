@@ -53,7 +53,6 @@ public class StudentConfigController {
         return ResponseEntity.ok(created);
     }
 
-
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public ResponseEntity<StudentConfigDto> updateConfig(@PathVariable Long id, @RequestBody StudentConfigDto dto) {

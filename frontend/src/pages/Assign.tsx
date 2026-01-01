@@ -8,6 +8,8 @@ import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import type { Student } from "../services/studentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
+import type { Course } from "../services/courseService";
+import courseService from "../services/courseService";
 
 export default function InternshipAssignments() {
   const [selectedYear, setSelectedYear] = useState<string>("");
@@ -48,6 +50,8 @@ export default function InternshipAssignments() {
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
 
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -58,28 +62,36 @@ export default function InternshipAssignments() {
     }
   }, [selectedYear]);
 
-  const fetchInitialData = async () => {
-    try {
-      setLoading(true);
-      const [yearsData, teachersData, studentsData] = await Promise.all([
-        studentConfigService.getAllYears(),
-        plService.getAllPls(),
-        studentService.getAllStudent(),
-      ]);
-      
-      setAvailableYears(yearsData);
-      setTeachers(teachersData);
-      setStudents(studentsData);
-      
-      if (yearsData.length > 0) {
-        setSelectedYear(yearsData[0]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
-    } finally {
-      setLoading(false);
+const fetchInitialData = async () => {
+  try {
+    setLoading(true);
+    const [yearsData, teachersData, studentsData, coursesData] = await Promise.all([
+      studentConfigService.getAllYears(),
+      plService.getAllPls(),
+      studentService.getAllStudent(),
+      courseService.getAllCourses(), // Add this
+    ]);
+    
+    setAvailableYears(yearsData);
+    setTeachers(teachersData);
+    setStudents(studentsData);
+    setAllCourses(coursesData); // Add this
+    
+    if (yearsData.length > 0) {
+      setSelectedYear(yearsData[0]);
     }
-  };
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to load data");
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add a helper function to get course by ID
+const getCourseById = (courseId: number | null): Course | null => {
+  if (!courseId) return null;
+  return allCourses.find(c => c.id === courseId) || null;
+};
 
   const fetchStudentConfigsByYear = async () => {
     if (!selectedYear) return;
@@ -147,58 +159,59 @@ export default function InternshipAssignments() {
     setSelectedTeacherForConfig(null);
   };
 
-  const handleDeleteTeacherConfig = (teacherId: number, configId: number) => {
-    setDeletingTeacherConfig({teacherId, configId});
-    setShowDeleteTeacherModal(true);
-  };
+const handleDeleteTeacherConfig = (teacherId: number, configId: number) => {
+  setDeletingTeacherConfig({teacherId, configId});
+  setShowDeleteTeacherModal(true);
+};
 
-  const handleConfirmDeleteTeacherConfig = async () => {
-    if (!deletingTeacherConfig) {
-      return;
-    }
+const handleConfirmDeleteTeacherConfig = async () => {
+  
+  if (!deletingTeacherConfig) {
+    return;
+  }
 
-    try {
-      await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
-      setSuccess("Teacher configuration deleted successfully!");
-      await fetchInitialData(); // Refresh teachers with updated configs
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete configuration");
-    } finally {
-      setShowDeleteTeacherModal(false);
-      setDeletingTeacherConfig(null);
-    }
-  };
+  try {
+    await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
+    setSuccess("Teacher configuration deleted successfully!");
+    await fetchInitialData(); // Refresh teachers with updated configs
+    setTimeout(() => setSuccess(null), 3000);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to delete configuration");
+  } finally {
+    setShowDeleteTeacherModal(false);
+    setDeletingTeacherConfig(null);
+  }
+};
 
   // New Year Handler
   const handleCreateNewYear = () => {
     setShowNewYearModal(true);
   };
 
-  const handleConfirmNewYear = () => {
-    if (!newYearInput.trim()) {
-      setError("Please enter a valid year");
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
+const handleConfirmNewYear = () => {
+  if (!newYearInput.trim()) {
+    setError("Please enter a valid year");
+    setTimeout(() => setError(null), 3000);
+    return;
+  }
 
-    if (availableYears.includes(newYearInput.trim())) {
-      setError("This year already exists");
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
+  if (availableYears.includes(newYearInput.trim())) {
+    setError("This year already exists");
+    setTimeout(() => setError(null), 3000);
+    return;
+  }
 
-    // Add the new year to the list and select it
-    const updatedYears = [...availableYears, newYearInput.trim()].sort();
-    setAvailableYears(updatedYears);
-    setSelectedYear(newYearInput.trim());
-    setStudentConfigs([]); // Clear configs for new year
-    
-    setShowNewYearModal(false);
-    setNewYearInput('');
-    setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
-    setTimeout(() => setSuccess(null), 3000);
-  };
+  // Add the new year to the list and select it
+  const updatedYears = [...availableYears, newYearInput.trim()].sort();
+  setAvailableYears(updatedYears);
+  setSelectedYear(newYearInput.trim());
+  setStudentConfigs([]); // Clear configs for new year
+  
+  setShowNewYearModal(false);
+  setNewYearInput('');
+  setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
+  setTimeout(() => setSuccess(null), 3000);
+};
 
   if (loading) {
     return <div className="loading">Loading...</div>;
@@ -617,7 +630,7 @@ export default function InternshipAssignments() {
                         return (
                           <tr key={`teacher-${teacher.teacherId}`}>
                             <td>{getTeacherName(teacher)}</td>
-                            <td>{teacher.mainSubject}</td>
+                            <td>{teacher.mainSubject.name}</td>
                             <td colSpan={3} className="empty-state">No configurations</td>
                             <td>
                               <button
@@ -636,13 +649,22 @@ export default function InternshipAssignments() {
                           {index === 0 && (
                             <>
                               <td rowSpan={teacherConfigsForYear.length}>{getTeacherName(teacher)}</td>
-                              <td rowSpan={teacherConfigsForYear.length}>{teacher.mainSubject}</td>
+                              <td rowSpan={teacherConfigsForYear.length}>{teacher.mainSubject.name}</td>
                             </>
                           )}
                           <td>{config.schoolYear}</td>
-                          <td>{config.subjectSpecializations.join(", ") || "-"}</td>
-                          <td>{config.internshipPreferences.join(", ") || "-"}</td>
                           <td>
+                            {config.subjectSpecializations && config.subjectSpecializations.length > 0 
+                              ? config.subjectSpecializations.map(course => course.name).join(", ")
+                              : "-"
+                            }
+                          </td>             
+                    <td>
+                        {config.internshipPreferences && config.internshipPreferences.length > 0
+                          ? config.internshipPreferences.join(", ")
+                          : "-"
+                        }
+                      </td>                          <td>
                             <div className="action-buttons">
                               <button
                                 className="btn-secondary btn-sm"
@@ -730,103 +752,100 @@ export default function InternshipAssignments() {
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {students.filter(student => {
-                    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-                    return fullName.includes(studentSearchTerm.toLowerCase());
-                  }).length === 0 ? (
-                    <tr>
-                      <td colSpan={12} className="empty-state">
-                        {studentSearchTerm ? 'No students match your search' : 'No students found'}
-                      </td>
-                    </tr>
-                  ) : (
-                    students.filter(student => {
-                      const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-                      return fullName.includes(studentSearchTerm.toLowerCase());
-                    }).flatMap((student) => {
-                      const studentConfigsForYear = studentConfigs.filter(
-                        (config) => config.studentId === student.matriculationNbr && config.year === selectedYear
-                      );
+<tbody>
+  {students.filter(student => {
+    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+    return fullName.includes(studentSearchTerm.toLowerCase());
+  }).length === 0 ? (
+    <tr>
+      <td colSpan={12} className="empty-state">
+        {studentSearchTerm ? "No students match your search" : "No students found"}
+      </td>
+    </tr>
+  ) : (
+    students
+      .filter(student => {
+        const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+        return fullName.includes(studentSearchTerm.toLowerCase());
+      })
+      .flatMap(student => {
+        const studentConfigsForYear = studentConfigs.filter(
+          config =>
+            config.studentId === student.matriculationNbr &&
+            config.year === selectedYear
+        );
 
-                      if (studentConfigsForYear.length === 0) {
-                        return (
-                          <tr key={`student-${student.matriculationNbr}`}>
-                            <td>{student.firstName} {student.lastName}</td>
-                            <td colSpan={10} className="empty-state">No configurations</td>
-                            <td>
-                              <button
-                                className="btn-primary btn-sm"
-                                onClick={() => {
-                                  setEditingStudentConfig({
-                                    studentId: student.matriculationNbr,
-                                    year: selectedYear,
-                                    schoolType: student.schoolType,
-                                    mainCourse: student.mainCourse,
-                                    prefCourse1: student.prefCourse1,
-                                    prefCourse2: student.prefCourse2,
-                                    prefCourse3: student.prefCourse3,
-                                    pdpI: false,
-                                    pdpII: false,
-                                    zsp: false,
-                                    sfp: false,
-                                  } as StudentConfigDto);
-                                  setShowStudentConfigModal(true);
-                                }}
-                              >
-                                + Add Config
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      }
+if (studentConfigsForYear.length === 0) {
+  return (
+    <tr key={`student-${student.matriculationNbr}`}>
+      <td>{student.firstName} {student.lastName}</td>
+      <td colSpan={10} className="empty-state">No configurations</td>
+      <td>
+        <button
+          className="btn-primary btn-sm"
+          onClick={() => {
+            setEditingStudentConfig({
+              studentId: student.matriculationNbr,
+              year: selectedYear,
+              schoolType: student.schoolType,
+              mainCourse: getCourseById(student.mainCourseId),
+              prefCourse1: getCourseById(student.prefCourse1Id),
+              prefCourse2: getCourseById(student.prefCourse2Id),
+              prefCourse3: getCourseById(student.prefCourse3Id),
+              pdpI: false,
+              pdpII: false,
+              zsp: false,
+              sfp: false,
+            } as StudentConfigDto);
+            setShowStudentConfigModal(true);
+          }}
+        >
+          + Add Config
+        </button>
+      </td>
+    </tr>
+  );
+}
 
-                      return studentConfigsForYear.map((config, index) => (
-                        <tr key={`student-${student.matriculationNbr}-config-${config.id}`}>
-                          {index === 0 && (
-                            <td rowSpan={studentConfigsForYear.length}>
-                              {student.firstName} {student.lastName}
-                            </td>
-                          )}
-                          <td>{config.year}</td>
-                          <td>{config.schoolType}</td>
-                          <td>{config.mainCourse}</td>
-                          <td>{config.prefCourse1 || "-"}</td>
-                          <td>{config.prefCourse2 || "-"}</td>
-                          <td>{config.prefCourse3 || "-"}</td>
-                          <td>
-                            <input type="checkbox" checked={config.pdpI} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.pdpII} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.zsp} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.sfp} disabled />
-                          </td>
-                          <td>
-                            <div className="action-buttons">
-                              <button
-                                className="btn-secondary btn-sm"
-                                onClick={() => handleOpenStudentConfigModal(config)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="btn-danger btn-sm"
-                                onClick={() => config.id && handleDeleteStudentConfig(config.id)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ));
-                    })
-                  )}
-                </tbody>
+        return studentConfigsForYear.map((config, index) => (
+          <tr key={`student-${student.matriculationNbr}-config-${config.id}`}>
+            {index === 0 && (
+              <td rowSpan={studentConfigsForYear.length}>
+                {student.firstName} {student.lastName}
+              </td>
+            )}
+            <td>{config.year}</td>
+            <td>{config.schoolType}</td>
+            <td>{config.mainCourse?.name ?? "-"}</td>
+            <td>{config.prefCourse1?.name ?? "-"}</td>
+            <td>{config.prefCourse2?.name ?? "-"}</td>
+            <td>{config.prefCourse3?.name ?? "-"}</td>
+            <td><input type="checkbox" checked={config.pdpI} disabled /></td>
+            <td><input type="checkbox" checked={config.pdpII} disabled /></td>
+            <td><input type="checkbox" checked={config.zsp} disabled /></td>
+            <td><input type="checkbox" checked={config.sfp} disabled /></td>
+            <td>
+              <div className="action-buttons">
+                <button
+                  className="btn-secondary btn-sm"
+                  onClick={() => handleOpenStudentConfigModal(config)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="btn-danger btn-sm"
+                  onClick={() => config.id && handleDeleteStudentConfig(config.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        ));
+      })
+  )}
+</tbody>
+
               </table>
             </div>
           </div>

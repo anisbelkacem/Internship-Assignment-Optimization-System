@@ -1,6 +1,7 @@
 package com.aspd.backend.dto;
 
 import com.aspd.backend.model.AvailabilityStatus;
+import com.aspd.backend.model.Course;
 import com.aspd.backend.model.PraktikumType;
 
 import java.util.Set;
@@ -10,7 +11,7 @@ public record TeacherPlConfigRequest(
         Integer maxPraktikaPerYear,
         Integer totalHoursCredit,
         AvailabilityStatus availabilityStatus,
-        Set<String> subjectSpecializations,
+        Set<Long> subjectSpecializations,
         Set<PraktikumType> internshipPreferences
 ) {
 }

@@ -1,6 +1,9 @@
 package com.aspd.backend.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -12,6 +15,9 @@ import java.util.Set;
                 @UniqueConstraint(columnNames = {"teacher_id", "school_year"})
         }
 )
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class TeacherPlConfig {
 
     @Id
@@ -35,13 +41,13 @@ public class TeacherPlConfig {
     private AvailabilityStatus availabilityStatus;
 
     // Subjects per config (per year)
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "teacher_pl_subjects",
-            joinColumns = @JoinColumn(name = "pl_config_id")
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "teacher_pl_courses",
+            joinColumns = @JoinColumn(name = "pl_config_id"),
+            inverseJoinColumns = @JoinColumn(name = "course_id")
     )
-    @Column(name = "subject", nullable = false)
-    private Set<String> subjectSpecializations = new HashSet<>();
+    private Set<Course> subjectSpecializations = new HashSet<>();
 
     // Internship preferences per config (per year)
     @ElementCollection(fetch = FetchType.EAGER)
@@ -55,66 +61,4 @@ public class TeacherPlConfig {
 
     @Column(name = "max_praktika_per_year")
     private Integer maxPraktikaPerYear;
-
-    // --- Getters & setters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public Teacher getTeacher() {
-        return teacher;
-    }
-
-    public void setTeacher(Teacher teacher) {
-        this.teacher = teacher;
-    }
-
-    public String getSchoolYear() {
-        return schoolYear;
-    }
-
-    public void setSchoolYear(String schoolYear) {
-        this.schoolYear = schoolYear;
-    }
-
-    public Integer getTotalHoursCredit() {
-        return totalHoursCredit;
-    }
-
-    public void setTotalHoursCredit(Integer totalHoursCredit) {
-        this.totalHoursCredit = totalHoursCredit;
-    }
-
-    public AvailabilityStatus getAvailabilityStatus() {
-        return availabilityStatus;
-    }
-
-    public void setAvailabilityStatus(AvailabilityStatus availabilityStatus) {
-        this.availabilityStatus = availabilityStatus;
-    }
-
-    public Set<String> getSubjectSpecializations() {
-        return subjectSpecializations;
-    }
-
-    public void setSubjectSpecializations(Set<String> subjectSpecializations) {
-        this.subjectSpecializations = subjectSpecializations;
-    }
-
-    public Set<PraktikumType> getInternshipPreferences() {
-        return internshipPreferences;
-    }
-
-    public void setInternshipPreferences(Set<PraktikumType> internshipPreferences) {
-        this.internshipPreferences = internshipPreferences;
-    }
-
-    public Integer getMaxPraktikaPerYear() {
-        return maxPraktikaPerYear;
-    }
-
-    public void setMaxPraktikaPerYear(Integer maxPraktikaPerYear) {
-        this.maxPraktikaPerYear = maxPraktikaPerYear;
-    }
 }
