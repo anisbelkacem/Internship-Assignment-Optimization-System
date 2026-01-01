@@ -39,7 +39,7 @@ export interface TeacherPlConfigDto {
   schoolYear: string;
   maxPraktikaPerYear: number;
   totalHoursCredit: number;
-  subjectSpecializations: string[];
+  subjectSpecializations: Course[];
   internshipPreferences: PraktikumType[];
 }
 
@@ -68,7 +68,7 @@ export interface TeacherPlConfigRequest {
   schoolYear: string;
   maxPraktikaPerYear: number;
   totalHoursCredit: number;
-  subjectSpecializations: string[];
+  subjectSpecializations: number[];
   internshipPreferences: PraktikumType[];
 }
 

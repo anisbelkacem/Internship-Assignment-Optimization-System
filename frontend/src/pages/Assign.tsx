@@ -159,28 +159,29 @@ const getCourseById = (courseId: number | null): Course | null => {
     setSelectedTeacherForConfig(null);
   };
 
-  const handleDeleteTeacherConfig = (teacherId: number, configId: number) => {
-    setDeletingTeacherConfig({teacherId, configId});
-    setShowDeleteTeacherModal(true);
-  };
+const handleDeleteTeacherConfig = (teacherId: number, configId: number) => {
+  setDeletingTeacherConfig({teacherId, configId});
+  setShowDeleteTeacherModal(true);
+};
 
-  const handleConfirmDeleteTeacherConfig = async () => {
-    if (!deletingTeacherConfig) {
-      return;
-    }
+const handleConfirmDeleteTeacherConfig = async () => {
+  
+  if (!deletingTeacherConfig) {
+    return;
+  }
 
-    try {
-      await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
-      setSuccess("Teacher configuration deleted successfully!");
-      await fetchInitialData(); // Refresh teachers with updated configs
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete configuration");
-    } finally {
-      setShowDeleteTeacherModal(false);
-      setDeletingTeacherConfig(null);
-    }
-  };
+  try {
+    await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
+    setSuccess("Teacher configuration deleted successfully!");
+    await fetchInitialData(); // Refresh teachers with updated configs
+    setTimeout(() => setSuccess(null), 3000);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to delete configuration");
+  } finally {
+    setShowDeleteTeacherModal(false);
+    setDeletingTeacherConfig(null);
+  }
+};
 
   // New Year Handler
   const handleCreateNewYear = () => {
@@ -652,9 +653,18 @@ const handleConfirmNewYear = () => {
                             </>
                           )}
                           <td>{config.schoolYear}</td>
-                          <td>{config.subjectSpecializations.join(", ") || "-"}</td>
-                          <td>{config.internshipPreferences.join(", ") || "-"}</td>
                           <td>
+                            {config.subjectSpecializations && config.subjectSpecializations.length > 0 
+                              ? config.subjectSpecializations.map(course => course.name).join(", ")
+                              : "-"
+                            }
+                          </td>             
+                    <td>
+                        {config.internshipPreferences && config.internshipPreferences.length > 0
+                          ? config.internshipPreferences.join(", ")
+                          : "-"
+                        }
+                      </td>                          <td>
                             <div className="action-buttons">
                               <button
                                 className="btn-secondary btn-sm"

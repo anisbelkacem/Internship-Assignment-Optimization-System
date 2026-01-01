@@ -2,14 +2,18 @@ package com.aspd.backend.service;
 
 import com.aspd.backend.dto.TeacherPlConfigDto;
 import com.aspd.backend.dto.TeacherPlConfigRequest;
+import com.aspd.backend.model.Course;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.model.TeacherPlConfig;
+import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.TeacherPlConfigRepository;
 import com.aspd.backend.repository.TeacherRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -17,11 +21,16 @@ public class TeacherPlConfigService {
 
     private final TeacherRepository teacherRepository;
     private final TeacherPlConfigRepository plConfigRepository;
+    private final CourseRepository courseRepository; // Add this
+
 
     public TeacherPlConfigService(TeacherRepository teacherRepository,
-                                  TeacherPlConfigRepository plConfigRepository) {
+                                  TeacherPlConfigRepository plConfigRepository,
+                                  CourseRepository courseRepository) {
         this.teacherRepository = teacherRepository;
         this.plConfigRepository = plConfigRepository;
+        this.courseRepository = courseRepository;
+
     }
 
     public List<TeacherPlConfigDto> getForTeacher(Long teacherId) {
@@ -61,7 +70,15 @@ public class TeacherPlConfigService {
         cfg.setMaxPraktikaPerYear(request.maxPraktikaPerYear());
         cfg.setTotalHoursCredit(request.totalHoursCredit());
         cfg.setAvailabilityStatus(request.availabilityStatus());
-        cfg.setSubjectSpecializations(request.subjectSpecializations());
+        Set<Course> courses = new HashSet<>();
+        if (request.subjectSpecializations() != null) {
+            for (Long courseId : request.subjectSpecializations()) {
+                Course course = courseRepository.findById(courseId)
+                        .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseId));
+                courses.add(course);
+            }
+        }
+        cfg.setSubjectSpecializations(courses);
         cfg.setInternshipPreferences(request.internshipPreferences());
     }
 

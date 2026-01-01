@@ -1,7 +1,11 @@
-import { useState } from "react";
-import plService from "../../services/plService";
-import { PraktikumType } from "../../services/plService";
-import type { TeacherPlConfigRequest, TeacherPlConfigDto, TeacherDto } from "../../services/plService";
+import { useState, useEffect } from "react";
+import plService, { PraktikumType } from "../../services/plService";
+import type {
+  TeacherPlConfigRequest,
+  TeacherPlConfigDto,
+  TeacherDto,
+} from "../../services/plService";
+import courseService, { type Course } from "../../services/courseService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
 
 interface Props {
@@ -12,17 +16,42 @@ interface Props {
   onSave: () => void;
 }
 
-export default function TeacherConfigForm({ teacher, config, selectedYear, onClose, onSave }: Props) {
+export default function TeacherConfigForm({
+  teacher,
+  config,
+  selectedYear,
+  onClose,
+  onSave,
+}: Props) {
+  /* ---------------- Courses ---------------- */
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  
+  // Initialize form with course IDs instead of course names
   const [form, setForm] = useState<TeacherPlConfigRequest>({
     schoolYear: config?.schoolYear || selectedYear || "",
     maxPraktikaPerYear: config?.maxPraktikaPerYear || 0,
     totalHoursCredit: config?.totalHoursCredit || 0,
-    subjectSpecializations: config?.subjectSpecializations || [],
+    subjectSpecializations: config?.subjectSpecializations?.map(c => c.id) || [], // Store course IDs
     internshipPreferences: config?.internshipPreferences || [],
   });
 
-  const [subjectInput, setSubjectInput] = useState("");
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        setLoadingCourses(true);
+        const allCourses = await courseService.getAllCourses();
+        setCourses(allCourses.filter((c) => c.active));
+      } catch (err) {
+        console.error("Failed to load courses", err);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+    loadCourses();
+  }, []);
 
+  /* ---------------- Helpers ---------------- */
   const handleChange = <K extends keyof TeacherPlConfigRequest>(
     key: K,
     value: TeacherPlConfigRequest[K]
@@ -30,30 +59,26 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleAddSubject = () => {
-    if (subjectInput.trim() && !form.subjectSpecializations.includes(subjectInput.trim())) {
-      handleChange("subjectSpecializations", [...form.subjectSpecializations, subjectInput.trim()]);
-      setSubjectInput("");
-    }
-  };
-
-  const handleRemoveSubject = (subject: string) => {
+  /* Toggle course checkbox - now using course IDs */
+  const handleToggleCourse = (courseId: number) => {
+    const current = form.subjectSpecializations;
     handleChange(
       "subjectSpecializations",
-      form.subjectSpecializations.filter((s) => s !== subject)
+      current.includes(courseId)
+        ? current.filter((id) => id !== courseId)
+        : [...current, courseId]
     );
   };
 
+  /* Toggle internship type */
   const handleToggleInternshipPref = (pref: PraktikumType) => {
     const current = form.internshipPreferences;
-    if (current.includes(pref)) {
-      handleChange(
-        "internshipPreferences",
-        current.filter((p) => p !== pref)
-      );
-    } else {
-      handleChange("internshipPreferences", [...current, pref]);
-    }
+    handleChange(
+      "internshipPreferences",
+      current.includes(pref)
+        ? current.filter((p) => p !== pref)
+        : [...current, pref]
+    );
   };
 
   const handleSubmit = async () => {
@@ -69,22 +94,28 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
     }
   };
 
+  // Get the count of selected courses
+  const selectedCount = form.subjectSpecializations.length;
+
   return (
     <div className="student-config-form-container">
       <h3 className="student-config-form-title">
         {config ? "Edit Teacher Configuration" : "Create Teacher Configuration"}
       </h3>
+
       <p className="teacher-name">
         Teacher: {teacher.firstName} {teacher.lastName}
       </p>
+      <p className="teacher-main-subject">
+        Main Subject: {teacher.mainSubject?.name || "Not specified"}
+      </p>
 
       <div className="student-config-split-layout">
-        {/* Left Side: Basic Configuration */}
+        {/* LEFT SIDE */}
         <div className="student-config-left-section">
           <div className="student-config-field">
-            <label htmlFor="schoolYear">School Year</label>
+            <label>School Year</label>
             <input
-              id="schoolYear"
               className="student-config-input"
               type="text"
               placeholder="e.g., 2024-2025"
@@ -94,75 +125,83 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
           </div>
 
           <div className="student-config-field">
-            <label htmlFor="maxPraktika">Max Praktika Per Year</label>
+            <label>Max Praktika Per Year</label>
             <input
-              id="maxPraktika"
               className="student-config-input"
               type="number"
-              min="0"
+              min={0}
               value={form.maxPraktikaPerYear}
-              onChange={(e) => handleChange("maxPraktikaPerYear", Number(e.target.value))}
+              onChange={(e) =>
+                handleChange("maxPraktikaPerYear", Number(e.target.value))
+              }
             />
           </div>
 
           <div className="student-config-field">
-            <label htmlFor="totalHours">Total Hours Credit</label>
+            <label>Total Hours Credit</label>
             <input
-              id="totalHours"
               className="student-config-input"
               type="number"
-              min="0"
+              min={0}
               value={form.totalHoursCredit}
-              onChange={(e) => handleChange("totalHoursCredit", Number(e.target.value))}
+              onChange={(e) =>
+                handleChange("totalHoursCredit", Number(e.target.value))
+              }
             />
           </div>
         </div>
 
-        {/* Right Side: Subjects & Internship Preferences */}
+        {/* RIGHT SIDE */}
         <div className="student-config-right-section">
+          {/* SUBJECT SPECIALIZATIONS (CHECKBOXES) */}
           <div className="student-config-field">
-            <label htmlFor="subjectInput">Subject Specializations</label>
-            <div className="subject-input-row">
-              <input
-                id="subjectInput"
-                className="student-config-input"
-                type="text"
-                placeholder="Enter subject"
-                value={subjectInput}
-                onChange={(e) => setSubjectInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddSubject();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="student-config-btn btn-add-subject"
-                onClick={handleAddSubject}
-              >
-                + Add
-              </button>
-            </div>
-            <div className="subject-tags">
-              {form.subjectSpecializations.map((subject) => (
-                <span key={subject} className="subject-tag">
-                  {subject}
-                  <button
-                    type="button"
-                    className="remove-tag"
-                    onClick={() => handleRemoveSubject(subject)}
-                  >
-                    ×
-                  </button>
+            <label style={{ marginBottom: "12px", display: "block" }}>
+              Subject Specializations
+              {selectedCount > 0 && (
+                <span style={{ marginLeft: "8px", fontSize: "0.9rem", color: "#64748b" }}>
+                  ({selectedCount} selected)
                 </span>
-              ))}
-            </div>
+              )}
+            </label>
+
+            {loadingCourses ? (
+              <div style={{ color: "#777" }}>Loading courses…</div>
+            ) : courses.length === 0 ? (
+              <div style={{ color: "#777", fontStyle: "italic" }}>
+                No active courses available
+              </div>
+            ) : (
+              <div className="checkbox-group vertical" style={{ maxHeight: "200px", overflowY: "auto" }}>
+                {courses.map((course) => (
+                  <label key={course.id} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={form.subjectSpecializations.includes(course.id)}
+                      onChange={() => handleToggleCourse(course.id)}
+                    />
+                    <span>{course.name}</span>
+                    {course.id === teacher.mainSubject?.id && (
+                      <span style={{ 
+                        marginLeft: "8px", 
+                        fontSize: "0.8rem", 
+                        color: "#3b82f6",
+                        fontWeight: "bold"
+                      }}>
+                        (Main Subject)
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="student-config-field" style={{marginTop: '20px'}}>
-            <label style={{marginBottom: '12px', display: 'block'}}>Internship Preferences</label>
+          {/* INTERNSHIP TYPES */}
+          <div className="student-config-field" style={{ marginTop: "20px" }}>
+            <label style={{ marginBottom: "12px", display: "block" }}>
+              Internship Preferences
+            </label>
+
             <div className="checkbox-group horizontal">
               {Object.values(PraktikumType).map((pref) => (
                 <label key={pref} className="checkbox-label">
@@ -179,11 +218,19 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
         </div>
       </div>
 
+      {/* ACTION BUTTONS */}
       <div className="student-config-form-actions">
-        <button className="student-config-btn" onClick={handleSubmit}>
+        <button
+          className="student-config-btn"
+          onClick={handleSubmit}
+          disabled={loadingCourses}
+        >
           {config ? "Update" : "Create"}
         </button>
-        <button className="student-config-btn student-config-btn-cancel" onClick={onClose}>
+        <button
+          className="student-config-btn student-config-btn-cancel"
+          onClick={onClose}
+        >
           Cancel
         </button>
       </div>
