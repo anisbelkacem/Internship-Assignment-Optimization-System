@@ -1,15 +1,51 @@
-import React from "react";
+import React, { useState } from "react";
 import RightPanel from "../components/RightPanel";
 import "../styles/global.css";
 
 const Dashboard: React.FC = () => {
+  const [showSemesterMenu, setShowSemesterMenu] = useState(false);
+  const [selectedSemester, setSelectedSemester] = useState("WiSe 24/25");
+
+  const semesters = [
+    "WiSe 24/25",
+    "SoSe 25",
+    "WiSe 25/26",
+    "SoSe 26",
+    "WiSe 26/27",
+  ];
+
+  const handleSemesterSelect = (semester: string) => {
+    setSelectedSemester(semester);
+    setShowSemesterMenu(false);
+  };
+
   return (
     <div className="dashboard-root">
       {/* Current Semester Status */}
       <div className="dashboard-top">
         <div className="semester-header">
-          <h1>Wintersemester 2024/2025 — Mission Control</h1>
-          <button className="btn btn-ghost">Semester wechseln</button>
+          <h1>{selectedSemester} — Mission Control</h1>
+          <div className="semester-menu-container">
+            <button 
+              className="btn btn-ghost"
+              onClick={() => setShowSemesterMenu(!showSemesterMenu)}
+            >
+              Semester wechseln
+            </button>
+            {showSemesterMenu && (
+              <div className="semester-dropdown">
+                {semesters.map((sem) => (
+                  <button
+                    key={sem}
+                    className={`semester-option ${selectedSemester === sem ? "active" : ""}`}
+                    onClick={() => handleSemesterSelect(sem)}
+                  >
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="card-row">
           <div className="status-card info">

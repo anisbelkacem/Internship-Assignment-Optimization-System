@@ -142,22 +142,25 @@ const StudentList: React.FC = () => {
                                         <td style={{textTransform: 'capitalize'}}>{student.prefCourse2.replace(/_/g, ' ').toLowerCase()}</td>
                                         <td style={{textTransform: 'capitalize'}}>{student.prefCourse3.replace(/_/g, ' ').toLowerCase()}</td>
                                         <td>
-                                            <button
-                                                className="btn btn-sm"
-                                                onClick={() => {
-                                                    setSelectedStudent(student);
-                                                    setShowForm(true);
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                className="btn btn-sm"
-                                                style={{marginLeft: '8px', backgroundColor: '#d14d4d'}}
-                                                onClick={() => handleDelete(student.matriculationNbr)}
-                                            >
-                                                Delete
-                                            </button>
+                                            <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                                <button
+                                                    className="action-btn edit-btn"
+                                                    onClick={() => {
+                                                        setSelectedStudent(student);
+                                                        setShowForm(true);
+                                                    }}
+                                                    title="Edit student"
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    className="action-btn delete-btn"
+                                                    onClick={() => handleDelete(student.matriculationNbr)}
+                                                    title="Delete student"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

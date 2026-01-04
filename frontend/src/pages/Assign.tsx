@@ -15,8 +15,14 @@ type TabType = "assignments" | "pl-config" | "student-config";
 export default function InternshipAssignments() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("assignments");
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>("WiSe 24/25");
+  const [availableYears, setAvailableYears] = useState<string[]>([
+    "WiSe 24/25",
+    "SoSe 25",
+    "WiSe 25/26",
+    "SoSe 26",
+    "WiSe 26/27",
+  ]);
   const [studentConfigs, setStudentConfigs] = useState<StudentConfigDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -71,20 +77,15 @@ export default function InternshipAssignments() {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [yearsData, teachersData, studentsData] = await Promise.all([
-        studentConfigService.getAllYears(),
+      const [teachersData, studentsData] = await Promise.all([
         plService.getAllPls(),
         studentService.getAllStudent(),
       ]);
       
-      setAvailableYears(yearsData);
       setTeachers(teachersData);
       setStudents(studentsData);
-      
-      if (yearsData.length > 0) {
-        setSelectedYear(yearsData[0]);
-      }
     } catch (err) {
+      console.error("Error fetching initial data:", err);
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
@@ -640,10 +641,11 @@ export default function InternshipAssignments() {
                             <td colSpan={3} className="empty-state">No configurations</td>
                             <td>
                               <button
-                                className="btn btn-sm"
+                                className="edit-config-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher)}
+                                title="Edit teacher configuration"
                               >
-                                + Add
+                                ✏️
                               </button>
                             </td>
                           </tr>
@@ -773,7 +775,7 @@ export default function InternshipAssignments() {
                             <td colSpan={10} className="empty-state">No configurations</td>
                             <td>
                               <button
-                                className="btn-primary btn-sm"
+                                className="edit-config-btn"
                                 onClick={() => {
                                   setEditingStudentConfig({
                                     studentId: student.matriculationNbr,
@@ -790,8 +792,9 @@ export default function InternshipAssignments() {
                                   } as StudentConfigDto);
                                   setShowStudentConfigModal(true);
                                 }}
+                                title="Edit student configuration"
                               >
-                                + Add
+                                ✏️
                               </button>
                             </td>
                           </tr>

@@ -180,9 +180,9 @@ html, body, #root {
     background: white;
   }
   .btn-primary {
-    background: #509CDB;
-    color: #ffffff;
-    border: none;
+    background: transparent;
+    color: #509CDB;
+    border: 1px solid #509CDB;
     width: 128px; 
     height: 40px;
     border-radius: 8px;
@@ -192,14 +192,10 @@ html, body, #root {
     padding: 0 12px; 
     font-weight: 700;
     font-size: 15px; 
-    box-shadow: 0 1px 0 rgba(0,0,0,0.06);
     cursor: pointer;
-    transition: background 0.2s ease;
     margin-left: 0;
   }
-  .btn-primary:hover {
-    background: #4189c7;
-  }
+  
   .avatar {
     width: 43px;
     height: 43px;
@@ -722,6 +718,50 @@ html, body, #root {
   .semester-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
   .semester-header h1 { margin:0; color:#17324b; font-size:20px; }
   .semester-header .btn { height: 36px; }
+
+  .semester-menu-container { position: relative; }
+  .semester-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 280px;
+    margin-top: 8px;
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .semester-option {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: #ffffff;
+    color: #17324b;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .semester-option:last-child {
+    border-bottom: none;
+  }
+
+  .semester-option:hover {
+    background: #f3f4f6;
+  }
+
+  .semester-option.active {
+    background: #509cdb;
+    color: #ffffff;
+    font-weight: 600;
+  }
+
   .dashboard-title h1 { margin:0; color:#17324b; font-size:20px; }
   .subtitle { color:#6f7276; margin-top:6px; font-size:13px; }
 
@@ -853,11 +893,12 @@ html, body, #root {
     font-family: 'Kumbh Sans', sans-serif;
   }
   .btn-primary {
-    background: #509CDB;
-    color: #ffffff;
+    background: transparent;
+    color: #509CDB;
+    border: 1px solid #509CDB;
   }
   .btn-primary:hover {
-    background: #4189c7;
+    background: transparent;
   }
   .btn-secondary {
     background: #6b7280;
@@ -1062,4 +1103,18 @@ html, body, #root {
     .app-sidebar { z-index: 70; }
   }
 
-
+  /* Edit Config Button - Matches Studierende page style */
+  .edit-config-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    margin-left: 10px;
+   }

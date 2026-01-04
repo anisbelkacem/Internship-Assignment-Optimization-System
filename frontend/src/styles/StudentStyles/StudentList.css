@@ -127,3 +127,25 @@
 .student-btn-update:hover {
     background-color: #509CDB;
 }
+/* Action Buttons in Table */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: none;
+    background-color: transparent !important;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+}
+
+.action-btn.edit-btn {
+    color: #3b82f6 !important;
+}
+
+.action-btn.delete-btn {
+    color: #ef4444 !important;
+}
