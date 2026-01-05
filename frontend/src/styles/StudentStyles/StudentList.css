@@ -32,10 +32,10 @@
 /* Top controls (Edit/Create) */
 .student-list-controls .student-btn {
     padding: 12px 22px;
-    border: 1px solid #3b82f6;
+    border: none;
     border-radius: 8px;
     background-color: white;
-    color: #3b82f6;
+    color: #fff;
     font-weight: 450;
     cursor: pointer;
     transition: none;
@@ -47,8 +47,8 @@
 
 .student-list-controls .student-btn-create {
     background-color: white;
-    border: 1px solid #ef4444;
-    color: #ef4444;
+    border: none;
+    color: #fff;
 }
 
 .student-list-controls .student-btn-create:hover {
@@ -111,8 +111,8 @@
 
 .student-btn-delete {
     background-color: #ffffff;
-    color: #547792;
-    border: 1px solid #547792;
+    color: #fff;
+    border: none;
 }
 
 .student-btn-delete:hover {

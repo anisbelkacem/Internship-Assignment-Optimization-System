@@ -15,14 +15,8 @@ type TabType = "assignments" | "pl-config" | "student-config";
 export default function InternshipAssignments() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("assignments");
-  const [selectedYear, setSelectedYear] = useState<string>("WiSe 24/25");
-  const [availableYears, setAvailableYears] = useState<string[]>([
-    "WiSe 24/25",
-    "SoSe 25",
-    "WiSe 25/26",
-    "SoSe 26",
-    "WiSe 26/27",
-  ]);
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [studentConfigs, setStudentConfigs] = useState<StudentConfigDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -238,7 +232,7 @@ export default function InternshipAssignments() {
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
-            + New Year
+            New Year
           </button>
         </div>
       </div>
@@ -409,7 +403,7 @@ export default function InternshipAssignments() {
 
             {showTeacherAssignments && (
               <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
-                <button className="btn btn-primary" style={{backgroundColor: '#15803d'}}>
+                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
                   Überprüfen
                 </button>
               </div>
@@ -551,7 +545,7 @@ export default function InternshipAssignments() {
 
             {showStudentAssignments && (
               <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
-                <button className="btn btn-primary" style={{backgroundColor: '#15803d'}}>
+                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
                   Überprüfen
                 </button>
               </div>
@@ -565,12 +559,6 @@ export default function InternshipAssignments() {
         <section className="section-container">
           <div className="section-header">
             <h2>PL Configuration</h2>
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowTeacherConfigModal(true)}
-            >
-              + Add PL
-            </button>
           </div>
           <div style={{marginBottom: '20px'}}>
                 <input
@@ -698,7 +686,7 @@ export default function InternshipAssignments() {
               className="btn btn-primary"
               onClick={() => handleOpenStudentConfigModal()}
             >
-              + Add Config
+              Add Config
             </button>
           </div>
           <div style={{marginBottom: '20px'}}>

@@ -274,17 +274,19 @@ export default function Pls() {
                       <div className="table-actions">
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm"
+                          className="action-btn edit-btn"
                           onClick={() => handleEdit(pl)}
+                          title="Bearbeiten"
                         >
-                          Bearbeiten
+                          ✏️
                         </button>
                         <button
                           type="button"
-                          className="btn btn-ghost btn-sm danger"
+                          className="action-btn delete-btn"
                           onClick={() => handleDelete(pl)}
+                          title="Löschen"
                         >
-                          Löschen
+                          🗑️
                         </button>
                       </div>
                     </td>

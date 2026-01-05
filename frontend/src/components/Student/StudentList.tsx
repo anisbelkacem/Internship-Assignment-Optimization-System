@@ -70,7 +70,7 @@ const StudentList: React.FC = () => {
                             setShowForm(true);
                         }}
                     >
-                        + Add Student
+                        Add Student
                     </button>
                 </div>
             </div>

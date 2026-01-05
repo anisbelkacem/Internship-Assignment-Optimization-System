@@ -193,37 +193,64 @@
   color: #111827;
 }
 
-.badge {
+.schools-table .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.28rem 0.7rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 650;
 }
 
-.badge-gs {
-  background-color: #dbeafe;
-  color: #1e40af;
+.schools-table .badge-gs {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-ms {
-  background-color: #fef3c7;
-  color: #92400e;
+.schools-table .badge-ms {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-oepnv {
-  background-color: #d1fae5;
-  color: #065f46;
+.schools-table .badge-oepnv {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-no-oepnv {
-  background-color: #fee2e2;
-  color: #991b1b;
+.schools-table .badge-no-oepnv {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
 .action-buttons {
   display: flex;
   gap: 0.5rem;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.action-btn:hover {
+  opacity: 0.85;
+}
+
+.action-btn.edit-btn {
+  color: #3b82f6;
+}
+
+.action-btn.delete-btn {
+  color: #ef4444;
 }
 
 /* Modal Styles */

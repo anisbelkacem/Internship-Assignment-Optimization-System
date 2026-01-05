@@ -191,11 +191,11 @@ export default function Settings() {
                     </td>
                     <td>
                       <div className="table-actions">
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleOpenModal(user)}>
-                          Bearbeiten
+                        <button className="action-btn edit-btn" onClick={() => handleOpenModal(user)} title="Bearbeiten">
+                          ✏️
                         </button>
-                        <button className="btn btn-ghost btn-sm danger" onClick={() => handleDelete(user.id)}>
-                          Löschen
+                        <button className="action-btn delete-btn" onClick={() => handleDelete(user.id)} title="Löschen">
+                          🗑️
                         </button>
                       </div>
                     </td>

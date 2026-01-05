@@ -431,7 +431,7 @@ export default function Schools() {
              Excel importieren
           </button>
           <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
-            <span>+</span> Schule hinzufügen
+            Schule hinzufügen
           </button>
         </div>
       </div>
@@ -486,16 +486,18 @@ export default function Schools() {
                     <td>
                       <div className="action-buttons">
                         <button 
-                          className="btn-secondary" 
+                          className="action-btn edit-btn" 
                           onClick={() => handleOpenModal(school)}
+                          title="Bearbeiten"
                         >
-                          Bearbeiten
+                          ✏️
                         </button>
                         <button 
-                          className="btn-danger" 
+                          className="action-btn delete-btn" 
                           onClick={() => handleDelete(school.id)}
+                          title="Löschen"
                         >
-                          Löschen
+                          🗑️
                         </button>
                       </div>
                     </td>
