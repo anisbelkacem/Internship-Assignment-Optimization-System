@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+
+    <!-- PHASE 1: Teacher-to-Internship Assignment -->
+    <!-- Assigns teachers and schools to planned internship slots -->
+    
+    <solutionClass>com.aspd.backend.solver.InternshipSolution</solutionClass>
+    <entityClass>com.aspd.backend.model.PlannedInternship</entityClass>
+
+    <scoreDirectorFactory>
+        <constraintProviderClass>com.aspd.backend.solver.InternshipConstraintProvider</constraintProviderClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <secondsSpentLimit>10</secondsSpentLimit>
+    </termination>
+</solver>
