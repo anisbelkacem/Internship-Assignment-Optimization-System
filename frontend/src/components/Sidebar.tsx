@@ -19,6 +19,7 @@ const Sidebar: FC = () => {
   };
 
   const isAssignmentsActive = location.pathname === '/assignments';
+  const isAssignmentsOpen = expandedSubmenu === 'assignments';
 
   return (
     <>
@@ -81,7 +82,7 @@ const Sidebar: FC = () => {
               <span className="nav-label">Schulen</span>
             </NavLink>
           </li>
-          <li className={`submenu-item ${isAssignmentsActive ? 'active' : ''}`}>
+          <li className={`submenu-item ${isAssignmentsActive ? 'active' : ''} ${isAssignmentsOpen ? 'open' : ''}`}>
             <button 
               className="submenu-toggle"
               onClick={() => toggleSubmenu('assignments')}

@@ -538,6 +538,7 @@ html, body, #root {
   }
 
   .app-sidebar.collapsed .submenu-item.active .submenu,
+  .app-sidebar.collapsed .submenu-item.open .submenu,
   .app-sidebar.collapsed .submenu-toggle:focus-within + .submenu {
     display: block;
   }
