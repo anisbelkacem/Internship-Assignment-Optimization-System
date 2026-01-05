@@ -81,7 +81,10 @@ public class InternshipConstraintProvider implements ConstraintProvider {
                          ConstraintCollectors.toList())
                 .filter((teacher, internships) -> {
                     int count = internships.size();
-                    if (count != 2 && count != 4) return false;
+                    if (count != 2 && count != 4) 
+                        {
+                            return false;
+                        }
                     
                     // Check if all types are different
                     long uniqueTypes = internships.stream()
@@ -208,16 +211,21 @@ public class InternshipConstraintProvider implements ConstraintProvider {
                     
                     if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
                         // Zone 1 is OK
-                        if ("1".equals(zone)) return false;
-                        
+                        if ("1".equals(zone)) {
+                            return false;
+                        }
                         // Zone 2 with OEPNV is OK
-                        if ("2".equals(zone) && Boolean.TRUE.equals(hasOepnv)) return false;
+                        if ("2".equals(zone) && Boolean.TRUE.equals(hasOepnv)){
+                            return false;
+                        } 
                         
                         // Everything else is NOT OK
                         return true;
                     } else { // PDP_I or PDP_II
                         // Zone 2 or 3 is OK
-                        if ("2".equals(zone) || "3".equals(zone)) return false;
+                        if ("2".equals(zone) || "3".equals(zone)){
+                            return false;
+                        }
                         
                         // Zone 1 is NOT OK
                         return true;
