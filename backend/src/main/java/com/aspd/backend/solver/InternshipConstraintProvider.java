@@ -30,22 +30,22 @@ public class InternshipConstraintProvider implements ConstraintProvider {
     public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
         return new Constraint[]{
                 // HARD CONSTRAINTS - Teacher Assignment Rules
-                // teacherCanOnlyTake_0_1_2_or_4_Internships(constraintFactory),
-                // teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes(constraintFactory),
-                // teacherMustSupportPraktikumType(constraintFactory),
-                // teacherMustMatchCourseForZspAndSfp(constraintFactory),
+                teacherCanOnlyTake_0_1_2_or_4_Internships(constraintFactory),
+                teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes(constraintFactory),
+                teacherMustSupportPraktikumType(constraintFactory),
+                teacherMustMatchCourseForZspAndSfp(constraintFactory),
 
                 // HARD CONSTRAINTS - School and Zone Rules
-                // internshipsMustBeInAcceptableZones(constraintFactory),
+                internshipsMustBeInAcceptableZones(constraintFactory),
 
                 // SOFT CONSTRAINTS - Basic Assignment
-                // rewardTeacherAssignment(constraintFactory),
+                rewardTeacherAssignment(constraintFactory),
 
                 // SOFT CONSTRAINTS - Workload Optimization
-                // preferTeachersWithExactly2Internships(constraintFactory),
+                preferTeachersWithExactly2Internships(constraintFactory),
 
                 // SOFT CONSTRAINTS - Diversity
-                // preferDiverseInternshipTypesPerSchool(constraintFactory),
+                preferDiverseInternshipTypesPerSchool(constraintFactory),
         };
     }
 
@@ -60,8 +60,12 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * take exactly 3 internships or more than 4 internships.
      */
     Constraint teacherCanOnlyTake_0_1_2_or_4_Internships(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .groupBy(PlannedInternship::getAssignedTeacher, ConstraintCollectors.count())
+                .filter((teacher, count) -> count == 3 || count > 4)
+                .penalize(HardSoftScore.ONE_HARD, (teacher, count) -> count.intValue())
+                .asConstraint("teacherCanOnlyTake_0_1_2_or_4_Internships");
     }
 
     /**
@@ -71,8 +75,24 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * 2 × ZSP; they must supervise different types (e.g., ZSP + SFP).
      */
     Constraint teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .groupBy(PlannedInternship::getAssignedTeacher, 
+                         ConstraintCollectors.toList())
+                .filter((teacher, internships) -> {
+                    int count = internships.size();
+                    if (count != 2 && count != 4) return false;
+                    
+                    // Check if all types are different
+                    long uniqueTypes = internships.stream()
+                            .map(PlannedInternship::getPraktikumType)
+                            .distinct()
+                            .count();
+                    
+                    return uniqueTypes != count; // Penalize if not all different
+                })
+                .penalize(HardSoftScore.ONE_HARD)
+                .asConstraint("teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes");
     }
 
     /**
@@ -83,8 +103,35 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * internships of types they have indicated they can supervise.
      */
     Constraint teacherMustSupportPraktikumType(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> {
+                    Teacher teacher = internship.getAssignedTeacher();
+                    String schoolYear = internship.getSchoolYear();
+                    PraktikumType type = internship.getPraktikumType();
+                    
+                    // Find the teacher's config for this school year
+                    TeacherPlConfig config = teacher.getPlConfigs().stream()
+                            .filter(c -> c.getSchoolYear().equals(schoolYear))
+                            .findFirst()
+                            .orElse(null);
+                    
+                    if (config == null) {
+                        log.warn("CONSTRAINT VIOLATION: Teacher {} has no config for year {}", 
+                                teacher.getTeacherId(), schoolYear);
+                        return true; // No config = violates constraint
+                    }
+                    
+                    // Check if teacher's preferences include this type
+                    boolean violation = !config.getInternshipPreferences().contains(type);
+                    if (violation) {
+                        log.warn("CONSTRAINT VIOLATION: Teacher {} does not support {} (preferences: {})",
+                                teacher.getTeacherId(), type, config.getInternshipPreferences());
+                    }
+                    return violation;
+                })
+                .penalize(HardSoftScore.ONE_HARD)
+                .asConstraint("teacherMustSupportPraktikumType");
     }
 
     /**
@@ -97,8 +144,41 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * This does not apply to PDP_I and PDP_II internships.
      */
     Constraint teacherMustMatchCourseForZspAndSfp(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.getCourse() != null) // Only ZSP/SFP have courses (PDP has null)
+                .filter(internship -> {
+                    PraktikumType type = internship.getPraktikumType();
+                    return type == PraktikumType.ZSP || type == PraktikumType.SFP;
+                })
+                .filter(internship -> {
+                    Teacher teacher = internship.getAssignedTeacher();
+                    Course requiredCourse = internship.getCourse();
+                    String schoolYear = internship.getSchoolYear();
+                    
+                    // Check if main subject matches
+                    if (teacher.getMainSubject() == requiredCourse) {
+                        return false; // No violation
+                    }
+                    
+                    // Check if any specialization matches
+                    TeacherPlConfig config = teacher.getPlConfigs().stream()
+                            .filter(c -> c.getSchoolYear().equals(schoolYear))
+                            .findFirst()
+                            .orElse(null);
+                    
+                    if (config != null && config.getSubjectSpecializations().contains(requiredCourse)) {
+                        return false; // No violation
+                    }
+                    
+                    log.warn("CONSTRAINT VIOLATION: Teacher {} (main: {}, specs: {}) doesn't match course {} for {}",
+                            teacher.getTeacherId(), teacher.getMainSubject(), 
+                            config != null ? config.getSubjectSpecializations() : "no config",
+                            requiredCourse, internship.getPraktikumType());
+                    return true; // Violation: teacher doesn't match course
+                })
+                .penalize(HardSoftScore.ONE_HARD)
+                .asConstraint("teacherMustMatchCourseForZspAndSfp");
     }
 
     // ================================================================================
@@ -119,8 +199,32 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      *   - Not allowed: Zone 1
      */
     Constraint internshipsMustBeInAcceptableZones(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedSchool() != null)
+                .filter(internship -> {
+                    PraktikumType type = internship.getPraktikumType();
+                    String zone = internship.getAssignedSchool().getZone();
+                    Boolean hasOepnv = internship.getAssignedSchool().getOepnv();
+                    
+                    if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
+                        // Zone 1 is OK
+                        if ("1".equals(zone)) return false;
+                        
+                        // Zone 2 with OEPNV is OK
+                        if ("2".equals(zone) && Boolean.TRUE.equals(hasOepnv)) return false;
+                        
+                        // Everything else is NOT OK
+                        return true;
+                    } else { // PDP_I or PDP_II
+                        // Zone 2 or 3 is OK
+                        if ("2".equals(zone) || "3".equals(zone)) return false;
+                        
+                        // Zone 1 is NOT OK
+                        return true;
+                    }
+                })
+                .penalize(HardSoftScore.ONE_HARD)
+                .asConstraint("internshipsMustBeInAcceptableZones");
     }
 
     // ================================================================================
@@ -134,8 +238,10 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * the empty solution where all teachers are null.
      */
     Constraint rewardTeacherAssignment(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .reward(HardSoftScore.ONE_SOFT, internship -> 100)
+                .asConstraint("rewardTeacherAssignment");
     }
 
     // ================================================================================
@@ -149,8 +255,12 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * 2 internships receive a score bonus.
      */
     Constraint preferTeachersWithExactly2Internships(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedTeacher() != null)
+                .groupBy(PlannedInternship::getAssignedTeacher, ConstraintCollectors.count())
+                .filter((teacher, count) -> count == IDEAL_TEACHER_INTERNSHIPS)
+                .reward(HardSoftScore.ONE_SOFT, (teacher, count) -> 10) // Bonus points
+                .asConstraint("preferTeachersWithExactly2Internships");
     }
 
     /**
@@ -161,7 +271,13 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      * - Mixed types are preferred (e.g., 3 × ZSP + 2 × SFP = higher score)
      */
     Constraint preferDiverseInternshipTypesPerSchool(ConstraintFactory constraintFactory) {
-        // TODO: Implement constraint
-        return null;
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.getAssignedSchool() != null)
+                .groupBy(PlannedInternship::getAssignedSchool,
+                         PlannedInternship::getPraktikumType,
+                         ConstraintCollectors.count())
+                .filter((school, type, count) -> count > 1)
+                .penalize(HardSoftScore.ONE_SOFT, (school, type, count) -> (count.intValue() - 1) * 2)
+                .asConstraint("preferDiverseInternshipTypesPerSchool");
     }
 }
