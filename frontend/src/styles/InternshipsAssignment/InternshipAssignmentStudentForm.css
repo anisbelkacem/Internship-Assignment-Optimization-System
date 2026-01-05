@@ -134,16 +134,16 @@ textarea.student-config-input {
 
 .checkbox-pill:hover,
 .checkbox-pill:focus-within {
-    border-color: #509CDB;
-    background: #eef2ff;
-    box-shadow: 0 4px 10px rgba(80, 156, 219, 0.15);
+    border-color: #547792;
+    background: #f0f3f7;
+    box-shadow: 0 4px 10px rgba(84, 119, 146, 0.15);
 }
 
 .checkbox-pill input[type="checkbox"] {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #509CDB;
+    accent-color: #547792;
 }
 
 .student-config-form-actions {

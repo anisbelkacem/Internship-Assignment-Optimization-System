@@ -5,6 +5,9 @@ import "../styles/global.css";
 const Dashboard: React.FC = () => {
   const [showSemesterMenu, setShowSemesterMenu] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState("WiSe 24/25");
+  const [showOverbookedModal, setShowOverbookedModal] = useState(false);
+  const [showDeadlineModal, setShowDeadlineModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   const semesters = [
     "WiSe 24/25",
@@ -106,7 +109,7 @@ const Dashboard: React.FC = () => {
                     <p>3 PLs mit 3+ Praktika</p>
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-sm">Anzeigen</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowOverbookedModal(true)}>Anzeigen</button>
               </div>
 
               <div className="status-card info">
@@ -117,7 +120,7 @@ const Dashboard: React.FC = () => {
                     <p>PDP I Planung: 15. Jan 2025</p>
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-sm">Details</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowDeadlineModal(true)}>Details</button>
               </div>
             </div>
           </section>
@@ -248,6 +251,180 @@ const Dashboard: React.FC = () => {
           <RightPanel />
         </aside>
       </div>
+
+      {/* Overbooked Modal */}
+      {showOverbookedModal && (
+        <div className="modal-overlay" onClick={() => setShowOverbookedModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="student-form-container">
+              <h3 className="student-form-title">Überbuchte Praktikumsleiter</h3>
+
+              <div className="overbooked-list">
+                <div className="overbooked-item">
+                  <div className="item-header">
+                    <h4>Dr. Robert Müller</h4>
+                    <span className="badge danger">4 Praktika</span>
+                  </div>
+                  <p className="item-detail">Schultyp: GS • Zone: 1 (Passau)</p>
+                  <p className="item-detail">Empfehlte Kapazität: 3 Praktika</p>
+                </div>
+
+                <div className="overbooked-item">
+                  <div className="item-header">
+                    <h4>Prof. Anna Schmidt</h4>
+                    <span className="badge danger">5 Praktika</span>
+                  </div>
+                  <p className="item-detail">Schultyp: MS • Zone: 3 (Entfernt)</p>
+                  <p className="item-detail">Empfehlte Kapazität: 4 Praktika</p>
+                </div>
+
+                <div className="overbooked-item">
+                  <div className="item-header">
+                    <h4>Hans Weber</h4>
+                    <span className="badge danger">3 Praktika</span>
+                  </div>
+                  <p className="item-detail">Schultyp: GS • Zone: 2 (Mittel)</p>
+                  <p className="item-detail">Empfehlte Kapazität: 2 Praktika</p>
+                </div>
+              </div>
+
+              <div className="student-form-actions">
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowOverbookedModal(false)}
+                >
+                  Schließen
+                </button>
+                <button className="btn btn-primary">Ausgleichen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deadline Modal */}
+      {showDeadlineModal && (
+        <div className="modal-overlay" onClick={() => setShowDeadlineModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="student-form-container">
+              <h3 className="student-form-title">Anstehende Deadlines</h3>
+
+              <div className="overbooked-list">
+                <div className="overbooked-item" style={{borderLeftColor: '#ef4444'}}>
+                  <div className="item-header">
+                    <h4>PDP I Planung</h4>
+                    <span className="badge danger">Dringend</span>
+                  </div>
+                  <p className="item-detail">📅 Deadline: 15. Januar 2025</p>
+                  <p className="item-detail">Status: 18 von 24 Zuweisungen abgeschlossen</p>
+                  <p className="item-detail">Verantwortlich: Praktikumsamt Team</p>
+                </div>
+
+                <div className="overbooked-item" style={{borderLeftColor: '#f59e0b'}}>
+                  <div className="item-header">
+                    <h4>SFP Dokumentation</h4>
+                    <span className="badge warning">Bald</span>
+                  </div>
+                  <p className="item-detail">📅 Deadline: 20. Januar 2025</p>
+                  <p className="item-detail">Status: Berichte ausstehend</p>
+                  <p className="item-detail">Verantwortlich: PLs & Studierende</p>
+                </div>
+
+                <div className="overbooked-item" style={{borderLeftColor: '#3b82f6'}}>
+                  <div className="item-header">
+                    <h4>PDP II Vorbereitung</h4>
+                    <span className="badge primary">Normal</span>
+                  </div>
+                  <p className="item-detail">📅 Deadline: 01. Februar 2025</p>
+                  <p className="item-detail">Status: Planung läuft</p>
+                  <p className="item-detail">Verantwortlich: Koordinatoren</p>
+                </div>
+              </div>
+
+              <div className="student-form-actions">
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowDeadlineModal(false)}
+                >
+                  Schließen
+                </button>
+                <button className="btn btn-primary" onClick={() => setShowCalendarModal(true)}>Kalender öffnen</button>
+              </div>
+            </div>
+
+      {/* Calendar Modal */}
+      {showCalendarModal && (
+        <div className="modal-overlay" onClick={() => setShowCalendarModal(false)}>
+          <div className="modal-content modal-calendar" onClick={(e) => e.stopPropagation()}>
+            <div className="student-form-container">
+              <h3 className="student-form-title">📅 Kalender - Januar 2025</h3>
+
+              <div className="calendar-grid">
+                <div className="calendar-header">Mo</div>
+                <div className="calendar-header">Di</div>
+                <div className="calendar-header">Mi</div>
+                <div className="calendar-header">Do</div>
+                <div className="calendar-header">Fr</div>
+                <div className="calendar-header">Sa</div>
+                <div className="calendar-header">So</div>
+
+                {/* Empty cells for days before month starts */}
+                <div className="calendar-day empty"></div>
+                <div className="calendar-day empty"></div>
+
+                {/* January days */}
+                {[1,2,3,4,5,6,7,8,9,10,11,12,13,14].map(day => (
+                  <div key={day} className="calendar-day">{day}</div>
+                ))}
+                <div className="calendar-day deadline-day">15</div>
+                {[16,17,18,19].map(day => (
+                  <div key={day} className="calendar-day">{day}</div>
+                ))}
+                <div className="calendar-day deadline-day">20</div>
+                {[21,22,23,24,25,26,27,28,29,30,31].map(day => (
+                  <div key={day} className="calendar-day">{day}</div>
+                ))}
+              </div>
+
+              <div className="calendar-legend">
+                <div className="legend-item">
+                  <span className="legend-color danger"></span>
+                  <span>Dringend</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color warning"></span>
+                  <span>Bald</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color primary"></span>
+                  <span>Normal</span>
+                </div>
+              </div>
+
+              <div className="student-form-actions">
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowCalendarModal(false)}
+                >
+                  Schließen
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    setShowCalendarModal(false);
+                    setShowDeadlineModal(true);
+                  }}
+                >
+                  Zurück
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

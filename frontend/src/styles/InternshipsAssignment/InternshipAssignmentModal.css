@@ -50,7 +50,7 @@
 .form-select-small:focus,
 .year-selector:focus {
   outline: none;
-  border-color: #509cdb;
+  border-color: #547792;
 }
 
 /* Tab Navigation (if needed later) */
@@ -74,12 +74,12 @@
 }
 
 .tab-button:hover {
-  color: #509cdb;
+  color: #547792;
 }
 
 .tab-button.active {
-  color: #509cdb;
-  border-bottom-color: #509cdb;
+  color: #547792;
+  border-bottom-color: #547792;
 }
 
 /* Tables - Unified with Dashboard/Reports */
@@ -135,7 +135,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #509cdb;
+  accent-color: #547792;
 }
 
 .schools-table input[type="checkbox"]:disabled {
@@ -271,12 +271,12 @@
 }
 
 .modal-btn-primary {
-  background-color: #509CDB;
+  background-color: #547792;
   color: white;
 }
 
 .modal-btn-primary:hover {
-  background-color: #4189c7;
+  background-color: #3d5a6d;
 }
 
 .modal-btn-cancel {

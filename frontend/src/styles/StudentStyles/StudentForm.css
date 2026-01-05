@@ -69,7 +69,7 @@
 }
 
 .student-input:focus {
-    border-color: #509CDB;
+    border-color: #547792;
     outline: none;
     box-shadow: 0 0 0 4px rgba(80, 156, 219, 0.12), 0 4px 12px rgba(80, 156, 219, 0.15);
     transform: translateY(-1px);
@@ -107,7 +107,7 @@ textarea.student-input {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #509CDB;
+    accent-color: #547792;
 }
 
 .student-checkbox-row label {

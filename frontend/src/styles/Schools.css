@@ -28,7 +28,7 @@
 
 .btn-primary {
   padding: 0.5rem 1rem;
-  background-color: #509CDB;
+  background-color: #547792;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -42,7 +42,7 @@
 }
 
 .btn-primary:hover {
-  background-color: #4189c7;
+  background-color: #3d5a6d;
 }
 
 .btn-add-school {
@@ -52,8 +52,8 @@
 .btn-secondary {
   padding: 0.5rem 1rem;
   background-color: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: #547792;
+  border: 1px solid #547792;
   border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 500;
@@ -62,14 +62,14 @@
 }
 
 .btn-secondary:hover {
-  background-color: #eff6ff;
+  background-color: #f0f3f7;
 }
 
 .btn-danger {
   padding: 0.5rem 1rem;
   background-color: transparent;
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: #213448;
+  border: 1px solid #213448;
   border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 500;
@@ -78,7 +78,7 @@
 }
 
 .btn-danger:hover {
-  background-color: #fef2f2;
+  background-color: #f5f3f0;
 }
 
 .btn-import {

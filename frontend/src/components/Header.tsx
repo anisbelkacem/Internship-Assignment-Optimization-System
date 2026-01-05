@@ -79,7 +79,6 @@ const Header: FC = () => {
                 <div className="user-menu" role="menu">
                   <div className="user-menu__header">
                     <div className="org-name">Passau University</div>
-                    <button className="logout-btn" onClick={handleLogout} aria-label="Logout">Logout</button>
                   </div>
                   
                   <div className="user-menu__profile">
@@ -98,7 +97,7 @@ const Header: FC = () => {
 
                   <button className="user-menu__link" role="menuitem">View Account</button>
 
-                  <button className="user-menu__item" role="menuitem">Switch Account</button>
+                  <button className="user-menu__item" onClick={handleLogout} role="menuitem">Logout</button>
                 </div>
               )}
             </div>

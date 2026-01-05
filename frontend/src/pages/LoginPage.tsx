@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import uniLogo from '../assets/Uni.png';
 import '../styles/LoginPage.css';
 
 const LoginPage: React.FC = () => {
@@ -39,54 +40,52 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="login-container">
-      <div className="login-wrapper">
-        <div className="login-header">
-          <div className="login-logo-container">
-            <div className="login-logo-inner">
-              <div className="login-logo-icon">P</div>
-              <div className="login-logo-text">
-                <div className="login-logo-title">UNIVERSITÄT</div>
-                <div className="login-logo-subtitle">PASSAU</div>
-              </div>
-            </div>
-          </div>
-          <h1 className="login-main-title">Praktikumsamt</h1>
-          <p className="login-subtitle">Universität Passau</p>
+      <header className="login-topbar" aria-label="Universität Passau">
+        <div className="login-topbar-right">
+          <img src={uniLogo} alt="Universität Passau" className="login-topbar-logo" />
         </div>
+      </header>
 
+      <div className="login-wrapper">
         <div className="login-card">
           <h2 className="login-card-title">Anmelden</h2>
 
           <div className="login-form">
             <div className="login-input-group">
-              <label htmlFor="email" className="login-label">
-                E-Mail
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                className="login-input"
-                placeholder="admin@school.com"
-                disabled={loading}
-              />
+              <div className="login-input-wrapper">
+                <div className="login-input-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
+                  className="login-input"
+                  placeholder="Email or Phone"
+                  disabled={loading}
+                />
+              </div>
             </div>
 
             <div className="login-input-group">
-              <label htmlFor="password" className="login-label">
-                Passwort
-              </label>
-              <div className="login-password-container">
+              <div className="login-input-wrapper">
+                <div className="login-input-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+                  </svg>
+                </div>
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                  className="login-input"
-                  placeholder="Passwort eingeben"
+                  className="login-input login-input-with-eye"
+                  placeholder="Password"
                   disabled={loading}
                 />
                 <button
@@ -121,9 +120,10 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="login-footer">
-          <p>© 2025 Universität Passau - Aspd - Team 3</p>
-        </div>
+      </div>
+
+      <div className="login-footer">
+        <p>© 2025 Universität Passau - Aspd - Team 3</p>
       </div>
     </div>
   );

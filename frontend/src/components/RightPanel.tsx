@@ -1,6 +1,21 @@
 import type { FC } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import StudentForm from "./Student/StudentForm";
+import type { Student } from "../services/studentService";
 
-const RightPanel: FC = () => (
+const RightPanel: FC = () => {
+  const navigate = useNavigate();
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const handleStudentSave = (student: Student) => {
+    console.log("Student saved:", student);
+    setShowStudentModal(false);
+    // Optionally refresh student list or show success message
+  };
+
+  return (
   <div className="right-panel">
     {/* Quick Actions Panel */}
     <div className="section-container">
@@ -8,17 +23,17 @@ const RightPanel: FC = () => (
         <h2>⚡ Schnellaktionen</h2>
       </div>
       <div className="quick-actions-list">
-        <button className="quick-action-btn">
+        <button className="quick-action-btn" onClick={() => navigate('/assignments')}>
           <span className="card-icon">➕</span>
           <span className="action-text">Neue Zuweisung starten</span>
         </button>
-        <button className="quick-action-btn">
-          <span className="card-icon">📥</span>
-          <span className="action-text">Studierendenliste importieren</span>
+        <button className="quick-action-btn" onClick={() => setShowStudentModal(true)}>
+          <span className="card-icon">👥</span>
+          <span className="action-text">Studierenden hinzufügen</span>
         </button>
-        <button className="quick-action-btn">
+        <button className="quick-action-btn" onClick={() => setShowReportModal(true)}>
           <span className="card-icon">📄</span>
-          <span className="action-text">Planungsbriefe generieren</span>
+          <span className="action-text">Bericht erstellen</span>
         </button>
       </div>
     </div>
@@ -50,7 +65,70 @@ const RightPanel: FC = () => (
 
       <button className="btn btn-primary btn-full">Kartenansicht öffnen</button>
     </div>
+
+    {/* Add Student Modal */}
+    {showStudentModal && (
+      <div className="modal-overlay" onClick={() => setShowStudentModal(false)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <StudentForm 
+            student={null}
+            onClose={() => setShowStudentModal(false)}
+            onSave={handleStudentSave}
+          />
+        </div>
+      </div>
+    )}
+
+    {/* Generate Report Modal */}
+    {showReportModal && (
+      <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="student-form-container">
+            <h3 className="student-form-title">Bericht erstellen</h3>
+
+            <div className="student-field">
+              <label className="required" htmlFor="reportType">Berichtstyp</label>
+              <select id="reportType" className="student-input">
+                <option>Planungsbriefe</option>
+                <option>Zuweisungsübersicht</option>
+                <option>Kapazitätsauslastung</option>
+                <option>Studierende nach Zone</option>
+              </select>
+            </div>
+
+            <div className="student-field">
+              <label className="required" htmlFor="semester">Semester</label>
+              <select id="semester" className="student-input">
+                <option>WiSe 24/25</option>
+                <option>SoSe 25</option>
+                <option>WiSe 25/26</option>
+              </select>
+            </div>
+
+            <div className="student-field">
+              <label className="required" htmlFor="format">Format</label>
+              <select id="format" className="student-input">
+                <option>PDF</option>
+                <option>Excel</option>
+                <option>CSV</option>
+              </select>
+            </div>
+
+            <div className="student-form-actions">
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => setShowReportModal(false)}
+              >
+                Abbrechen
+              </button>
+              <button className="btn btn-primary">Generieren</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 );
+};
 
 export default RightPanel;

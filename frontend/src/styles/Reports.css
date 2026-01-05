@@ -48,7 +48,7 @@
 }
 
 .trend-card {
-  background: #f6f8fb;
+  background: #f0f3f7;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 14px;
@@ -61,7 +61,7 @@
 }
 
 .viz-card {
-  background: #f6f8fb;
+  background: #f0f3f7;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 14px;
@@ -181,14 +181,14 @@
 }
 
 .comparison-card {
-  background: #f6f8fb;
+  background: #f0f3f7;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 16px;
 }
 
 .comparison-card.diff {
-  background: #eef2ff;
+  background: #f0f5f7;
 }
 
 .comparison-header {
@@ -247,21 +247,21 @@
 }
 
 .alert-pill.urgent {
-  background: #fef2f2;
-  border-color: #c04b4b;
-  color: #7f1d1d;
+  background: #f5f3f0;
+  border-color: #213448;
+  color: #213448;
 }
 
 .alert-pill.warning {
-  background: #fffbeb;
-  border-color: #d98b33;
-  color: #92400e;
+  background: #f0f3f7;
+  border-color: #547792;
+  color: #213448;
 }
 
 .alert-pill.info {
-  background: #eff6ff;
-  border-color: #509cdb;
-  color: #1e3a5f;
+  background: #f0f5f7;
+  border-color: #547792;
+  color: #213448;
 }
 
 .alert-icon {
@@ -301,7 +301,7 @@
   background: white;
   border-radius: 8px;
   padding: 20px;
-  border-left: 4px solid #509CDB;
+  border-left: 4px solid #547792;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -757,18 +757,18 @@
 }
 
 .status-assigned {
-  background: #d1fae5;
-  color: #065f46;
+  background: #94B4C1;
+  color: #213448;
 }
 
 .status-not-assigned {
-  background: #fed7aa;
-  color: #92400e;
+  background: #f0f3f7;
+  color: #547792;
 }
 
 .status-completed {
-  background: #dbeafe;
-  color: #0c4a6e;
+  background: #547792;
+  color: #ffffff;
 }
 
 .filter-row {
