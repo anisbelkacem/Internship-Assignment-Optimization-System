@@ -142,7 +142,7 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
                 className="student-config-btn btn-add-subject"
                 onClick={handleAddSubject}
               >
-                + Add
+                Add
               </button>
             </div>
             <div className="subject-tags">
@@ -163,7 +163,7 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
 
           <div className="student-config-field" style={{marginTop: '20px'}}>
             <label style={{marginBottom: '12px', display: 'block'}}>Internship Preferences</label>
-            <div className="checkbox-group horizontal">
+            <div className="checkbox-group">
               {Object.values(PraktikumType).map((pref) => (
                 <label key={pref} className="checkbox-label">
                   <input
