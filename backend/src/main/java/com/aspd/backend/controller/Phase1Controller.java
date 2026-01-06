@@ -1,18 +1,24 @@
 package com.aspd.backend.controller;
 
-import com.aspd.backend.dto.*;
-import com.aspd.backend.model.*;
+import com.aspd.backend.dto.PlannedInternshipDto;
+import com.aspd.backend.dto.TeacherAssignmentResult;
+import com.aspd.backend.model.PlannedInternship;
+import com.aspd.backend.model.School;
+import com.aspd.backend.model.StudentConfig;
+import com.aspd.backend.model.Teacher;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.StudentConfigRepository;
 import com.aspd.backend.repository.TeacherRepository;
 import com.aspd.backend.service.Phase1OptimizationService;
 import com.aspd.backend.solver.InternshipSolution;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
