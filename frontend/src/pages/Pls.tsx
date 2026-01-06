@@ -267,7 +267,7 @@ export default function Pls() {
                     <td>
                       {pl.firstName} {pl.lastName}
                     </td>
-                    <td>{pl.mainSubject}</td>
+                    <td style={{textTransform: 'lowercase'}}>{pl.mainSubject}</td>
                     <td>{pl.schoolName ?? "-"}</td>
                     <td>{pl.email}</td>
                     <td>

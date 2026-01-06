@@ -13,19 +13,8 @@ export default function FolderTabs() {
     useEffect(() => {
         async function fetchYears() {
             const years = await StudentConfigService.getAllYears();
-            
-            // Use default semesters if no years are returned from backend
-            const defaultSemesters = [
-                "WiSe 2026/2027",
-                "SoSe 2026",
-                "WiSe 2025/2026",
-                "SoSe 2025",
-                "WiSe 2024/2025",
-            ];
-            
-            const yearsToUse = years.length > 0 ? years : defaultSemesters;
-            
-            const sortedYears = yearsToUse.sort((a, b) => {
+
+            const sortedYears = years.sort((a, b) => {
                 const [aStart, aEnd] = a.split("-");
                 const [bStart, bEnd] = b.split("-");
                 if (bStart !== aStart) return parseInt(bStart) - parseInt(aStart);
