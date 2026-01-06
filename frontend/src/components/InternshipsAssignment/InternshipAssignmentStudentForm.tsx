@@ -46,14 +46,14 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
     return (
         <div className="student-config-form-container">
             <h3 className="student-config-form-title">
-                {config?.id ? "Edit Student Configuration" : "Create Student Configuration"}
+                {config?.id ? "Schülerkonfiguration bearbeiten" : "Schülerkonfiguration erstellen"}
             </h3>
 
             <div className="student-config-split-layout">
                 {/* Left Side: Student Info */}
                 <div className="student-config-left-section">
                     <div className="student-config-field">
-                        <label className="required">Student ID</label>
+                        <label className="required">Schüler-ID</label>
                         <input
                             className="student-config-input"
                             type="number"
@@ -64,20 +64,20 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
                     </div>
 
                     <div className="student-config-field">
-                        <label className="required">Year</label>
+                        <label className="required">Jahr</label>
                         <input
                             className="student-config-input"
                             type="text"
                             value={form.year}
                             onChange={e => handleChange("year", e.target.value)}
-                            placeholder="e.g., 2024/2025"
+                            placeholder="z.B. 2024/2025"
                             required
                         />
                     </div>
 
                     {/* School Type (shown for both create and edit) */}
                     <div className="student-config-field">
-                        <label className="required">School Type</label>
+                        <label className="required">Schultyp</label>
                         <select
                             className="student-config-input"
                             value={form.schoolType}
@@ -93,33 +93,33 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
                 {/* Right Side: Courses (shown for both create and edit) */}
                 <div className="student-config-right-section">
                     {[
-                        ["mainCourse", "Main Course"],
-                        ["prefCourse1", "Course 1"],
-                        ["prefCourse2", "Course 2"],
-                        ["prefCourse3", "Course 3"]
+                        ["mainCourse", "Hauptfach"],
+                        ["prefCourse1", "Kurs 1"],
+                        ["prefCourse2", "Kurs 2"],
+                        ["prefCourse3", "Kurs 3"]
                     ].map(([key, label]) => (
                         <div key={key} className="student-config-field">
-                            <label className={label === "Main Course" ? "required" : undefined}>{label}</label>
+                            <label className={label === "Hauptfach" ? "required" : undefined}>{label}</label>
                             <select
                                 className="student-config-input"
                                 value={form[key as keyof StudentConfigDto] as string}
                                 onChange={e => handleChange(key as keyof StudentConfigDto, e.target.value as any)}
-                                required={label === "Main Course"}
+                                required={label === "Hauptfach"}
                             >
-                                <option value="COMPUTER_SCIENCE">Computer Science</option>
-                                <option value="ENGINEERING">Engineering</option>
-                                <option value="BUSINESS">Business</option>
-                                <option value="MEDICINE">Medicine</option>
-                                <option value="LAW">Law</option>
-                                <option value="ARTS">Arts</option>
-                                <option value="SCIENCES">Sciences</option>
-                                <option value="OTHER">Other</option>
+                                <option value="COMPUTER_SCIENCE">Informatik</option>
+                                <option value="ENGINEERING">Ingenieurwesen</option>
+                                <option value="BUSINESS">Betriebswirtschaft</option>
+                                <option value="MEDICINE">Medizin</option>
+                                <option value="LAW">Jura</option>
+                                <option value="ARTS">Kunst</option>
+                                <option value="SCIENCES">Naturwissenschaften</option>
+                                <option value="OTHER">Sonstiges</option>
                             </select>
                         </div>
                     ))}
 
                     <div className="student-config-field checkbox-list">
-                        <label>Internship Types</label>
+                        <label>Praktikumtypen</label>
                         <div className="checkbox-row">
                             {["pdpI", "pdpII", "zsp", "sfp"].map(field => (
                                 <label key={field} className="checkbox-pill">
@@ -138,13 +138,13 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
 
             <div className="student-config-form-actions">
                 <button className="btn btn-primary" onClick={handleSubmit}>
-                    {config ? "Update" : "Create"}
+                    {config ? "Aktualisieren" : "Erstellen"}
                 </button>
                 <button
                     className="btn btn-secondary"
                     onClick={onClose}
                 >
-                    Cancel
+                    Abbrechen
                 </button>
             </div>
         </div>

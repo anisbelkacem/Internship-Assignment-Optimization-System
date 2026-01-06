@@ -12,6 +12,21 @@ import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 
 type TabType = "assignments" | "pl-config" | "student-config";
 
+// Course translation function
+const translateCourse = (course: string): string => {
+  const courseMap: { [key: string]: string } = {
+    COMPUTER_SCIENCE: "Informatik",
+    ENGINEERING: "Ingenieurwesen",
+    BUSINESS: "Betriebswirtschaft",
+    MEDICINE: "Medizin",
+    LAW: "Jura",
+    ARTS: "Kunst",
+    SCIENCES: "Naturwissenschaften",
+    OTHER: "Sonstiges"
+  };
+  return courseMap[course] || course;
+};
+
 export default function InternshipAssignments() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("assignments");
@@ -686,18 +701,18 @@ export default function InternshipAssignments() {
       {activeTab === 'student-config' && (
         <section className="section-container">
           <div className="section-header">
-            <h2>Student Configuration</h2>
+            <h2>Schülerkonfiguration</h2>
             <button 
               className="btn btn-primary"
               onClick={() => handleOpenStudentConfigModal()}
             >
-              Add Config
+              Konfigurieren
             </button>
           </div>
           <div style={{marginBottom: '20px'}}>
                 <input
                   type="text"
-                  placeholder="🔍 Search students..."
+                  placeholder="🔍 Schüler suchen..."
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                   style={{
@@ -728,18 +743,15 @@ export default function InternshipAssignments() {
               <table className="schools-table">
                 <thead>
                   <tr>
-                    <th style={{ whiteSpace: 'nowrap' }}>Student Name</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Year</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>School Type</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Main Course</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Course 1</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Course 2</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Course 3</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>PDP-I</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>PDP-II</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>ZSP</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>SFP</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Actions</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Schülername</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Jahr</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Schultyp</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 1</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 2</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 3</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Praktika</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -749,7 +761,7 @@ export default function InternshipAssignments() {
                   }).length === 0 ? (
                     <tr>
                       <td colSpan={12} className="empty-state">
-                        {studentSearchTerm ? 'No students match your search' : 'No students found'}
+                        {studentSearchTerm ? 'Keine Schüler entsprechen Ihrer Suche' : 'Keine Schüler gefunden'}
                       </td>
                     </tr>
                   ) : (
@@ -765,10 +777,10 @@ export default function InternshipAssignments() {
                         return (
                           <tr key={`student-${student.matriculationNbr}`}>
                             <td>{student.firstName} {student.lastName}</td>
-                            <td colSpan={10} className="empty-state">No configurations</td>
+                            <td colSpan={7} className="empty-state">Keine Konfigurationen</td>
                             <td>
                               <button
-                                className="edit-config-btn"
+                                className="action-btn edit-btn"
                                 onClick={() => {
                                   setEditingStudentConfig({
                                     studentId: student.matriculationNbr,
@@ -786,6 +798,7 @@ export default function InternshipAssignments() {
                                   setShowStudentConfigModal(true);
                                 }}
                                 title="Edit student configuration"
+                                aria-label="Edit student configuration"
                               >
                                 ✏️
                               </button>
@@ -803,35 +816,36 @@ export default function InternshipAssignments() {
                           )}
                           <td>{config.year}</td>
                           <td>{config.schoolType}</td>
-                          <td>{config.mainCourse}</td>
-                          <td>{config.prefCourse1 || "-"}</td>
-                          <td>{config.prefCourse2 || "-"}</td>
-                          <td>{config.prefCourse3 || "-"}</td>
-                          <td>
-                            <input type="checkbox" checked={config.pdpI} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.pdpII} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.zsp} disabled />
-                          </td>
-                          <td>
-                            <input type="checkbox" checked={config.sfp} disabled />
+                          <td style={{textTransform: 'lowercase'}}>{translateCourse(config.mainCourse)}</td>
+                          <td style={{textTransform: 'lowercase'}}>{config.prefCourse1 ? translateCourse(config.prefCourse1) : "-"}</td>
+                          <td style={{textTransform: 'lowercase'}}>{config.prefCourse2 ? translateCourse(config.prefCourse2) : "-"}</td>
+                          <td style={{textTransform: 'lowercase'}}>{config.prefCourse3 ? translateCourse(config.prefCourse3) : "-"}</td>
+                          <td style={{ maxWidth: '150px' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center', overflow: 'auto' }}>
+                              {config.pdpI && <span style={{ background: '#e0f2fe', color: '#075985', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>PDP-I</span>}
+                              {config.pdpII && <span style={{ background: '#e0f2fe', color: '#075985', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>PDP-II</span>}
+                              {config.zsp && <span style={{ background: '#e0f2fe', color: '#075985', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>ZSP</span>}
+                              {config.sfp && <span style={{ background: '#e0f2fe', color: '#075985', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>SFP</span>}
+                              {!config.pdpI && !config.pdpII && !config.zsp && !config.sfp && <span style={{ color: '#94a3b8' }}>-</span>}
+                            </div>
                           </td>
                           <td>
                             <div className="action-buttons">
                               <button
-                                className="btn-secondary btn-sm"
+                                className="action-btn edit-btn"
                                 onClick={() => handleOpenStudentConfigModal(config)}
+                                title="Edit configuration"
+                                aria-label="Edit configuration"
                               >
-                                Edit
+                                ✏️
                               </button>
                               <button
-                                className="btn-danger btn-sm"
+                                className="action-btn delete-btn"
                                 onClick={() => config.id && handleDeleteStudentConfig(config.id)}
+                                title="Delete configuration"
+                                aria-label="Delete configuration"
                               >
-                                Delete
+                                🗑️
                               </button>
                             </div>
                           </td>
