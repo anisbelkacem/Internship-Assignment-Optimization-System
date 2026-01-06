@@ -82,12 +82,22 @@ const Sidebar: FC = () => {
               <span className="nav-label">Schulen</span>
             </NavLink>
           </li>
-          <li className={`submenu-item ${isAssignmentsActive ? 'active' : ''} ${isAssignmentsOpen ? 'open' : ''}`}>
-            <button 
-              className="submenu-toggle"
-              onClick={() => toggleSubmenu('assignments')}
-              aria-expanded={expandedSubmenu === 'assignments'}
-            >
+                    {/* NEW: Courses Navigation Item */}
+          <li>
+            <NavLink to="/courses" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+              <span className="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 7h8M8 11h8M8 15h5" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+              Kurse
+            </NavLink>
+          </li>
+          <li></li>
+          <li>
+            <NavLink to="/assignments" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                   <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>

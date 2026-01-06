@@ -5,7 +5,9 @@ import com.aspd.backend.dto.TeacherDto;
 import com.aspd.backend.dto.TeacherPlConfigDto;
 import com.aspd.backend.dto.TeacherRequest;
 
+import com.aspd.backend.model.Course;
 import com.aspd.backend.model.Teacher;
+import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherPlConfigRepository;
 import com.aspd.backend.repository.TeacherRepository;
@@ -20,7 +22,6 @@ import java.util.List;
 
 import com.aspd.backend.common.exception.InvalidDataException;
 import com.aspd.backend.dto.TeacherImportResult;
-import com.aspd.backend.model.Course;
 import com.aspd.backend.model.School;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -45,12 +46,14 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final TeacherPlConfigRepository plConfigRepository;
     private final SchoolRepository schoolRepository;
+    private final CourseRepository courseRepository;
     public TeacherService(TeacherRepository teacherRepository,
                           TeacherPlConfigRepository plConfigRepository,
-                          SchoolRepository schoolRepository) {
+                          SchoolRepository schoolRepository, CourseRepository courseRepository) {
         this.teacherRepository = teacherRepository;
         this.plConfigRepository = plConfigRepository;
         this.schoolRepository = schoolRepository;
+        this.courseRepository = courseRepository;
     }
 
 
@@ -223,7 +226,7 @@ public class TeacherService {
                 row.createCell(1).setCellValue(t.getLastName());
                 row.createCell(2).setCellValue(t.getEmail());
                 row.createCell(3).setCellValue(
-                        t.getMainSubject() != null ? t.getMainSubject().name() : ""
+                        t.getMainSubject() != null ? t.getMainSubject().getName() : ""
                 );
                 row.createCell(4).setCellValue(
                         t.getSchool() != null && t.getSchool().getId() != null
@@ -338,16 +341,13 @@ public class TeacherService {
             throw new InvalidDataException("mainSubject is required");
         }
 
-        Course mainSubject;
-        try {
-            mainSubject = Course.valueOf(mainSubjectRaw.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            throw new InvalidDataException(
-                    "mainSubject",
-                    mainSubjectRaw,
-                    "must be one of: " + List.of(Course.values())
-            );
-        }
+        Course mainSubject = courseRepository
+                .findByNameIgnoreCase(mainSubjectRaw.trim())
+                .orElseThrow(() -> new InvalidDataException(
+                        "mainSubject",
+                        mainSubjectRaw,
+                        "Course not found in database"
+                ));
 
         Teacher teacher = new Teacher();
         teacher.setFirstName(firstName.trim());

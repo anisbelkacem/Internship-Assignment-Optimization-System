@@ -1,13 +1,28 @@
 package com.aspd.backend.model;
 
-public enum Course {
-    //place holders for now;
-    COMPUTER_SCIENCE,
-    ENGINEERING,
-    BUSINESS,
-    MEDICINE,
-    LAW,
-    ARTS,
-    SCIENCES,
-    OTHER
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "courses")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class Course {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    private boolean active = true;
+
+    public Course(String courseName) {
+        this.name = courseName;
+    }
 }

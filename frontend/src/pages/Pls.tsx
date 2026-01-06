@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import apiService from "../services/api";
 import plService, {
-  Course,
   type TeacherDto,
 } from "../services/plService";
 import "../styles/Pls/Pls.css";
-
+import "../styles/Schools.css"; 
+import courseService, { type Course } from "../services/courseService";
 import PlFormModal, {
   type PlFormValues,
   type SchoolOption,
@@ -14,16 +14,26 @@ import PlImportModal from "../components/PlImportModal";
 
 type Mode = "create" | "edit";
 
+
+
 const initialForm: PlFormValues = {
   teacherId: undefined,
   firstName: "",
   lastName: "",
   email: "",
-  mainSubject: "",
+  mainSubjectId: "",
   schoolId: "",
 };
 
 export default function Pls() {
+  const [courses, setCourses] = useState<Course[]>([]);
+
+useEffect(() => {
+  void courseService.getAllCourses().then(data => {
+    setCourses(data.filter(c => c.active));
+  });
+}, []);
+
   const [pls, setPls] = useState<TeacherDto[]>([]);
   const [schools, setSchools] = useState<SchoolOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,8 +98,8 @@ export default function Pls() {
         firstName: pl.firstName ?? "",
         lastName: pl.lastName ?? "",
         email: pl.email ?? "",
-        mainSubject: (pl.mainSubject as Course) ?? "",
-        schoolId: (pl).schoolId ?? "",
+        mainSubjectId: pl.mainSubject ? pl.mainSubject.id : "",
+        schoolId: pl.schoolId ?? "",
       });
     } else {
       resetForm();
@@ -116,8 +126,10 @@ export default function Pls() {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "schoolId" && value !== "" ? Number(value) : (value ),
+[name]:
+  (name === "schoolId" || name === "mainSubjectId") && value !== ""
+    ? Number(value)
+    : value,
     }));
   }
 
@@ -132,7 +144,7 @@ export default function Pls() {
       showError("E-Mail ist erforderlich.");
       return;
     }
-    if (!form.mainSubject) {
+    if (!form.mainSubjectId) {
       showError("Hauptfach ist erforderlich.");
       return;
     }
@@ -141,13 +153,21 @@ export default function Pls() {
       return;
     }
 
-    const teacherPayload = {
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
-      email: form.email.trim(),
-      mainSubject: form.mainSubject as Course,
-      schoolId: { id: form.schoolId as number },
-    };
+const selectedCourse = courses.find(c => c.id === form.mainSubjectId);
+
+if (!selectedCourse) {
+  showError("Hauptfach ist erforderlich.");
+  return;
+}
+
+const teacherPayload = {
+  firstName: form.firstName.trim(),
+  lastName: form.lastName.trim(),
+  email: form.email.trim(),
+  mainSubject: selectedCourse,
+  schoolId: { id: form.schoolId as number },
+};
+
 
     try {
       if (mode === "create") {
@@ -234,9 +254,62 @@ export default function Pls() {
               Übersicht aller Praktikumsleitungen
             </span>
           </div>
-          <span className="table-count">
-            {pls.length} {pls.length === 1 ? "Eintrag" : "Einträge"}
-          </span>
+
+          {loading && <p>Lade Daten...</p>}
+
+          {!loading && !hasPls && (
+            <p style={{ fontSize: 14, color: "#6f7276" }}>
+              Es sind noch keine PLs erfasst. Nutzen Sie oben{" "}
+              <strong>„Neuen PL hinzufügen“</strong>, um einen Betreuer
+              anzulegen.
+            </p>
+          )}
+
+          {!loading && hasPls && (
+            <div className="pl-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Hauptfach</th>
+                    <th>Schule</th>
+                    <th>E-Mail</th>
+                    <th>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pls.map((pl) => (
+                    <tr key={pl.teacherId}>
+                      <td>
+                        {pl.firstName} {pl.lastName}
+                      </td>
+                      <td>{pl.mainSubject.name}</td>
+                      <td>{pl.schoolName ?? "-"}</td>
+                      <td>{pl.email}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() => handleEdit(pl)}
+                        >
+                          Bearbeiten
+                        </button>
+                        {"  "}
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          style={{ color: "#b91c1c" }}
+                          onClick={() => handleDelete(pl)}
+                        >
+                          Löschen
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {loading && <p className="table-status">Lade Daten...</p>}

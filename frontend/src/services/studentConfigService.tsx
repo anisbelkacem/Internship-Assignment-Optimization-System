@@ -1,15 +1,17 @@
 import apiService from './api';
-import type { SchoolType, Course } from './studentService';
+import type { Course } from './courseService';
+import type { SchoolType } from './studentService';
+
 
 export interface StudentConfigDto {
     id: number;
     studentId: number;
     year: string;
     schoolType: SchoolType;
-    mainCourse: Course;
-    prefCourse1: Course;
-    prefCourse2: Course;
-    prefCourse3: Course;
+    mainCourse: Course | null;
+    prefCourse1: Course | null;
+    prefCourse2: Course | null;
+    prefCourse3: Course | null;
     pdpI: boolean;
     pdpII: boolean;
     zsp: boolean;

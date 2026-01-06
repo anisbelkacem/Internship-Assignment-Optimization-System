@@ -1,14 +1,9 @@
 import apiService from './api';
+import type { Course } from './courseService';
 
 export type SchoolType = "GS" | "MS";
 
-
-export type Course =
-    "COMPUTER_SCIENCE" | "ENGINEERING" | "BUSINESS" |
-    "MEDICINE" | "LAW" | "ARTS" | "SCIENCES" | "OTHER";
-
 export type PraktikumType = "PDP_I" | "PDP_II" | "ZSP" | "SFP";
-
 
 export interface Address {
   street?: string;
@@ -24,18 +19,21 @@ export interface Student {
   lastName: string;
   email: string;
   schoolType: SchoolType;
-  mainCourse: Course;
-  prefCourse1: Course;
-  prefCourse2: Course;
-  prefCourse3: Course;
+
+  mainCourseId: number | null;
+  prefCourse1Id: number | null;
+  prefCourse2Id: number | null;
+  prefCourse3Id: number | null;
+
   registred: boolean;
   oriented: boolean;
   address?: Address;
   addressSemester?: Address;
   phone?: string;
-  birthDate?: string; // use string for ISO date
+  birthDate?: string;
   description?: string;
 }
+
 
 export interface CompletedInternship {
   id: number;

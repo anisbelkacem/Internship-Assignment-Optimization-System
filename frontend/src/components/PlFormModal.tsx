@@ -1,5 +1,7 @@
 import React from "react";
-import { Course } from "../services/plService";
+import { useEffect, useState } from "react";
+import courseService from "../services/courseService";
+import type { Course } from "../services/courseService";
 
 export interface SchoolOption {
   id: number;
@@ -11,7 +13,7 @@ export interface PlFormValues {
   firstName: string;
   lastName: string;
   email: string;
-  mainSubject: Course | "";
+  mainSubjectId: number | "";
   schoolId: number | "";
 }
 
@@ -27,17 +29,6 @@ export interface PlFormModalProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
-const COURSE_OPTIONS: { value: Course; label: string }[] = [
-  { value: Course.COMPUTER_SCIENCE, label: "Informatik" },
-  { value: Course.ENGINEERING, label: "Ingenieurwesen" },
-  { value: Course.BUSINESS, label: "Wirtschaft" },
-  { value: Course.MEDICINE, label: "Medizin" },
-  { value: Course.LAW, label: "Recht" },
-  { value: Course.ARTS, label: "Kunst" },
-  { value: Course.SCIENCES, label: "Naturwissenschaften" },
-  { value: Course.OTHER, label: "Sonstiges" },
-];
-
 const PlFormModal: React.FC<PlFormModalProps> = ({
   isOpen,
   mode,
@@ -47,6 +38,13 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+    const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    courseService.getAllCourses().then(data => {
+      setCourses(data.filter(c => c.active));
+    });
+  }, []);
   if (!isOpen) return null;
 
   return (
@@ -109,24 +107,26 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="form-label required" htmlFor="mainSubject">
+              <label className="form-label required" htmlFor="mainSubjectId">
                 Hauptfach
               </label>
               <select
                 id="mainSubject"
-                name="mainSubject"
+                name="mainSubjectId"
                 className="form-input"
-                value={form.mainSubject}
+                value={form.mainSubjectId}
                 onChange={onChange}
                 required
               >
                 <option value="">Bitte wählen</option>
-                {COURSE_OPTIONS.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
+
+
             </div>
 
             <div className="form-group">

@@ -25,8 +25,8 @@ public class Teacher {
     @Column(name = "last_name", nullable = false)
     private String lastName; // last_name
 
-    @Column(name = "main_subject", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "main_subject_id")
     private Course mainSubject; // main_subject (primary subject)
 
     @ManyToOne(fetch = FetchType.LAZY)

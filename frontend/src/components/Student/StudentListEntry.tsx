@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Student } from "../../services/studentService";
 import CompletedInternshipsTable from "./CompletedInternshipsTable";
 import "../../styles/StudentStyles/StudentListEntry.css";
+import courseService from "../../services/courseService";
+import type { Course } from "../../services/courseService";
 interface Props {
     student: Student;
     editMode?: boolean;
@@ -16,6 +18,19 @@ const StudentListEntry: React.FC<Props> = ({
     onDelete,
 }) => {
     const [expanded, setExpanded] = useState(false);
+    const [courses, setCourses] = useState<Course[]>([]);
+
+    useEffect(() => {
+        courseService.getAllCourses().then(data => {
+            setCourses(data);
+        });
+    }, []);
+
+    const getCourseName = (id?: number | null) => {
+        if (!id) return "N/A";
+        return courses.find(c => c.id === id)?.name ?? "N/A";
+    };
+
 
     return (
         <div className="student-entry">
@@ -33,8 +48,14 @@ const StudentListEntry: React.FC<Props> = ({
                     <p>Phone: {student.phone || "N/A"}</p>
                     <p>Birth Date: {student.birthDate || "N/A"}</p>
                     <p>School Type: {student.schoolType}</p>
-                    <p>Main Course: {student.mainCourse}</p>
-                    <p>Preferences: {student.prefCourse1}, {student.prefCourse2}, {student.prefCourse3}</p>
+                    <p>Main Course: {getCourseName(student.mainCourseId)}</p>
+
+                    <p>
+                        Preferences:{" "}
+                        {getCourseName(student.prefCourse1Id)},{" "}
+                        {getCourseName(student.prefCourse2Id)},{" "}
+                        {getCourseName(student.prefCourse3Id)}
+                    </p>
                     <p>Registered: {student.registred ? "Yes" : "No"}</p>
                     <p>Oriented: {student.oriented ? "Yes" : "No"}</p>
                     <p>Description: {student.description || "N/A"}</p>

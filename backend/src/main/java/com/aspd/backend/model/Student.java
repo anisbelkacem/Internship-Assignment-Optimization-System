@@ -20,16 +20,20 @@ public class Student {
     @Enumerated(EnumType.STRING)
     private SchoolType schoolType;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_course_id")
     private Course mainCourse;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course1_id")
     private Course prefCourse1;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course2_id")
     private Course prefCourse2;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pref_course3_id")
     private Course prefCourse3;
 
     private boolean registred;

@@ -29,6 +29,9 @@ class CompletedInternshipsRepositoryTest {
     @Autowired
     private SchoolRepository schoolRepository;
 
+    @Autowired
+    private CourseRepository courseRepository;
+
     @Test
     @DisplayName("save and find by teacherId and schoolId")
     @Transactional
@@ -49,11 +52,17 @@ class CompletedInternshipsRepositoryTest {
         school.setType(SchoolType.GS);
         schoolRepository.save(school);
 
+        Course sciences = new Course("SCIENCES");
+        Course cs = new Course("Computer Science");
+
+        courseRepository.save(sciences);
+        courseRepository.save(cs);
+
         Teacher t = new Teacher();
         t.setFirstName("Teach");
         t.setLastName("Er");
         t.setEmail("teacher@test.com");
-        t.setMainSubject(Course.SCIENCES);
+        t.setMainSubject(sciences);
         t.setSchool(school);
         teacherRepository.save(t);
 
@@ -62,7 +71,7 @@ class CompletedInternshipsRepositoryTest {
         ci.setStudent(s);
         ci.setTeacher(t);
         ci.setSchool(school);
-        ci.setCourse(Course.COMPUTER_SCIENCE);
+        ci.setCourse(cs);
         ci.setStartDate(LocalDate.of(2024, 1, 1));
         ci.setEndDate(LocalDate.of(2024, 6, 30));
         ci.setDescription("Test internship");
@@ -101,11 +110,18 @@ class CompletedInternshipsRepositoryTest {
         school.setType(SchoolType.MS);
         schoolRepository.saveAndFlush(school);
 
+        Course cs = new Course("Computer Sciences");
+        Course other = new Course("Other");
+
+        courseRepository.save(cs);
+        courseRepository.save(other);
+
+
         Teacher t = new Teacher();
         t.setFirstName("T");
         t.setLastName("T");
         t.setEmail("t@test.com");
-        t.setMainSubject(Course.SCIENCES);
+        t.setMainSubject(cs);
         t.setSchool(school);
         teacherRepository.saveAndFlush(t);
 
@@ -113,7 +129,7 @@ class CompletedInternshipsRepositoryTest {
         ci.setStudent(s);
         ci.setTeacher(t);
         ci.setSchool(school);
-        ci.setCourse(Course.OTHER);
+        ci.setCourse(other);
         ci.setStartDate(LocalDate.of(2023, 9, 1));
         ci.setEndDate(LocalDate.of(2024, 2, 28));
         ci.setType(PraktikumType.SFP);
