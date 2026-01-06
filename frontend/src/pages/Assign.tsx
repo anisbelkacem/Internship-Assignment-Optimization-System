@@ -629,9 +629,10 @@ export default function InternshipAssignments() {
                             <td colSpan={3} className="empty-state">No configurations</td>
                             <td>
                               <button
-                                className="edit-config-btn"
+                                className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher)}
                                 title="Edit teacher configuration"
+                                aria-label="Edit teacher configuration"
                               >
                                 ✏️
                               </button>
@@ -654,16 +655,20 @@ export default function InternshipAssignments() {
                           <td>
                             <div className="action-buttons">
                               <button
-                                className="btn-secondary btn-sm"
+                                className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher, config)}
+                                title="Edit configuration"
+                                aria-label="Edit configuration"
                               >
-                                Edit
+                                ✏️
                               </button>
                               <button
-                                className="btn-danger btn-sm"
+                                className="action-btn delete-btn"
                                 onClick={() => handleDeleteTeacherConfig(teacher.teacherId, config.id)}
+                                title="Delete configuration"
+                                aria-label="Delete configuration"
                               >
-                                Delete
+                                🗑️
                               </button>
                             </div>
                           </td>
