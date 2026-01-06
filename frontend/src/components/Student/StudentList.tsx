@@ -137,10 +137,10 @@ const StudentList: React.FC = () => {
                                         <td>{student.firstName} {student.lastName}</td>
                                         <td>{student.matriculationNbr}</td>
                                         <td>{student.schoolType}</td>
-                                        <td style={{textTransform: 'capitalize'}}>{student.mainCourse.replace(/_/g, ' ').toLowerCase()}</td>
-                                        <td style={{textTransform: 'capitalize'}}>{student.prefCourse1.replace(/_/g, ' ').toLowerCase()}</td>
-                                        <td style={{textTransform: 'capitalize'}}>{student.prefCourse2.replace(/_/g, ' ').toLowerCase()}</td>
-                                        <td style={{textTransform: 'capitalize'}}>{student.prefCourse3.replace(/_/g, ' ').toLowerCase()}</td>
+                                        <td>{student.mainCourseId ?? '-'}</td>
+                                        <td>{student.prefCourse1Id ?? '-'}</td>
+                                        <td>{student.prefCourse2Id ?? '-'}</td>
+                                        <td>{student.prefCourse3Id ?? '-'}</td>
                                         <td>
                                             <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                                                 <button

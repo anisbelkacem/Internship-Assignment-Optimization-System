@@ -340,7 +340,7 @@ const teacherPayload = {
                     <td>
                       {pl.firstName} {pl.lastName}
                     </td>
-                    <td style={{textTransform: 'lowercase'}}>{pl.mainSubject}</td>
+                    <td style={{textTransform: 'lowercase'}}>{pl.mainSubject.name}</td>
                     <td>{pl.schoolName ?? "-"}</td>
                     <td>{pl.email}</td>
                     <td>

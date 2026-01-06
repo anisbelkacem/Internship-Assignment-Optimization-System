@@ -97,7 +97,10 @@ const Sidebar: FC = () => {
           </li>
           <li></li>
           <li>
-            <NavLink to="/assignments" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+            <button 
+              onClick={() => toggleSubmenu('assignments')}
+              className={isAssignmentsActive ? "submenu-toggle active" : "submenu-toggle"}
+            >
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                   <rect x="3" y="7" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
@@ -105,9 +108,9 @@ const Sidebar: FC = () => {
                 </svg>
               </span>
               <span className="nav-label">Praktikumsplanung</span>
-              <span className={`chevron ${expandedSubmenu === 'assignments' ? 'expanded' : ''}`}>▼</span>
+              <span className={`chevron ${isAssignmentsOpen ? 'expanded' : ''}`}>▼</span>
             </button>
-            {expandedSubmenu === 'assignments' && (
+            {isAssignmentsOpen && (
               <ul className="submenu">
                 <li>
                   <NavLink 

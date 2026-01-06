@@ -14,21 +14,6 @@ import courseService from "../services/courseService";
 
 type TabType = "assignments" | "pl-config" | "student-config";
 
-// Course translation function
-const translateCourse = (course: string): string => {
-  const courseMap: { [key: string]: string } = {
-    COMPUTER_SCIENCE: "Informatik",
-    ENGINEERING: "Ingenieurwesen",
-    BUSINESS: "Betriebswirtschaft",
-    MEDICINE: "Medizin",
-    LAW: "Jura",
-    ARTS: "Kunst",
-    SCIENCES: "Naturwissenschaften",
-    OTHER: "Sonstiges"
-  };
-  return courseMap[course] || course;
-};
-
 export default function InternshipAssignments() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("assignments");

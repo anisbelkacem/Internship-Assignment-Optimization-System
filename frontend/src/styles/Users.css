@@ -119,9 +119,10 @@
 
 .settings-table th {
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   color: #4b5563;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .settings-table tbody tr:nth-child(odd) {
@@ -152,6 +153,28 @@
   font-weight: 600;
 }
 
+.pill-success {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.pill-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.table-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-empty {
+  padding: 16px;
+  font-size: 14px;
+  color: #6f7276;
+}
+
 .table-actions {
   display: flex;
   gap: 8px;
@@ -179,6 +202,11 @@
 
 .action-btn:hover {
   opacity: 0.85;
+}
+
+.action-btn:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .action-btn.edit-btn {

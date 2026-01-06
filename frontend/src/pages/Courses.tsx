@@ -10,11 +10,11 @@ export default function Courses() {
   const [error, setError] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  
-const [formData, setFormData] = useState<CourseCreate>({
-  name: '',
-  active: true,
-});
+
+  const [formData, setFormData] = useState<CourseCreate>({
+    name: '',
+    active: true,
+  });
 
   useEffect(() => {
     fetchCourses();
@@ -106,7 +106,12 @@ const handleDeactivate = async (id: number) => {
   }
 
   return (
-    <div className="users-container">
+    <div className="section-container settings-section">
+      <div style={{ marginBottom: '14px' }}>
+        <h2 style={{ margin: 0, fontSize: '22px' }}>Kurse</h2>
+        <span className="table-card-subtitle">Übersicht der Kurse</span>
+      </div>
+
       {error && (
         <div className="error-container">
           <strong>Fehler:</strong> {error}
@@ -116,87 +121,77 @@ const handleDeactivate = async (id: number) => {
         </div>
       )}
 
-      <div className="users-header">
-        <div className="users-header-content">
-          <h1>Kursverwaltung</h1>
-          <p>Verwalten Sie alle Kurse im System</p>
+      <div className="table-card">
+        <div className="table-card-header">
+          <div className="table-card-title" aria-hidden="true"></div>
+          <div className="table-card-actions">
+            <button className="btn-primary" onClick={() => handleOpenModal()}>
+              Neuer Kurs
+            </button>
+          </div>
         </div>
-        <button className="btn-primary" onClick={() => handleOpenModal()}>
-          + Neuer Kurs
-        </button>
+
+        {courses.length === 0 ? (
+          <div className="table-empty">Keine Kurse gefunden. Fügen Sie einen neuen Kurs hinzu, um zu beginnen.</div>
+        ) : (
+          <div className="table-container">
+            <table className="settings-table">
+              <thead>
+                <tr>
+                  <th>Kursname</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courses.map((course) => (
+                  <tr key={course.id}>
+                    <td>
+                      <div className="cell-strong">{course.name}</div>
+                    </td>
+
+                    <td>
+                      <span className={`pill ${course.active ? 'pill-success' : 'pill-danger'}`}>
+                        {course.active ? 'Aktiv' : 'Inaktiv'}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          className="action-btn edit-btn"
+                          onClick={() => handleOpenModal(course)}
+                          title="Bearbeiten"
+                          type="button"
+                        >
+                          ✏️
+                        </button>
+
+                        {course.active && (
+                          <button
+                            className="action-btn delete-btn"
+                            onClick={() => handleDeactivate(course.id)}
+                            title="Deaktivieren"
+                            type="button"
+                          >
+                            ❌
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {courses.length === 0 ? (
-        <div className="empty-state">
-          <p style={{ color: '#6b7280', fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-            Keine Kurse gefunden
-          </p>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-            Fügen Sie einen neuen Kurs hinzu, um zu beginnen
-          </p>
-        </div>
-      ) : (
-        <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-            <tr>
-                <th>Kursname</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Aktionen</th>
-            </tr>
-            </thead>
-            <tbody>
-  {courses.map((course) => (
-    <tr key={course.id}>
-      <td>
-        <div className="user-name">{course.name}</div>
-      </td>
-
-      <td>
-        <span
-          style={{
-            padding: '0.25rem 0.5rem',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            color: course.active ? '#065f46' : '#991b1b',
-            backgroundColor: course.active ? '#d1fae5' : '#fee2e2',
-          }}
-        >
-          {course.active ? 'Aktiv' : 'Inaktiv'}
+      <div className="settings-summary">
+        <span className="summary-text">
+          Gesamt: <strong>{courses.length}</strong> Kurse | Aktiv: <strong>{courses.filter(c => c.active).length}</strong>
         </span>
-      </td>
-
-      <td>
-        <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn-secondary" onClick={() => handleOpenModal(course)}>
-            Bearbeiten
-          </button>
-
-          {course.active && (
-            <button
-              className="btn-warning"
-              onClick={() => handleDeactivate(course.id)}
-            >
-              Deaktivieren
-            </button>
-          )}
-        </div>
-      </td>
-    </tr>
-  ))}
-</tbody>
-
-          </table>
-        </div>
-      )}
-
-    <div className="users-summary">
-    <span className="summary-text">
-        Gesamt: <strong>{courses.length}</strong> Kurse | Aktiv:{' '}
-        <strong>{courses.filter(c => c.active).length}</strong>
-    </span>
-    </div>
+      </div>
 
       {/* Modal */}
       {showModal && (
