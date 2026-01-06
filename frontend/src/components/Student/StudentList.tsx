@@ -1,23 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Student } from "../../services/studentService";
 import StudentService from "../../services/studentService";
+import type { Course } from "../../services/courseService";
+import CourseService from "../../services/courseService";
 import StudentForm from "./StudentForm";
 import StudentModal from "./StudentModal";
 import "../../styles/StudentStyles/StudentList.css";
 
 const StudentList: React.FC = () => {
     const [students, setStudents] = useState<Student[]>([]);
+    const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
-    // Fetch students
+    // Fetch students and courses together
     useEffect(() => {
         const load = async () => {
             try {
-                const data = await StudentService.getAllStudent();
-                setStudents(data);
+                const [studentsData, coursesData] = await Promise.all([
+                    StudentService.getAllStudent(),
+                    CourseService.getAllCourses()
+                ]);
+                setStudents(studentsData);
+                setCourses(coursesData);
             } catch (error) {
                 console.error("Error fetching students:", error);
             } finally {
@@ -54,6 +61,19 @@ const StudentList: React.FC = () => {
         const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
         return fullName.includes(searchTerm.toLowerCase());
     });
+
+    const courseNameById = useMemo(() => {
+        const map = new Map<number, string>();
+        courses.forEach(course => {
+            map.set(course.id, course.name);
+        });
+        return map;
+    }, [courses]);
+
+    const renderCourse = (courseId?: number | null) => {
+        if (!courseId) return "-";
+        return courseNameById.get(courseId) ?? courseId;
+    };
 
     if (loading) return <div className="assign-root"><p>Loading students...</p></div>;
 
@@ -137,10 +157,10 @@ const StudentList: React.FC = () => {
                                         <td>{student.firstName} {student.lastName}</td>
                                         <td>{student.matriculationNbr}</td>
                                         <td>{student.schoolType}</td>
-                                        <td>{student.mainCourseId ?? '-'}</td>
-                                        <td>{student.prefCourse1Id ?? '-'}</td>
-                                        <td>{student.prefCourse2Id ?? '-'}</td>
-                                        <td>{student.prefCourse3Id ?? '-'}</td>
+                                        <td>{renderCourse(student.mainCourseId)}</td>
+                                        <td>{renderCourse(student.prefCourse1Id)}</td>
+                                        <td>{renderCourse(student.prefCourse2Id)}</td>
+                                        <td>{renderCourse(student.prefCourse3Id)}</td>
                                         <td>
                                             <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                                                 <button

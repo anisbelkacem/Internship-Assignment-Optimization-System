@@ -9,8 +9,7 @@ import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import type { Student } from "../services/studentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
-import type { Course } from "../services/courseService";
-import courseService from "../services/courseService";
+import "../styles/InternshipsAssignment/StudentConfigTable.css";
 
 type TabType = "assignments" | "pl-config" | "student-config";
 
@@ -50,8 +49,6 @@ export default function InternshipAssignments() {
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
 
-  const [allCourses, setAllCourses] = useState<Course[]>([]);
-
   useEffect(() => {
     // Read tab from URL params on component mount
     const tabParam = searchParams.get('tab');
@@ -75,17 +72,15 @@ export default function InternshipAssignments() {
 const fetchInitialData = async () => {
   try {
     setLoading(true);
-    const [yearsData, teachersData, studentsData, coursesData] = await Promise.all([
+    const [yearsData, teachersData, studentsData] = await Promise.all([
       studentConfigService.getAllYears(),
       plService.getAllPls(),
       studentService.getAllStudent(),
-      courseService.getAllCourses(), // Add this
     ]);
     
     setAvailableYears(yearsData);
     setTeachers(teachersData);
     setStudents(studentsData);
-    setAllCourses(coursesData); // Add this
     
     if (yearsData.length > 0) {
       setSelectedYear(yearsData[0]);
@@ -97,11 +92,6 @@ const fetchInitialData = async () => {
   }
 };
 
-// Add a helper function to get course by ID
-const getCourseById = (courseId: number | null): Course | null => {
-  if (!courseId) return null;
-  return allCourses.find(c => c.id === courseId) || null;
-};
 
   const fetchStudentConfigsByYear = async () => {
     if (!selectedYear) return;
@@ -793,30 +783,7 @@ if (studentConfigsForYear.length === 0) {
   return (
     <tr key={`student-${student.matriculationNbr}`}>
       <td>{student.firstName} {student.lastName}</td>
-      <td colSpan={10} className="empty-state">No configurations</td>
-      <td>
-        <button
-          className="btn-primary btn-sm"
-          onClick={() => {
-            setEditingStudentConfig({
-              studentId: student.matriculationNbr,
-              year: selectedYear,
-              schoolType: student.schoolType,
-              mainCourse: getCourseById(student.mainCourseId),
-              prefCourse1: getCourseById(student.prefCourse1Id),
-              prefCourse2: getCourseById(student.prefCourse2Id),
-              prefCourse3: getCourseById(student.prefCourse3Id),
-              pdpI: false,
-              pdpII: false,
-              zsp: false,
-              sfp: false,
-            } as StudentConfigDto);
-            setShowStudentConfigModal(true);
-          }}
-        >
-          + Add Config
-        </button>
-      </td>
+      <td colSpan={8} className="empty-state">No configurations</td>
     </tr>
   );
 }
@@ -834,23 +801,38 @@ if (studentConfigsForYear.length === 0) {
             <td>{config.prefCourse1?.name ?? "-"}</td>
             <td>{config.prefCourse2?.name ?? "-"}</td>
             <td>{config.prefCourse3?.name ?? "-"}</td>
-            <td><input type="checkbox" checked={config.pdpI} disabled /></td>
-            <td><input type="checkbox" checked={config.pdpII} disabled /></td>
-            <td><input type="checkbox" checked={config.zsp} disabled /></td>
-            <td><input type="checkbox" checked={config.sfp} disabled /></td>
+            <td>
+              <div className="pill-row">
+                {['PDP I', 'PDP II', 'ZSP', 'SFP']
+                  .filter(label => {
+                    if (label === 'PDP I') return config.pdpI;
+                    if (label === 'PDP II') return config.pdpII;
+                    if (label === 'ZSP') return config.zsp;
+                    return config.sfp;
+                  })
+                  .map(label => (
+                    <span key={label} className="internship-pill">{label}</span>
+                  ))}
+                {!config.pdpI && !config.pdpII && !config.zsp && !config.sfp && (
+                  <span className="muted-dash">-</span>
+                )}
+              </div>
+            </td>
             <td>
               <div className="action-buttons">
                 <button
-                  className="btn-secondary btn-sm"
+                  className="action-btn edit-btn"
                   onClick={() => handleOpenStudentConfigModal(config)}
+                  title="Edit"
                 >
-                  Edit
+                  ✏️
                 </button>
                 <button
-                  className="btn-danger btn-sm"
+                  className="action-btn delete-btn"
                   onClick={() => config.id && handleDeleteStudentConfig(config.id)}
+                  title="Delete"
                 >
-                  Delete
+                  🗑️
                 </button>
               </div>
             </td>

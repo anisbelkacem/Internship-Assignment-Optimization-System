@@ -254,62 +254,6 @@ const teacherPayload = {
               Übersicht aller Praktikumsleitungen
             </span>
           </div>
-
-          {loading && <p>Lade Daten...</p>}
-
-          {!loading && !hasPls && (
-            <p style={{ fontSize: 14, color: "#6f7276" }}>
-              Es sind noch keine PLs erfasst. Nutzen Sie oben{" "}
-              <strong>„Neuen PL hinzufügen“</strong>, um einen Betreuer
-              anzulegen.
-            </p>
-          )}
-
-          {!loading && hasPls && (
-            <div className="pl-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Hauptfach</th>
-                    <th>Schule</th>
-                    <th>E-Mail</th>
-                    <th>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pls.map((pl) => (
-                    <tr key={pl.teacherId}>
-                      <td>
-                        {pl.firstName} {pl.lastName}
-                      </td>
-                      <td>{pl.mainSubject.name}</td>
-                      <td>{pl.schoolName ?? "-"}</td>
-                      <td>{pl.email}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          onClick={() => handleEdit(pl)}
-                        >
-                          Bearbeiten
-                        </button>
-                        {"  "}
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          style={{ color: "#b91c1c" }}
-                          onClick={() => handleDelete(pl)}
-                        >
-                          Löschen
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
         {loading && <p className="table-status">Lade Daten...</p>}
