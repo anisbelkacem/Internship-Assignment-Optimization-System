@@ -445,40 +445,40 @@
 .form-input-small {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   box-sizing: border-box;
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .form-input-small:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #94b4c1;
+  box-shadow: 0 0 0 2px rgba(148, 180, 193, 0.25);
 }
 
 .form-select-small {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #4b5563;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   box-sizing: border-box;
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .form-select-small:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #94b4c1;
+  box-shadow: 0 0 0 2px rgba(148, 180, 193, 0.25);
 }
 
 .form-select-small option {
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .preview-table-container {

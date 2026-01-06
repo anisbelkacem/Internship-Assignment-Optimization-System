@@ -760,7 +760,6 @@ export default function Schools() {
                             className="form-select-small"
                             value={school.type || ''}
                             onChange={(e) => handlePreviewInputChange(index, 'type', e.target.value as SchoolType)}
-                            style={{ backgroundColor: '#374151', color: 'white', border: '1px solid #4b5563' }}
                           >
                             <option value="">-- Bitte wählen --</option>
                             <option value={SchoolType.GS}>GS</option>
@@ -795,8 +794,9 @@ export default function Schools() {
                 className="btn-primary" 
                 onClick={handleConfirmImport}
                 disabled={previewSchools.filter(s => s.isValid).length === 0}
+                title={`Gültig: ${previewSchools.filter(s => s.isValid).length}`}
               >
-                Gültige Einträge importieren ({previewSchools.filter(s => s.isValid).length})
+                Importieren
               </button>
             </div>
           </div>

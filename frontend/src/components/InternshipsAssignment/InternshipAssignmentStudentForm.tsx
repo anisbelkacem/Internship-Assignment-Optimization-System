@@ -70,7 +70,7 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
                             type="text"
                             value={form.year}
                             onChange={e => handleChange("year", e.target.value)}
-                            placeholder="z.B. 2024/2025"
+                            placeholder="z.B. 2024"
                             required
                         />
                     </div>

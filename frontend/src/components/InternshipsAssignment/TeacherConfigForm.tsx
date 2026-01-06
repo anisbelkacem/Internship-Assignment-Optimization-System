@@ -87,7 +87,7 @@ export default function TeacherConfigForm({ teacher, config, selectedYear, onClo
               id="schoolYear"
               className="student-config-input"
               type="text"
-              placeholder="e.g., 2024-2025"
+              placeholder="z.B. 2024"
               value={form.schoolYear}
               onChange={(e) => handleChange("schoolYear", e.target.value)}
             />
