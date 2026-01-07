@@ -28,7 +28,7 @@
 
 .btn-primary {
   padding: 0.5rem 1rem;
-  background-color: #509CDB;
+  background-color: #547792;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -42,7 +42,7 @@
 }
 
 .btn-primary:hover {
-  background-color: #4189c7;
+  background-color: #3d5a6d;
 }
 
 .btn-add-school {
@@ -52,8 +52,8 @@
 .btn-secondary {
   padding: 0.5rem 1rem;
   background-color: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: #547792;
+  border: 1px solid #547792;
   border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 500;
@@ -62,14 +62,14 @@
 }
 
 .btn-secondary:hover {
-  background-color: #eff6ff;
+  background-color: #f0f3f7;
 }
 
 .btn-danger {
   padding: 0.5rem 1rem;
   background-color: transparent;
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: #213448;
+  border: 1px solid #213448;
   border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 500;
@@ -78,7 +78,7 @@
 }
 
 .btn-danger:hover {
-  background-color: #fef2f2;
+  background-color: #f5f3f0;
 }
 
 .btn-import {
@@ -193,37 +193,64 @@
   color: #111827;
 }
 
-.badge {
+.schools-table .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.28rem 0.7rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 650;
 }
 
-.badge-gs {
-  background-color: #dbeafe;
-  color: #1e40af;
+.schools-table .badge-gs {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-ms {
-  background-color: #fef3c7;
-  color: #92400e;
+.schools-table .badge-ms {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-oepnv {
-  background-color: #d1fae5;
-  color: #065f46;
+.schools-table .badge-oepnv {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
-.badge-no-oepnv {
-  background-color: #fee2e2;
-  color: #991b1b;
+.schools-table .badge-no-oepnv {
+  background-color: #e0f2fe;
+  color: #075985;
 }
 
 .action-buttons {
   display: flex;
   gap: 0.5rem;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.action-btn:hover {
+  opacity: 0.85;
+}
+
+.action-btn.edit-btn {
+  color: #3b82f6;
+}
+
+.action-btn.delete-btn {
+  color: #ef4444;
 }
 
 /* Modal Styles */
@@ -418,40 +445,40 @@
 .form-input-small {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   box-sizing: border-box;
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .form-input-small:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #94b4c1;
+  box-shadow: 0 0 0 2px rgba(148, 180, 193, 0.25);
 }
 
 .form-select-small {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #4b5563;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   box-sizing: border-box;
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .form-select-small:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #94b4c1;
+  box-shadow: 0 0 0 2px rgba(148, 180, 193, 0.25);
 }
 
 .form-select-small option {
-  background-color: #374151;
-  color: white;
+  background-color: #ffffff;
+  color: #17324b;
 }
 
 .preview-table-container {

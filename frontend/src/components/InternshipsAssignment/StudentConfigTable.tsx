@@ -28,20 +28,33 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
 
     if (loading) return <p className="loading-text">Loading configs...</p>;
 
+    const renderInternships = (cfg: StudentConfigDto) => {
+        const labels: string[] = [];
+        if (cfg.pdpI) labels.push("PDP I");
+        if (cfg.pdpII) labels.push("PDP II");
+        if (cfg.zsp) labels.push("ZSP");
+        if (cfg.sfp) labels.push("SFP");
+        if (labels.length === 0) return <span className="muted-dash">-</span>;
+        return (
+            <div className="pill-row">
+                {labels.map(label => (
+                    <span key={label} className="internship-pill">{label}</span>
+                ))}
+            </div>
+        );
+    };
+
     return (
-        <div className="config-table-wrapper">
-            <table className="config-table">
+        <div className="table-container student-config-table">
+            <table className="schools-table">
                 <thead>
                     <tr>
-                        <th>Student ID</th>
-                        <th>School Type</th>
-                        <th>PDP I</th>
-                        <th>PDP II</th>
-                        <th>ZSP</th>
-                        <th>SFP</th>
-                        <th>Main Course</th>
-                        <th>Preferred Courses</th>
-                        {editMode && <th>Actions</th>}
+                        <th style={{ whiteSpace: 'nowrap' }}>Student ID</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>School Type</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Praktika</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Main Course</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Preferred Courses</th>
+                        {editMode && <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>Actions</th>}
                     </tr>
                 </thead>
 
@@ -50,10 +63,7 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
                         <tr key={c.id}>
                             <td>{c.studentId}</td>
                             <td>{c.schoolType}</td>
-                            <td>{c.pdpI ? "✔" : "✖"}</td>
-                            <td>{c.pdpII ? "✔" : "✖"}</td>
-                            <td>{c.zsp ? "✔" : "✖"}</td>
-                            <td>{c.sfp ? "✔" : "✖"}</td>
+                            <td>{renderInternships(c)}</td>
                             {/* Fix: Access the name property of Course objects */}
                             <td>{c.mainCourse?.name ?? "-"}</td>
                             <td>
@@ -63,20 +73,22 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
                             </td>
 
                             {editMode && (
-                                <td>
+                                <td style={{ textAlign: 'center' }}>
                                     <button
-                                        className="edit-btn"
-                                        onClick={() => onEdit(c)}
+                                            className="action-btn edit-btn"
+                                            onClick={() => onEdit(c)}
+                                            title="Edit"
                                     >
-                                        Edit
+                                            ✏️
                                     </button>
 
                                     {c.id !== undefined && (
                                         <button
-                                            className="delete-btn"
-                                            onClick={() => handleDelete(c.id)}
+                                                className="action-btn delete-btn"
+                                                onClick={() => handleDelete(c.id)}
+                                                title="Delete"
                                         >
-                                            Delete
+                                                🗑️
                                         </button>
                                     )}
                                 </td>

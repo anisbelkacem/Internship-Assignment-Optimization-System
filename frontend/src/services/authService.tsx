@@ -16,6 +16,7 @@ export interface User {
   email: string;
   roles: string[];
   permissions: string[];
+  profileImage?: string;
 }
 
 class AuthService {

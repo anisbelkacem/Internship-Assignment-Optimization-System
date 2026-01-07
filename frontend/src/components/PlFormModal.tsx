@@ -121,7 +121,7 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
                 <option value="">Bitte wählen</option>
                 {courses.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.name.charAt(0).toUpperCase() + c.name.slice(1)}
                   </option>
                 ))}
               </select>
@@ -152,15 +152,15 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
           </div>
 
           <div className="modal-footer">
+            <button type="submit" className="btn btn-primary">
+              {mode === "create" ? "Hinzufügen" : "Aktualisieren"}
+            </button>
             <button
               type="button"
-              className="btn-cancel"
+              className="btn btn-secondary"
               onClick={onClose}
             >
               Abbrechen
-            </button>
-            <button type="submit" className="btn-primary">
-              {mode === "create" ? "Hinzufügen" : "Aktualisieren"}
             </button>
           </div>
         </form>

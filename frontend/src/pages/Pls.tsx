@@ -46,6 +46,7 @@ useEffect(() => {
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     void loadData();
@@ -215,132 +216,144 @@ const teacherPayload = {
 
   const hasPls = useMemo(() => pls.length > 0, [pls]);
 
+  const filteredPls = useMemo(() => {
+    return pls.filter(pl => {
+      const fullName = `${pl.firstName} ${pl.lastName}`.toLowerCase();
+      return fullName.includes(searchTerm.toLowerCase());
+    });
+  }, [pls, searchTerm]);
+
   return (
-    <section className="pls-table-section">
-      {/* Page header */}
-      <div className="pls-header">
+    <section className="section-container pls-section">
+      <div className="section-header">
         <div>
           <h2>PL-Management</h2>
-          <p style={{ fontSize: 13, color: "#6f7276", marginTop: 4 }}>
-            Betreuer mit Fächerspezialisierungen, Arbeitslast und
-            Praktikumspräferenzen verwalten.
-          </p>
         </div>
-        <div className="pls-actions" style={{ gap: 8 }}>
+        <div className="section-header-actions">
           <button
             type="button"
-            className="btn-primary"
+            className="btn btn-ghost"
             onClick={handleOpenImportModal}
           >
             PLs importieren
           </button>
           <button
             type="button"
-            className="btn-primary"
+            className="btn btn-primary"
             onClick={() => handleOpenFormModal()}
           >
-            Neuen PL hinzufügen
+            PL hinzufügen
           </button>
         </div>
       </div>
 
-      {/* Messages */}
-      {error && (
-        <div
-          style={{
-            padding: "10px 12px",
-            backgroundColor: "#fee2e2",
-            borderRadius: 8,
-            color: "#b91c1c",
-            fontSize: 13,
-            marginBottom: 12,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="inline-alert error">{error}</div>}
+      {success && <div className="inline-alert success">{success}</div>}
 
-      {success && (
-        <div
+      <div style={{marginBottom: '20px'}}>
+        <input
+          type="text"
+          placeholder="🔍 PLs suchen..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
-            padding: "10px 12px",
-            backgroundColor: "#ecfdf3",
-            borderRadius: 8,
-            color: "#15803d",
-            fontSize: 13,
-            marginBottom: 12,
+            width: '100%',
+            padding: '12px 16px',
+            fontSize: '14px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            outline: 'none',
+            transition: 'all 0.2s ease',
+            backgroundColor: '#f8fafc',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            color: '#000000'
           }}
-        >
-          {success}
-        </div>
-      )}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#3b82f6';
+            e.target.style.backgroundColor = '#ffffff';
+            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = '#e2e8f0';
+            e.target.style.backgroundColor = '#f8fafc';
+            e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+          }}
+        />
+      </div>
 
-      {/* Table */}
-      <div className="cards">
-        <div className="card pl-table">
-          <div className="card-header">
+      <div className="table-card">
+        <div className="table-card-header">
+          <div className="table-card-title">
             <h3>Betreuerliste</h3>
-            <span className="card-count">
-              {pls.length} {pls.length === 1 ? "Eintrag" : "Einträge"}
+            <span className="table-card-subtitle">
+              Übersicht aller Praktikumsleitungen
             </span>
           </div>
+        </div>
 
-          {loading && <p>Lade Daten...</p>}
+        {loading && <p className="table-status">Lade Daten...</p>}
 
-          {!loading && !hasPls && (
-            <p style={{ fontSize: 14, color: "#6f7276" }}>
-              Es sind noch keine PLs erfasst. Nutzen Sie oben{" "}
-              <strong>„Neuen PL hinzufügen“</strong>, um einen Betreuer
-              anzulegen.
-            </p>
-          )}
+        {!loading && !hasPls && (
+          <p className="table-empty">
+            Es sind noch keine PLs erfasst. Nutzen Sie oben
+            <strong> „Neuen PL hinzufügen“</strong>, um einen Betreuer
+            anzulegen.
+          </p>
+        )}
 
-          {!loading && hasPls && (
-            <div className="pl-table">
-              <table>
-                <thead>
+        {!loading && hasPls && (
+          <div className="table-container" style={{overflowX: 'auto'}}>
+            <table className="schools-table">
+              <thead>
+                <tr>
+                  <th style={{ whiteSpace: 'nowrap' }}>Name</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Schule</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>E-Mail</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPls.length === 0 ? (
                   <tr>
-                    <th>Name</th>
-                    <th>Hauptfach</th>
-                    <th>Schule</th>
-                    <th>E-Mail</th>
-                    <th>Aktionen</th>
+                    <td colSpan={5} className="empty-state">
+                      {searchTerm ? "Keine PLs gefunden" : "Es sind keine PLs vorhanden"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {pls.map((pl) => (
+                ) : (
+                  filteredPls.map((pl) => (
                     <tr key={pl.teacherId}>
-                      <td>
-                        {pl.firstName} {pl.lastName}
-                      </td>
-                      <td>{pl.mainSubject.name}</td>
+                      <td>{pl.firstName} {pl.lastName}</td>
+                      <td>{pl.mainSubject.name.charAt(0).toUpperCase() + pl.mainSubject.name.slice(1)}</td>
                       <td>{pl.schoolName ?? "-"}</td>
                       <td>{pl.email}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          onClick={() => handleEdit(pl)}
-                        >
-                          Bearbeiten
-                        </button>
-                        {"  "}
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          style={{ color: "#b91c1c" }}
-                          onClick={() => handleDelete(pl)}
-                        >
-                          Löschen
-                        </button>
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                          <button
+                            type="button"
+                            className="action-btn edit-btn"
+                            onClick={() => handleEdit(pl)}
+                            title="Bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn delete-btn"
+                            onClick={() => handleDelete(pl)}
+                            title="Löschen"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* PL create/edit modal */}

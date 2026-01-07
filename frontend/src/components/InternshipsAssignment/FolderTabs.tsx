@@ -13,6 +13,7 @@ export default function FolderTabs() {
     useEffect(() => {
         async function fetchYears() {
             const years = await StudentConfigService.getAllYears();
+
             const sortedYears = years.sort((a, b) => {
                 const [aStart, aEnd] = a.split("-");
                 const [bStart, bEnd] = b.split("-");

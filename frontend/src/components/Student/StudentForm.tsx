@@ -97,43 +97,47 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </h3>
 
             <div className="student-field">
-                <label htmlFor="matriculationNbr">Matriculation Number</label>
+                <label className="required" htmlFor="matriculationNbr">Matriculation Number</label>
                 <input
                     id="matriculationNbr"
                     className="student-input"
                     type="number"
                     value={form.matriculationNbr}
                     onChange={e => handleChange("matriculationNbr", Number(e.target.value))}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="firstName">First Name</label>
+                <label className="required" htmlFor="firstName">First Name</label>
                 <input
                     id="firstName"
                     className="student-input"
                     value={form.firstName}
                     onChange={e => handleChange("firstName", e.target.value)}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="lastName">Last Name</label>
+                <label className="required" htmlFor="lastName">Last Name</label>
                 <input
                     id="lastName"
                     className="student-input"
                     value={form.lastName}
                     onChange={e => handleChange("lastName", e.target.value)}
+                    required
                 />
             </div>
 
             <div className="student-field">
-                <label htmlFor="email">Email</label>
+                <label className="required" htmlFor="email">Email</label>
                 <input
                     id="email"
                     className="student-input"
                     value={form.email}
                     onChange={e => handleChange("email", e.target.value)}
+                    required
                 />
             </div>
 
@@ -169,12 +173,13 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="schoolType">School Type</label>
+                <label className="required" htmlFor="schoolType">School Type</label>
                 <select
                     id="schoolType"
                     className="student-input"
                     value={form.schoolType}
                     onChange={e => handleChange("schoolType", e.target.value as SchoolType)}
+                    required
                 >
                     <option value="GS">GS</option>
                     <option value="HS">MS</option>
@@ -306,10 +311,10 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             ))}
 
             <div className="student-form-actions">
-                <button className="student-btn" onClick={handleSubmit}>
+                <button className="btn btn-primary" onClick={handleSubmit}>
                     {student ? "Update" : "Create"}
                 </button>
-                <button className="student-btn student-btn-cancel" onClick={onClose}>
+                <button className="btn btn-secondary" onClick={onClose}>
                     Cancel
                 </button>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import studentConfigService from "../services/studentConfigService";
 import plService from "../services/plService";
 import studentService from "../services/studentService";
@@ -8,10 +9,13 @@ import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import type { Student } from "../services/studentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
-import type { Course } from "../services/courseService";
-import courseService from "../services/courseService";
+import "../styles/InternshipsAssignment/StudentConfigTable.css";
+
+type TabType = "assignments" | "pl-config" | "student-config";
 
 export default function InternshipAssignments() {
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>("assignments");
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [studentConfigs, setStudentConfigs] = useState<StudentConfigDto[]>([]);
@@ -38,19 +42,22 @@ export default function InternshipAssignments() {
   const [showTeacherAssignments, setShowTeacherAssignments] = useState(false);
   const [showStudentAssignments, setShowStudentAssignments] = useState(false);
 
-  // Student Configuration Modal State
-  const [showStudentConfigTable, setShowStudentConfigTable] = useState(false);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
-
-  // Teacher Configuration Modal State
-  const [showTeacherConfigTable, setShowTeacherConfigTable] = useState(false);
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
 
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
 
-  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  useEffect(() => {
+    // Read tab from URL params on component mount
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'pl-config' || tabParam === 'student-config') {
+      setActiveTab(tabParam as TabType);
+    } else {
+      setActiveTab('assignments');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchInitialData();
@@ -65,17 +72,15 @@ export default function InternshipAssignments() {
 const fetchInitialData = async () => {
   try {
     setLoading(true);
-    const [yearsData, teachersData, studentsData, coursesData] = await Promise.all([
+    const [yearsData, teachersData, studentsData] = await Promise.all([
       studentConfigService.getAllYears(),
       plService.getAllPls(),
       studentService.getAllStudent(),
-      courseService.getAllCourses(), // Add this
     ]);
     
     setAvailableYears(yearsData);
     setTeachers(teachersData);
     setStudents(studentsData);
-    setAllCourses(coursesData); // Add this
     
     if (yearsData.length > 0) {
       setSelectedYear(yearsData[0]);
@@ -87,11 +92,6 @@ const fetchInitialData = async () => {
   }
 };
 
-// Add a helper function to get course by ID
-const getCourseById = (courseId: number | null): Course | null => {
-  if (!courseId) return null;
-  return allCourses.find(c => c.id === courseId) || null;
-};
 
   const fetchStudentConfigsByYear = async () => {
     if (!selectedYear) return;
@@ -218,8 +218,8 @@ const handleConfirmNewYear = () => {
   }
 
   return (
-    <div className="schools-container">
-      <div className="schools-header">
+    <div className="assign-root">
+      <div className="assign-header">
         <h1>Praktikum Planning - {selectedYear || "Select Year"}</h1>
         <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <select
@@ -236,11 +236,11 @@ const handleConfirmNewYear = () => {
             ))}
           </select>
           <button 
-            className="btn-primary"
+            className="btn btn-primary"
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
-            + New Year
+            New Year
           </button>
         </div>
       </div>
@@ -259,306 +259,316 @@ const handleConfirmNewYear = () => {
         </div>
       )}
 
-      {/* Student Configuration Section */}
-      <section className="config-section">
-        <div className="section-header">
-          <h2>Student Configuration</h2>
-          <button 
-            className="btn-primary"
-            onClick={() => setShowStudentConfigTable(true)}
-          >
-            Configure Students
-          </button>
-        </div>
-      </section>
+      {/* Tab Content: Assignments (Default View) */}
+      {activeTab === 'assignments' && (
+        <>
+          {/* Assignment for Teachers Results */}
+          <section className="section-container">
+            <div className="section-header">
+              <div>
+                <h2>Assignment for Teachers Results</h2>
+                <p style={{color: '#6f7276', fontSize: '13px', marginTop: '4px'}}>
+                  Übersicht der Lehrerzuweisungen
+                </p>
+              </div>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
+              >
+                {showTeacherAssignments ? "Löschen" : "Zuweisen"}
+              </button>
+            </div>
 
-      {/* Teacher Configuration Section */}
-      <section className="config-section">
-        <div className="section-header">
-          <h2>Teacher Configuration</h2>
-          <button 
-            className="btn-primary"
-            onClick={() => setShowTeacherConfigTable(true)}
-          >
-            Configure Teachers
-          </button>
-        </div>
-      </section>
+            <div className="table-card">
+              <div className="table-card-header">
+                <div className="table-card-title">
+                  <h3>Lehrerzuweisungen</h3>
+                  <span className="table-card-subtitle">Alle Praktikumszuweisungen für Lehrkräfte</span>
+                </div>
+              </div>
 
-      {/* Assignment for Teachers Results */}
-      <section className="config-section">
-        <div className="section-header">
-          <h2>Assignment for Teachers Results</h2>
-          <button 
-            className="btn-primary btn-auto-assign"
-            onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
-          >
-            {showTeacherAssignments ? "Clear" : "Auto Assign"}
-          </button>
-        </div>
-        <div className="table-container">
-          {!showTeacherAssignments ? (
-            <p className="empty-state">Click Auto Assign to generate teacher assignments</p>
-          ) : (
-            <table className="schools-table">
-              <thead>
-                <tr>
-                  <th>Teacher Name</th>
-                  <th>Internship Assignments</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Dr. Smith Johnson</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-I</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A, Mittelschule B
-                        </div>
-                      </div>
-                      <div>
-                        <strong>ZSP - Physics</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule C
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Prof. Maria Garcia</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-II - German Literature</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule C, Mittelschule D
-                        </div>
-                      </div>
-                      <div>
-                        <strong>SFP - History</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dr. Thomas Weber</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>ZSP - Chemistry</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Mittelschule D, Grundschule A
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Anna Schmidt</td>
-                  <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                      <div>
-                        <strong>PDP-I</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Grundschule A
-                        </div>
-                      </div>
-                      <div>
-                        <strong>PDP-II - Biology</strong>
-                        <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                          Schools: Mittelschule B, Grundschule C
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Anna Schmidt')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Dr. Michael Brown</td>
-                  <td>
-                    <div style={{color: '#f59e0b', fontStyle: 'italic'}}>
-                      No assignments yet
-                    </div>
-                  </td>
-                  <td>
-                    <button className="btn-edit" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        </div>
-        {showTeacherAssignments && (
-          <div style={{marginTop: '20px', display: 'flex', justifyContent: 'flex-end'}}>
-            <button className="btn-primary" style={{padding: '12px 30px', fontSize: '1rem', backgroundColor: '#10b981'}}>
-              Validate
-            </button>
+              {!showTeacherAssignments ? (
+                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+              ) : (
+                <div className="table-container">
+                  <table className="schools-table">
+                    <thead>
+                      <tr>
+                        <th>Lehrername</th>
+                        <th>Praktikumszuweisungen</th>
+                        <th>Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Dr. Smith Johnson</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-I</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A, Mittelschule B
+                              </div>
+                            </div>
+                            <div>
+                              <strong>ZSP - Physics</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule C
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Prof. Maria Garcia</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-II - German Literature</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule C, Mittelschule D
+                              </div>
+                            </div>
+                            <div>
+                              <strong>SFP - History</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Dr. Thomas Weber</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>ZSP - Chemistry</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Mittelschule D, Grundschule A
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Anna Schmidt</td>
+                        <td>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            <div>
+                              <strong>PDP-I</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Grundschule A
+                              </div>
+                            </div>
+                            <div>
+                              <strong>PDP-II - Biology</strong>
+                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
+                                Schulen: Mittelschule B, Grundschule C
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Anna Schmidt')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Dr. Michael Brown</td>
+                        <td>
+                          <div style={{color: '#d97706', fontStyle: 'italic'}}>
+                            Noch keine Zuweisungen
+                          </div>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
+                            Bearbeiten
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {showTeacherAssignments && (
+              <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
+                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
+                  Überprüfen
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Assignment Results - Student */}
+          <section className="section-container">
+            <div className="section-header">
+              <div>
+                <h2>Assignment Results - Students</h2>
+                <p style={{color: '#6f7276', fontSize: '13px', marginTop: '4px'}}>
+                  Übersicht der Praktikumszuweisungen
+                </p>
+              </div>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowStudentAssignments(!showStudentAssignments)}
+              >
+                {showStudentAssignments ? "Löschen" : "Zuweisen"}
+              </button>
+            </div>
+
+            <div className="table-card">
+              <div className="table-card-header">
+                <div className="table-card-title">
+                  <h3>Studentenzuweisungen</h3>
+                  <span className="table-card-subtitle">Alle Praktikumszuweisungen</span>
+                </div>
+              </div>
+
+              {!showStudentAssignments ? (
+                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+              ) : (
+                <div className="table-container">
+                  <table className="schools-table">
+                    <thead>
+                      <tr>
+                        <th>Schülername</th>
+                        <th>Betreuer</th>
+                        <th>Praktikumtyp</th>
+                        <th>Schule</th>
+                        <th>Startdatum</th>
+                        <th>Enddatum</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Emma Müller</td>
+                        <td>Dr. Smith Johnson</td>
+                        <td>PDP-I</td>
+                        <td>Grundschule A</td>
+                        <td>2025-03-01</td>
+                        <td>2025-03-15</td>
+                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Lukas Wagner</td>
+                        <td>Prof. Maria Garcia</td>
+                        <td>PDP-II</td>
+                        <td>Mittelschule B</td>
+                        <td>2025-03-05</td>
+                        <td>2025-03-20</td>
+                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Sophie Fischer</td>
+                        <td>Dr. Thomas Weber</td>
+                        <td>SFP</td>
+                        <td>Grundschule C</td>
+                        <td>2025-03-10</td>
+                        <td>2025-03-25</td>
+                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Max Schneider</td>
+                        <td>Anna Schmidt</td>
+                        <td>PDP-I</td>
+                        <td>Mittelschule D</td>
+                        <td>2025-03-08</td>
+                        <td>2025-03-22</td>
+                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Lisa Hoffmann</td>
+                        <td>Prof. Maria Garcia</td>
+                        <td>ZSP</td>
+                        <td>Mittelschule B</td>
+                        <td>2025-03-12</td>
+                        <td>2025-03-28</td>
+                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Jonas Becker</td>
+                        <td>Dr. Smith Johnson</td>
+                        <td>PDP-I</td>
+                        <td>Grundschule A</td>
+                        <td>2025-03-15</td>
+                        <td>2025-03-30</td>
+                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Mia Koch</td>
+                        <td>Anna Schmidt</td>
+                        <td>PDP-II</td>
+                        <td>Mittelschule D</td>
+                        <td>2025-03-18</td>
+                        <td>2025-04-02</td>
+                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {showStudentAssignments && (
+              <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
+                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
+                  Überprüfen
+                </button>
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* Tab Content: PL Configuration */}
+      {activeTab === 'pl-config' && (
+        <section className="section-container">
+          <div className="section-header">
+            <h2>PL Configuration</h2>
           </div>
-        )}
-      </section>
-
-      {/* Assignment Results */}
-      <section className="config-section">
-        <div className="section-header">
-          <h2>Assignment Results</h2>
-          <button 
-            className="btn-primary btn-auto-assign"
-            onClick={() => setShowStudentAssignments(!showStudentAssignments)}
-          >
-            {showStudentAssignments ? "Clear" : "Auto Assign"}
-          </button>
-        </div>
-        <div className="table-container">
-          {!showStudentAssignments ? (
-            <p className="empty-state">Click Auto Assign to generate student assignments</p>
-          ) : (
-            <table className="schools-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Assigned Teacher</th>
-                  <th>Praktikum Type</th>
-                  <th>School</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Emma Müller</td>
-                  <td>Dr. Smith Johnson</td>
-                  <td>PDP-I</td>
-                  <td>Grundschule A</td>
-                  <td>2025-03-01</td>
-                  <td>2025-03-15</td>
-                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Lukas Wagner</td>
-                  <td>Prof. Maria Garcia</td>
-                  <td>PDP-II</td>
-                  <td>Mittelschule B</td>
-                  <td>2025-03-05</td>
-                  <td>2025-03-20</td>
-                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Sophie Fischer</td>
-                  <td>Dr. Thomas Weber</td>
-                  <td>SFP</td>
-                  <td>Grundschule C</td>
-                  <td>2025-03-10</td>
-                  <td>2025-03-25</td>
-                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Max Schneider</td>
-                  <td>Anna Schmidt</td>
-                  <td>PDP-I</td>
-                  <td>Mittelschule D</td>
-                  <td>2025-03-08</td>
-                  <td>2025-03-22</td>
-                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Lisa Hoffmann</td>
-                  <td>Prof. Maria Garcia</td>
-                  <td>ZSP</td>
-                  <td>Mittelschule B</td>
-                  <td>2025-03-12</td>
-                  <td>2025-03-28</td>
-                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Jonas Becker</td>
-                  <td>Dr. Smith Johnson</td>
-                  <td>PDP-I</td>
-                  <td>Grundschule A</td>
-                  <td>2025-03-15</td>
-                  <td>2025-03-30</td>
-                  <td><span style={{color: '#10b981', fontWeight: 600}}>Confirmed</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Mia Koch</td>
-                  <td>Anna Schmidt</td>
-                  <td>PDP-II</td>
-                  <td>Mittelschule D</td>
-                  <td>2025-03-18</td>
-                  <td>2025-04-02</td>
-                  <td><span style={{color: '#f59e0b', fontWeight: 600}}>Pending</span></td>
-                  <td>
-                    <button className="btn-edit">Edit</button>
-                  </td>
-                </tr>
-                
-              </tbody>
-            </table>
-          )}
-        </div>
-        {showStudentAssignments && (
-          <div style={{marginTop: '20px', display: 'flex', justifyContent: 'flex-end'}}>
-            <button className="btn-primary" style={{padding: '12px 30px', fontSize: '1rem', backgroundColor: '#10b981'}}>
-              Validate
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Teacher Configuration Table Modal */}
-      {showTeacherConfigTable && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{maxWidth: '95%', width: '95%', maxHeight: '90vh', height: '90vh'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-              <h2 style={{margin: 0}}>Teacher Configuration</h2>
-              <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+          <div style={{marginBottom: '20px'}}>
                 <input
                   type="text"
                   placeholder="🔍 Search teachers..."
@@ -587,14 +597,7 @@ const handleConfirmNewYear = () => {
                     e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
                   }}
                 />
-                <button 
-                  className="btn-secondary"
-                  onClick={() => setShowTeacherConfigTable(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+          </div>
             <div className="table-container" style={{overflowX: 'auto'}}>
               <table className="schools-table">
                 <thead>
@@ -634,10 +637,12 @@ const handleConfirmNewYear = () => {
                             <td colSpan={3} className="empty-state">No configurations</td>
                             <td>
                               <button
-                                className="btn-primary btn-sm"
+                                className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher)}
+                                title="Edit teacher configuration"
+                                aria-label="Edit teacher configuration"
                               >
-                                + Add Config
+                                ✏️
                               </button>
                             </td>
                           </tr>
@@ -667,16 +672,20 @@ const handleConfirmNewYear = () => {
                       </td>                          <td>
                             <div className="action-buttons">
                               <button
-                                className="btn-secondary btn-sm"
+                                className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher, config)}
+                                title="Edit configuration"
+                                aria-label="Edit configuration"
                               >
-                                Edit
+                                ✏️
                               </button>
                               <button
-                                className="btn-danger btn-sm"
+                                className="action-btn delete-btn"
                                 onClick={() => handleDeleteTeacherConfig(teacher.teacherId, config.id)}
+                                title="Delete configuration"
+                                aria-label="Delete configuration"
                               >
-                                Delete
+                                🗑️
                               </button>
                             </div>
                           </td>
@@ -687,20 +696,25 @@ const handleConfirmNewYear = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* Student Configuration Table Modal */}
-      {showStudentConfigTable && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{maxWidth: '95%', width: '95%', maxHeight: '90vh', height: '90vh'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-              <h2 style={{margin: 0}}>Student Configuration</h2>
-              <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+      {/* Tab Content: Student Configuration */}
+      {activeTab === 'student-config' && (
+        <section className="section-container">
+          <div className="section-header">
+            <h2>Schülerkonfiguration</h2>
+            <button 
+              className="btn btn-primary"
+              onClick={() => handleOpenStudentConfigModal()}
+            >
+              Konfigurieren
+            </button>
+          </div>
+          <div style={{marginBottom: '20px'}}>
                 <input
                   type="text"
-                  placeholder="🔍 Search students..."
+                  placeholder="🔍 Schüler suchen..."
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                   style={{
@@ -726,30 +740,20 @@ const handleConfirmNewYear = () => {
                     e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
                   }}
                 />
-                <button 
-                  className="btn-secondary"
-                  onClick={() => setShowStudentConfigTable(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+          </div>
             <div className="table-container" style={{overflowX: 'auto'}}>
               <table className="schools-table">
                 <thead>
                   <tr>
-                    <th>Student Name</th>
-                    <th>Year</th>
-                    <th>School Type</th>
-                    <th>Main Course</th>
-                    <th>Pref. Course 1</th>
-                    <th>Pref. Course 2</th>
-                    <th>Pref. Course 3</th>
-                    <th>PDP-I</th>
-                    <th>PDP-II</th>
-                    <th>ZSP</th>
-                    <th>SFP</th>
-                    <th>Actions</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Schülername</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Jahr</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Schultyp</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 1</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 2</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Kurs 3</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Praktika</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Aktionen</th>
                   </tr>
                 </thead>
 <tbody>
@@ -779,30 +783,7 @@ if (studentConfigsForYear.length === 0) {
   return (
     <tr key={`student-${student.matriculationNbr}`}>
       <td>{student.firstName} {student.lastName}</td>
-      <td colSpan={10} className="empty-state">No configurations</td>
-      <td>
-        <button
-          className="btn-primary btn-sm"
-          onClick={() => {
-            setEditingStudentConfig({
-              studentId: student.matriculationNbr,
-              year: selectedYear,
-              schoolType: student.schoolType,
-              mainCourse: getCourseById(student.mainCourseId),
-              prefCourse1: getCourseById(student.prefCourse1Id),
-              prefCourse2: getCourseById(student.prefCourse2Id),
-              prefCourse3: getCourseById(student.prefCourse3Id),
-              pdpI: false,
-              pdpII: false,
-              zsp: false,
-              sfp: false,
-            } as StudentConfigDto);
-            setShowStudentConfigModal(true);
-          }}
-        >
-          + Add Config
-        </button>
-      </td>
+      <td colSpan={8} className="empty-state">No configurations</td>
     </tr>
   );
 }
@@ -820,23 +801,38 @@ if (studentConfigsForYear.length === 0) {
             <td>{config.prefCourse1?.name ?? "-"}</td>
             <td>{config.prefCourse2?.name ?? "-"}</td>
             <td>{config.prefCourse3?.name ?? "-"}</td>
-            <td><input type="checkbox" checked={config.pdpI} disabled /></td>
-            <td><input type="checkbox" checked={config.pdpII} disabled /></td>
-            <td><input type="checkbox" checked={config.zsp} disabled /></td>
-            <td><input type="checkbox" checked={config.sfp} disabled /></td>
+            <td>
+              <div className="pill-row">
+                {['PDP I', 'PDP II', 'ZSP', 'SFP']
+                  .filter(label => {
+                    if (label === 'PDP I') return config.pdpI;
+                    if (label === 'PDP II') return config.pdpII;
+                    if (label === 'ZSP') return config.zsp;
+                    return config.sfp;
+                  })
+                  .map(label => (
+                    <span key={label} className="internship-pill">{label}</span>
+                  ))}
+                {!config.pdpI && !config.pdpII && !config.zsp && !config.sfp && (
+                  <span className="muted-dash">-</span>
+                )}
+              </div>
+            </td>
             <td>
               <div className="action-buttons">
                 <button
-                  className="btn-secondary btn-sm"
+                  className="action-btn edit-btn"
                   onClick={() => handleOpenStudentConfigModal(config)}
+                  title="Edit"
                 >
-                  Edit
+                  ✏️
                 </button>
                 <button
-                  className="btn-danger btn-sm"
+                  className="action-btn delete-btn"
                   onClick={() => config.id && handleDeleteStudentConfig(config.id)}
+                  title="Delete"
                 >
-                  Delete
+                  🗑️
                 </button>
               </div>
             </td>
@@ -848,8 +844,7 @@ if (studentConfigsForYear.length === 0) {
 
               </table>
             </div>
-          </div>
-        </div>
+        </section>
       )}
 
       {/* New Year Modal */}

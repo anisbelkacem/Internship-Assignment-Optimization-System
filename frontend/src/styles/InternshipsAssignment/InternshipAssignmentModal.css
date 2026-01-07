@@ -1,361 +1,422 @@
 @import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700&display=swap');
 
-/* ------------------ Modal Overlay ------------------ */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(128, 128, 128, 0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+/* ============================================
+   UNIFIED PRAKTIKUMSPLANUNG PAGE DESIGN
+   Matches Dashboard & Reports styling
+============================================ */
+
+/* Page Root */
+.assign-root {
+  padding: 20px 1rem 1rem 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+  background: #f7f8f9;
+  font-family: 'Kumbh Sans', sans-serif;
 }
 
-/* ------------------ Modal Content ------------------ */
-.modal-content {
-    background-color: #fff;
-    padding: 25px;
-    border-radius: 10px;
-    max-width: 600px;
-    width: 90%;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    overflow-y: auto;
-    max-height: 90vh;
-    box-sizing: border-box;
+/* Page Header */
+.assign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-.modal-small {
-    max-width: 400px;
-}
-
-/* ------------------ Modal Title ------------------ */
-.modal-title {
-    font-size: 22px;
-    font-weight: 600;
-    text-align: center;
-    color: #333;
-    margin-bottom: 10px;
-}
-
-/* ------------------ Modal Buttons ------------------ */
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.modal-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-.modal-btn-primary {
-    background-color: #509CDB;
-    color: white;
-}
-
-.modal-btn-primary:hover {
-    background-color: #4189c7;
-}
-
-.modal-btn-cancel {
-    background-color: #ccc;
-    color: #333;
-}
-
-.modal-btn-cancel:hover {
-    background-color: #999;
-}
-
-/* ------------------ Praktikum Planning Page Styles ------------------ */
-.schools-container {
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    font-family: 'Kumbh Sans', sans-serif;
-}
-
-.schools-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.schools-header h1 {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #1f2937;
+.assign-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #17324b;
 }
 
 .header-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
+/* Year Selector */
+.form-select-small,
 .year-selector {
-    padding: 1rem 3rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    background-color: white;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #374151;
+  font-family: 'Kumbh Sans', sans-serif;
 }
 
-/* ------------------ Config Sections ------------------ */
-.config-section {
-    margin-bottom: 3rem;
+.form-select-small:focus,
+.year-selector:focus {
+  outline: none;
+  border-color: #547792;
 }
 
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+/* Tab Navigation (if needed later) */
+.assign-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.section-header h2 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1f2937;
+.tab-button {
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: #6f7276;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
 }
 
-/* ------------------ Buttons ------------------ */
-.btn-primary {
-    padding: 0.75rem 1.5rem;
-    background-color: #509CDB;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    font-weight: 500 !important;
-    font-size: 0.89rem;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 178px;
+.tab-button:hover {
+  color: #547792;
 }
 
-.btn-primary:hover {
-    background-color: #4189c7;
+.tab-button.active {
+  color: #547792;
+  border-bottom-color: #547792;
 }
 
-.btn-auto-assign {
-    padding: 0.75rem 1.5rem;
-    background-color: #EFEFEF !important;
-    color: #1f2937 !important;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 140px;
-    font-family: 'Kumbh Sans', sans-serif;
-}
-
-.btn-auto-assign:hover {
-    background-color: #2563eb;
-}
-
-.btn-edit {
-    background-color: #f59e0b;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.3s;
-}
-
-.btn-edit:hover {
-    background-color: #d97706;
-}
-
-/* Checkbox styling for table */
-.schools-table input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    accent-color: #1e3a8a;
-    border: 2px solid #000000;
-    border-radius: 4px;
-}
-
-.schools-table input[type="checkbox"]:disabled {
-    opacity: 1;
-}
-
-.schools-table input[type="checkbox"]:checked {
-    background-color: #1e3a8a;
-    border-color: #000000;
-}
-
-.btn-secondary {
-    padding: 0.5rem 1rem;
-    background-color: transparent;
-    color: #3b82f6;
-    border: 1px solid #3b82f6;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background-color: #eff6ff;
-}
-
-.btn-danger {
-    padding: 0.5rem 1rem;
-    background-color: transparent;
-    color: #ef4444;
-    border: 1px solid #ef4444;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.btn-danger:hover {
-    background-color: #fef2f2;
-}
-
-.btn-sm {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-}
-
-/* ------------------ Table Styles ------------------ */
+/* Tables - Unified with Dashboard/Reports */
 .table-container {
-    background-color: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    overflow-x: auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
 }
 
 .schools-table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
 }
 
 .schools-table thead {
-    background-color: #f9fafb;
+  background-color: #f9fafb;
 }
 
 .schools-table th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #374151;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6f7276;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .schools-table tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-    transition: background-color 0.2s;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s ease;
 }
 
 .schools-table tbody tr:hover {
-    background-color: #f9fafb;
+  background-color: #f8fafc;
+}
+
+.schools-table tbody tr:last-child {
+  border-bottom: none;
 }
 
 .schools-table td {
-    padding: 0.75rem 1rem;
-    color: #374151;
-    font-size: 0.875rem;
+  padding: 12px 16px;
+  color: #17324b;
+  font-size: 14px;
 }
 
+.schools-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #547792;
+}
+
+.schools-table input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty State */
 .empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
+  text-align: center;
+  padding: 40px 20px;
+  color: #6f7276;
+  font-size: 14px;
 }
 
+/* Action Buttons Row */
 .action-buttons {
-    display: flex;
-    gap: 0.5rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
-/* ------------------ Alerts ------------------ */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
+  color: #4b5563;
+}
+
+.action-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #e5e7eb;
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.action-btn.edit-btn {
+  color: #3b82f6;
+}
+
+.action-btn.delete-btn {
+  color: #ef4444;
+}
+
+/* Alerts - Unified */
 .alert {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
 }
 
 .alert-error {
-    background-color: #fee2e2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
 }
 
 .alert-success {
-    background-color: #d1fae5;
-    border: 1px solid #a7f3d0;
-    color: #065f46;
+  background-color: #ecfdf3;
+  border: 1px solid #a7f3d0;
+  color: #15803d;
 }
 
 .alert-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.7;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0 4px;
 }
 
 .alert-close:hover {
-    opacity: 1;
+  opacity: 1;
 }
 
-/* ------------------ Loading State ------------------ */
+/* Loading State */
 .loading {
-    text-align: center;
-    padding: 3rem;
-    font-size: 1.25rem;
-    color: #6b7280;
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+  color: #6f7276;
 }
 
-/* ------------------ Form Select Small ------------------ */
-.form-select-small {
-    padding: 0.5rem 1rem ;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    background-color: white;
-    color: #374151;
+/* ============================================
+   MODAL STYLES
+============================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(23, 50, 75, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.form-select-small:focus {
-    outline: none;
-    border-color: #3b82f6;
+.modal-content {
+  background-color: #fff;
+  padding: 28px;
+  border-radius: 10px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  max-height: 90vh;
+  box-sizing: border-box;
+}
+
+.modal-small {
+  max-width: 400px;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  color: #17324b;
+  margin-bottom: 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-family: 'Kumbh Sans', sans-serif;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.modal-btn-primary {
+  background-color: #547792;
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background-color: #3d5a6d;
+}
+
+.modal-btn-cancel {
+  background-color: #e5e7eb;
+  color: #17324b;
+}
+
+.modal-btn-cancel:hover {
+  background-color: #cbd5e1;
+}
+
+/* ============================================
+   LEGACY SUPPORT (for old classes)
+============================================ */
+
+.schools-container {
+  padding: 20px 1rem 1rem 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+  background: #f7f8f9;
+}
+
+.schools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.schools-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #17324b;
+}
+
+.config-section {
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #17324b;
+}
+
+/* Button variants - now using global.css .btn classes */
+.btn-edit {
+  padding: 6px 12px;
+  background-color: #d98b33;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-edit:hover {
+  background-color: #b8761f;
+}
+
+.btn-auto-assign {
+  padding: 10px 16px;
+  background-color: #e5e7eb !important;
+  color: #17324b !important;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-auto-assign:hover {
+  background-color: #cbd5e1 !important;
+}
+/* Ensure all .btn and .btn-* classes prevent text wrapping in tables */
+.schools-table button,
+.teachers-table button,
+.students-table button {
+  white-space: nowrap;
+  display: inline-block;
+  min-width: fit-content;
+}
+
+/* Fix button styles for assignment tables */
+.btn {
+  white-space: nowrap;
+}
+
+.btn-sm {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.btn-primary {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.btn-secondary {
+  white-space: nowrap;
+  display: inline-block;
 }

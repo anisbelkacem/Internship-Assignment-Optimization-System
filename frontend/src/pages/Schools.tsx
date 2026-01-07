@@ -431,7 +431,7 @@ export default function Schools() {
              Excel importieren
           </button>
           <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
-            <span>+</span> Schule hinzufügen
+            Schule hinzufügen
           </button>
         </div>
       </div>
@@ -486,16 +486,18 @@ export default function Schools() {
                     <td>
                       <div className="action-buttons">
                         <button 
-                          className="btn-secondary" 
+                          className="action-btn edit-btn" 
                           onClick={() => handleOpenModal(school)}
+                          title="Bearbeiten"
                         >
-                          Bearbeiten
+                          ✏️
                         </button>
                         <button 
-                          className="btn-danger" 
+                          className="action-btn delete-btn" 
                           onClick={() => handleDelete(school.id)}
+                          title="Löschen"
                         >
-                          Löschen
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -758,7 +760,6 @@ export default function Schools() {
                             className="form-select-small"
                             value={school.type || ''}
                             onChange={(e) => handlePreviewInputChange(index, 'type', e.target.value as SchoolType)}
-                            style={{ backgroundColor: '#374151', color: 'white', border: '1px solid #4b5563' }}
                           >
                             <option value="">-- Bitte wählen --</option>
                             <option value={SchoolType.GS}>GS</option>
@@ -793,8 +794,9 @@ export default function Schools() {
                 className="btn-primary" 
                 onClick={handleConfirmImport}
                 disabled={previewSchools.filter(s => s.isValid).length === 0}
+                title={`Gültig: ${previewSchools.filter(s => s.isValid).length}`}
               >
-                Gültige Einträge importieren ({previewSchools.filter(s => s.isValid).length})
+                Importieren
               </button>
             </div>
           </div>
