@@ -75,10 +75,15 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                             hardScore -= 30;
                         } else {
                             // SOFT: Reward matching preferred courses
-                            if (internshipCourse.equals(config.getMainCourse())) softScore += 10;
-                            else if (internshipCourse.equals(config.getPrefCourse1())) softScore += 7;
-                            else if (internshipCourse.equals(config.getPrefCourse2())) softScore += 4;
-                            else if (internshipCourse.equals(config.getPrefCourse3())) softScore += 2;
+                            if (internshipCourse.equals(config.getMainCourse())) {
+                                softScore += 10;
+                            } else if (internshipCourse.equals(config.getPrefCourse1())) {
+                                softScore += 7;
+                            } else if (internshipCourse.equals(config.getPrefCourse2())) {
+                                softScore += 4;
+                            } else if (internshipCourse.equals(config.getPrefCourse3())) {
+                                softScore += 2;
+                            }
                         }
                     }
                 }
@@ -87,9 +92,13 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                 if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
                     if (demand.getStudentAddress() != null && internship.getAssignedSchool() != null) {
                         String zone = internship.getAssignedSchool().getZone();
-                        if ("3".equals(zone)) softScore -= 30;
-                        else if ("2".equals(zone)) softScore -= 15;
-                        else if ("1".equals(zone)) softScore -= 5;
+                        if ("3".equals(zone)) {
+                            softScore -= 30;
+                        } else if ("2".equals(zone)) {
+                            softScore -= 15;
+                        } else if ("1".equals(zone)) {
+                            softScore -= 5;
+                        }
                     }
                 }
             }

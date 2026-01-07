@@ -1,6 +1,12 @@
 package com.aspd.backend.service;
 
-import com.aspd.backend.model.*;
+import com.aspd.backend.model.AssignmentStatus;
+import com.aspd.backend.model.Course;
+import com.aspd.backend.model.InternshipAssignment;
+import com.aspd.backend.model.PlannedInternship;
+import com.aspd.backend.model.PraktikumType;
+import com.aspd.backend.model.StudentConfig;
+import com.aspd.backend.model.StudentInternshipDemand;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.solver.StudentAssignmentSolution;
