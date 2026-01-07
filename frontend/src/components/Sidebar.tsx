@@ -92,11 +92,11 @@ const Sidebar: FC = () => {
                   <path d="M8 7h8M8 11h8M8 15h5" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </span>
-              Kurse
+              <span className="nav-label">Kurse</span>
             </NavLink>
           </li>
           <li></li>
-          <li>
+          <li className={isAssignmentsOpen ? "submenu-item open" : "submenu-item"}>
             <button 
               onClick={() => toggleSubmenu('assignments')}
               className={isAssignmentsActive ? "submenu-toggle active" : "submenu-toggle"}

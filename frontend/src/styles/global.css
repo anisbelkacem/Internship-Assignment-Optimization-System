@@ -524,7 +524,7 @@ html, body, #root {
     display: none;
     position: absolute;
     left: 70px;
-    top: 0;
+    top: calc(100% - 32px);
     width: 150px;
     background: #1a202f;
     border: 1px solid #334155;
