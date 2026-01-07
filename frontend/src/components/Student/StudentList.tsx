@@ -72,7 +72,9 @@ const StudentList: React.FC = () => {
 
     const renderCourse = (courseId?: number | null) => {
         if (!courseId) return "-";
-        return courseNameById.get(courseId) ?? courseId;
+        const courseName = courseNameById.get(courseId);
+        if (!courseName) return courseId;
+        return courseName.charAt(0).toUpperCase() + courseName.slice(1);
     };
 
     if (loading) return <div className="assign-root"><p>Loading students...</p></div>;

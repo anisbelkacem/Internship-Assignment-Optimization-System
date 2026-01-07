@@ -46,6 +46,7 @@ useEffect(() => {
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     void loadData();
@@ -215,15 +216,18 @@ const teacherPayload = {
 
   const hasPls = useMemo(() => pls.length > 0, [pls]);
 
+  const filteredPls = useMemo(() => {
+    return pls.filter(pl => {
+      const fullName = `${pl.firstName} ${pl.lastName}`.toLowerCase();
+      return fullName.includes(searchTerm.toLowerCase());
+    });
+  }, [pls, searchTerm]);
+
   return (
     <section className="section-container pls-section">
       <div className="section-header">
         <div>
           <h2>PL-Management</h2>
-          <p className="pls-subtitle">
-            Betreuer mit Fächerspezialisierungen, Arbeitslast und
-            Praktikumspräferenzen verwalten.
-          </p>
         </div>
         <div className="section-header-actions">
           <button
@@ -246,6 +250,37 @@ const teacherPayload = {
       {error && <div className="inline-alert error">{error}</div>}
       {success && <div className="inline-alert success">{success}</div>}
 
+      <div style={{marginBottom: '20px'}}>
+        <input
+          type="text"
+          placeholder="🔍 PLs suchen..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            fontSize: '14px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            outline: 'none',
+            transition: 'all 0.2s ease',
+            backgroundColor: '#f8fafc',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            color: '#000000'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#3b82f6';
+            e.target.style.backgroundColor = '#ffffff';
+            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = '#e2e8f0';
+            e.target.style.backgroundColor = '#f8fafc';
+            e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+          }}
+        />
+      </div>
+
       <div className="table-card">
         <div className="table-card-header">
           <div className="table-card-title">
@@ -267,48 +302,54 @@ const teacherPayload = {
         )}
 
         {!loading && hasPls && (
-          <div className="table-container">
-            <table className="pls-table">
+          <div className="table-container" style={{overflowX: 'auto'}}>
+            <table className="schools-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Hauptfach</th>
-                  <th>Schule</th>
-                  <th>E-Mail</th>
-                  <th>Aktionen</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Name</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Schule</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>E-Mail</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Aktionen</th>
                 </tr>
               </thead>
               <tbody>
-                {pls.map((pl) => (
-                  <tr key={pl.teacherId}>
-                    <td>
-                      {pl.firstName} {pl.lastName}
-                    </td>
-                    <td style={{textTransform: 'lowercase'}}>{pl.mainSubject.name}</td>
-                    <td>{pl.schoolName ?? "-"}</td>
-                    <td>{pl.email}</td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          className="action-btn edit-btn"
-                          onClick={() => handleEdit(pl)}
-                          title="Bearbeiten"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          type="button"
-                          className="action-btn delete-btn"
-                          onClick={() => handleDelete(pl)}
-                          title="Löschen"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                {filteredPls.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="empty-state">
+                      {searchTerm ? "Keine PLs gefunden" : "Es sind keine PLs vorhanden"}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredPls.map((pl) => (
+                    <tr key={pl.teacherId}>
+                      <td>{pl.firstName} {pl.lastName}</td>
+                      <td>{pl.mainSubject.name.charAt(0).toUpperCase() + pl.mainSubject.name.slice(1)}</td>
+                      <td>{pl.schoolName ?? "-"}</td>
+                      <td>{pl.email}</td>
+                      <td>
+                        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                          <button
+                            type="button"
+                            className="action-btn edit-btn"
+                            onClick={() => handleEdit(pl)}
+                            title="Bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn delete-btn"
+                            onClick={() => handleDelete(pl)}
+                            title="Löschen"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
