@@ -6,6 +6,7 @@ import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.model.Teacher;
+import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.StudentConfigRepository;
 import com.aspd.backend.repository.TeacherRepository;
@@ -33,16 +34,19 @@ public class Phase1Controller {
     private final StudentConfigRepository studentConfigRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
+    private final PlannedInternshipRepository plannedInternshipRepository;
 
     public Phase1Controller(
             Phase1OptimizationService phase1OptimizationService,
             StudentConfigRepository studentConfigRepository,
             TeacherRepository teacherRepository,
-            SchoolRepository schoolRepository) {
+            SchoolRepository schoolRepository,
+            PlannedInternshipRepository plannedInternshipRepository) {
         this.phase1OptimizationService = phase1OptimizationService;
         this.studentConfigRepository = studentConfigRepository;
         this.teacherRepository = teacherRepository;
         this.schoolRepository = schoolRepository;
+        this.plannedInternshipRepository = plannedInternshipRepository;
     }
 
     /**
@@ -69,18 +73,24 @@ public class Phase1Controller {
         InternshipSolution phase1Solution = phase1OptimizationService.optimize(
                 teachers, schools, studentConfigs, schoolYear, 70);
 
+        // Save the planned internships to the database so Phase 2 can use them
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(
+                phase1Solution.getPlannedInternships());
+        
+        log.info("Saved {} planned internships to database", savedInternships.size());
+
         // Build response
         TeacherAssignmentResult result = TeacherAssignmentResult.builder()
                 .schoolYear(schoolYear)
-                .totalPlannedInternships(phase1Solution.getPlannedInternships().size())
-                .assignedCount((int) phase1Solution.getPlannedInternships().stream()
+                .totalPlannedInternships(savedInternships.size())
+                .assignedCount((int) savedInternships.stream()
                         .filter(i -> i.getAssignedTeacher() != null)
                         .count())
-                .unassignedCount((int) phase1Solution.getPlannedInternships().stream()
+                .unassignedCount((int) savedInternships.stream()
                         .filter(i -> i.getAssignedTeacher() == null)
                         .count())
                 .score(phase1Solution.getScore().toString())
-                .plannedInternships(phase1Solution.getPlannedInternships().stream()
+                .plannedInternships(savedInternships.stream()
                         .map(this::toPlannedInternshipDto)
                         .collect(Collectors.toList()))
                 .build();
