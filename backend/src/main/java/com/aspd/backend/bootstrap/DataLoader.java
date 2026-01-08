@@ -4,6 +4,7 @@ import com.aspd.backend.model.Permission;
 import com.aspd.backend.model.User;
 import com.aspd.backend.model.UserRole;
 import com.aspd.backend.repository.UserRepository;
+import com.aspd.backend.repository.SchoolRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,10 +16,12 @@ import java.util.Set;
 public class DataLoader implements ApplicationRunner {
 
     private final UserRepository userRepository;
+    private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataLoader(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataLoader(UserRepository userRepository, SchoolRepository schoolRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.schoolRepository = schoolRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -36,5 +39,13 @@ public class DataLoader implements ApplicationRunner {
                     .build();
             userRepository.save(admin);
         }
+
+        // Ensure legacy schools are marked active
+        schoolRepository.findAll().stream()
+                .filter(s -> s.getActive() == null)
+                .forEach(s -> {
+                    s.setActive(true);
+                    schoolRepository.save(s);
+                });
     }
 }

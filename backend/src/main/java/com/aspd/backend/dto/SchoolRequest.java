@@ -29,4 +29,7 @@ public class SchoolRequest {
 
     @NotNull
     private SchoolType type; // GS or MS
+
+    @NotNull
+    private Boolean active; // Active or inactive
 }

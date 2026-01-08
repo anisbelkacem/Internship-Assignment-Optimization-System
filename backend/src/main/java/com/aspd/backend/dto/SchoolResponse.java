@@ -19,4 +19,5 @@ public class SchoolResponse {
     private String zone;
     private Boolean oepnv;
     private SchoolType type;
+    private Boolean active;
 }

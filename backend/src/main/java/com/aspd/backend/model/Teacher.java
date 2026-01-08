@@ -38,7 +38,6 @@ public class Teacher {
 
     @OneToMany(
             mappedBy = "teacher",
-            cascade = CascadeType.ALL,
             orphanRemoval = true
     )
     private Set<TeacherPlConfig> plConfigs = new HashSet<>();

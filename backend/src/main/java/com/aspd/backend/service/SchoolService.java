@@ -36,6 +36,10 @@ public class SchoolService {
         return repository.findAll();
     }
 
+    public List<School> listActive() {
+        return repository.findByActiveTrue();
+    }
+
     public School get(Long id) {
         return repository.findById(id).orElseThrow(() -> new NotFoundException("School", id));
     }
@@ -66,6 +70,7 @@ public class SchoolService {
         s.setZone(req.getZone());
         s.setOepnv(req.getOepnv());
         s.setType(req.getType());
+        s.setActive(req.getActive());
     }
 
     @Transactional
@@ -194,6 +199,7 @@ public class SchoolService {
         s.setZone(zone);
         s.setOepnv(oepnv);
         s.setType(type);
+        s.setActive(true);
         return s;
     }
 

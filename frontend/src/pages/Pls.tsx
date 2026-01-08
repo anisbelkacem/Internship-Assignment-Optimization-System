@@ -58,9 +58,8 @@ useEffect(() => {
     try {
       const [plsData, schoolsData] = await Promise.all([
         plService.getAllPls(),
-        apiService.get<SchoolOption[]>("/api/schools"),
+        apiService.get<SchoolOption[]>("/api/schools/active"),
       ]);
-
       setPls(plsData);
       setSchools(
         schoolsData.map((s) => ({
