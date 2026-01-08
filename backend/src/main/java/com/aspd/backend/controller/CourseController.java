@@ -46,20 +46,15 @@ public class CourseController {
         return courseService.updateCourse(id, course);
     }
 
-    /**
-     * Deactivates a course instead of deleting it permanently.
-     *
-     * Courses are referenced by students and completed internships.
-     * Physically deleting a course would break historical data.
-     *
-     * Using soft-deactivation (active = false) allows us to:
-     * - Preserve historical records
-     * - Keep existing student and internship data consistent
-     * - Prevent the course from being selected in future operations
-     */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{id}/deactivate")
+    public Course deactivateCourse(@PathVariable Long id) {
+        return courseService.deactivateCourse(id);
+    }
+
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
-    public void deactivateCourse(@PathVariable Long id) {
-        courseService.deactivateCourse(id);
+    public void deleteCourse(@PathVariable Long id) {
+        courseService.deleteCourse(id);
     }
 }

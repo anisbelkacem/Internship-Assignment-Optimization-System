@@ -33,6 +33,7 @@ export default function Schools() {
     zone: '',
     oepnv: false,
     type: SchoolType.GS,
+    active: true,
   });
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function Schools() {
         zone: school.zone,
         oepnv: school.oepnv,
         type: school.type,
+        active: school.active,
       });
     } else {
       setEditingSchool(null);
@@ -70,6 +72,7 @@ export default function Schools() {
         zone: '',
         oepnv: false,
         type: SchoolType.GS,
+        active: true,
       });
     }
     setShowModal(true);
@@ -84,6 +87,7 @@ export default function Schools() {
       zone: '',
       oepnv: false,
       type: SchoolType.GS,
+      active: true,
     });
   };
 
@@ -129,6 +133,23 @@ export default function Schools() {
     } finally {
       setShowDeleteModal(false);
       setDeletingSchoolId(null);
+    }
+  };
+  const handleToggleActive = async (school: School) => {
+    try {
+      await schoolService.updateSchool(school.id, {
+        name: school.name,
+        address: school.address,
+        zone: school.zone,
+        oepnv: school.oepnv,
+        type: school.type,
+        active: !school.active,
+      });
+      setSuccess(`School ${!school.active ? 'activated' : 'deactivated'} successfully!`);
+      fetchSchools();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
@@ -225,6 +246,7 @@ export default function Schools() {
               zone: zone,
               oepnv,
               type: type as SchoolType,
+              active: true,
               isValid: errors.length === 0,
               errors
             };
@@ -365,7 +387,8 @@ export default function Schools() {
             address: school.address,
             zone: school.zone,
             oepnv: school.oepnv,
-            type: school.type
+            type: school.type,
+            active: true
           });
           successCount++;
         } catch (err) {
@@ -464,6 +487,7 @@ export default function Schools() {
                   <th>Zone</th>
                   <th>ÖPNV</th>
                   <th>Type</th>
+                  <th>Status</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -484,6 +508,11 @@ export default function Schools() {
                       </span>
                     </td>
                     <td>
+                      <span className={school.active ? 'badge badge-oepnv' : 'badge badge-no-oepnv'}>
+                        {school.active ? 'Aktiv' : 'Inaktiv'}
+                      </span>
+                    </td>
+                    <td>
                       <div className="action-buttons">
                         <button 
                           className="action-btn edit-btn" 
@@ -491,6 +520,14 @@ export default function Schools() {
                           title="Bearbeiten"
                         >
                           ✏️
+                        </button>
+                        <button
+                          className="action-btn"
+                          onClick={() => handleToggleActive(school)}
+                          title={school.active ? 'Deaktivieren' : 'Aktivieren'}
+                          style={{ backgroundColor: school.active ? '#f59e0b' : '#10b981' }}
+                        >
+                          {school.active ? '⏸️' : '▶️'}
                         </button>
                         <button 
                           className="action-btn delete-btn" 
@@ -611,6 +648,22 @@ export default function Schools() {
                     />
                     <label className="form-label" htmlFor="oepnv" style={{ marginBottom: 0 }}>
                       ÖPNV-Anbindung vorhanden
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <div className="form-checkbox-group">
+                    <input
+                      type="checkbox"
+                      id="active"
+                      name="active"
+                      className="form-checkbox"
+                      checked={formData.active}
+                      onChange={handleInputChange}
+                    />
+                    <label className="form-label" htmlFor="active" style={{ marginBottom: 0 }}>
+                      Aktiv
                     </label>
                   </div>
                 </div>

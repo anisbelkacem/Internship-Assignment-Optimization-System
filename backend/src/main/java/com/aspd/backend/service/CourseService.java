@@ -46,9 +46,14 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    public void deactivateCourse(Long id) {
+    public Course deactivateCourse(Long id) {
         Course course = getCourseById(id);
         course.setActive(false);
-        courseRepository.save(course);
+        return courseRepository.save(course);
+    }
+
+    public void deleteCourse(Long id) {
+        Course course = getCourseById(id);
+        courseRepository.delete(course);
     }
 }

@@ -40,6 +40,12 @@ public class SchoolController {
     }
 
     @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
+    @GetMapping("/active")
+    public List<SchoolResponse> listActive() {
+        return service.listActive().stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @PreAuthorize("hasAuthority('VIEW') or hasAnyAuthority('EDIT')")
     @GetMapping("/{id}")
     public SchoolResponse get(@PathVariable Long id) {
         return toResponse(service.get(id));
@@ -83,6 +89,7 @@ public class SchoolController {
         r.setZone(s.getZone());
         r.setOepnv(s.getOepnv());
         r.setType(s.getType());
+        r.setActive(s.getActive());
         return r;
     }
 }

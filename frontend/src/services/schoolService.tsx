@@ -12,6 +12,7 @@ export interface School {
   zone: string;
   oepnv: boolean;
   type: SchoolType;
+  active: boolean;
 }
 
 export interface SchoolCreate {
@@ -20,6 +21,7 @@ export interface SchoolCreate {
   zone: string;
   oepnv: boolean;
   type: SchoolType;
+  active: boolean;
 }
 
 export interface SchoolImportResult {
@@ -32,6 +34,10 @@ export interface SchoolImportResult {
 class SchoolService {
   async getAllSchools(): Promise<School[]> {
     return apiService.get<School[]>('/api/schools');
+  }
+
+  async getActiveSchools(): Promise<School[]> {
+    return apiService.get<School[]>('/api/schools/active');
   }
 
   async getSchoolById(id: number): Promise<School> {

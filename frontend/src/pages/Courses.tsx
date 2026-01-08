@@ -80,17 +80,30 @@ const handleOpenModal = (course?: Course) => {
     }
   };
 
-const handleDeactivate = async (id: number) => {
-  if (!window.confirm('Möchten Sie diesen Kurs wirklich deaktivieren?')) {
+const handleToggleActive = async (course: Course) => {
+  try {
+    await courseService.updateCourse(course.id, {
+      name: course.name,
+      active: !course.active,
+    });
+    fetchCourses();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Fehler beim Aktualisieren des Kurses';
+    setError(errorMessage);
+  }
+};
+
+const handleDelete = async (id: number) => {
+  if (!window.confirm('Möchten Sie diesen Kurs wirklich löschen?')) {
     return;
   }
 
   try {
-    await courseService.deactivateCourse(id);
+    await courseService.deleteCourse(id);
     fetchCourses();
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : 'Fehler beim Deaktivieren des Kurses';
+      error instanceof Error ? error.message : 'Fehler beim Löschen des Kurses';
     setError(errorMessage);
   }
 };
@@ -167,16 +180,24 @@ const handleDeactivate = async (id: number) => {
                           ✏️
                         </button>
 
-                        {course.active && (
-                          <button
-                            className="action-btn delete-btn"
-                            onClick={() => handleDeactivate(course.id)}
-                            title="Deaktivieren"
-                            type="button"
-                          >
-                            ❌
-                          </button>
-                        )}
+                        <button
+                          className="action-btn"
+                          onClick={() => handleToggleActive(course)}
+                          title={course.active ? 'Deaktivieren' : 'Aktivieren'}
+                          type="button"
+                          style={{ backgroundColor: course.active ? '#f59e0b' : '#10b981' }}
+                        >
+                          {course.active ? '⏸️' : '▶️'}
+                        </button>
+
+                        <button
+                          className="action-btn delete-btn"
+                          onClick={() => handleDelete(course.id)}
+                          title="Löschen"
+                          type="button"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </td>
                   </tr>
