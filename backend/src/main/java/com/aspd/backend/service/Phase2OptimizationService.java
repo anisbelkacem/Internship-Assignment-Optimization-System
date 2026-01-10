@@ -48,9 +48,7 @@ public class Phase2OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        log.info("\n╔══════════════════════════════════════════════════════════════════════╗");
-        log.info("║  PHASE 2: Student Assignment                                        ║");
-        log.info("╚══════════════════════════════════════════════════════════════════════╝");
+        log.info("\n========== PHASE 2: Student Assignment ==========");
         
         // Load the PlannedInternships from Phase 1 (already saved in database)
         List<PlannedInternship> plannedInternships = plannedInternshipRepository
@@ -82,11 +80,9 @@ public class Phase2OptimizationService {
                 .filter(d -> d.getAssignedInternship() != null)
                 .count();
         
-        log.info("╔══════════════════════════════════════════════════════════════════════╗");
-        log.info("║  PHASE 2 COMPLETE                                                    ║");
-        log.info("║  Assigned: {}/{}                                                 ║", assignedCount, savedDemands.size());
-        log.info("║  Score: {}                                          ║", phase2Result.getScore());
-        log.info("╚══════════════════════════════════════════════════════════════════════╝\n");
+        log.info("========== PHASE 2 COMPLETE ==========");
+        log.info("Assigned: {}/{}", assignedCount, savedDemands.size());
+        log.info("Score: {}\n", phase2Result.getScore());
         
         return phase2Result;
     }

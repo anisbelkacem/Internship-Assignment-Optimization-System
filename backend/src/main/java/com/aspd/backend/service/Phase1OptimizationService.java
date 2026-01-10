@@ -43,9 +43,7 @@ public class Phase1OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        log.info("\n╔══════════════════════════════════════════════════════════════════════╗");
-        log.info("║  PHASE 1: Teacher & School Assignment                               ║");
-        log.info("╚══════════════════════════════════════════════════════════════════════╝");
+        log.info("\n========== PHASE 1: Teacher & School Assignment ==========");
         log.info("Input: {} teachers, {} schools, {} students\n", 
                  teachers.size(), schools.size(), studentConfigs.size());
         
@@ -69,11 +67,9 @@ public class Phase1OptimizationService {
                 .filter(i -> i.getAssignedTeacher() != null)
                 .count();
         
-        log.info("╔══════════════════════════════════════════════════════════════════════╗");
-        log.info("║  PHASE 1 COMPLETE                                                    ║");
-        log.info("║  Assigned: {}/{}                                                 ║", assignedCount, savedInternships.size());
-        log.info("║  Score: {}                                           ║", phase1Result.getScore());
-        log.info("╚══════════════════════════════════════════════════════════════════════╝\n");
+        log.info("========== PHASE 1 COMPLETE ==========");
+        log.info("Assigned: {}/{}", assignedCount, savedInternships.size());
+        log.info("Score: {}\n", phase1Result.getScore());
         
         return phase1Result;
     }
