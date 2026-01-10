@@ -55,15 +55,26 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                     }
                 }
                 
-                // 4. For PDP, course must be OTHER
+                // 4. For PDP, course must be null (no course restriction)
                 if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
                     if (internship.getCourse() != null) {
                         hardScore -= 100;
                     }
                 }
                 
-                // 5. For ZSP/SFP, student course must match internship course
-                if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
+                // 5. For SFP, student course must match internship course
+                if ( type == PraktikumType.SFP) {
+                    if (internship.getCourse() != null && internship.getCourse() != null) {
+                        Course internshipCourse = internship.getCourse();
+                        StudentConfig config = demand.getStudentConfig();
+                        boolean matches = internshipCourse.equals(config.getMainCourse());
+                        if (!matches) {
+                            hardScore -= 100;
+                        } 
+                    }
+                }
+                // 6. For ZSP, student course must match internship course
+                if (type == PraktikumType.ZSP) {
                     if (internship.getCourse() != null && internship.getCourse() != null) {
                         Course internshipCourse = internship.getCourse();
                         StudentConfig config = demand.getStudentConfig();
@@ -72,7 +83,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                                          internshipCourse.equals(config.getPrefCourse2()) ||
                                          internshipCourse.equals(config.getPrefCourse3());
                         if (!matches) {
-                            hardScore -= 30;
+                            softScore -= 30;
                         } else {
                             // SOFT: Reward matching preferred courses
                             if (internshipCourse.equals(config.getMainCourse())) {
