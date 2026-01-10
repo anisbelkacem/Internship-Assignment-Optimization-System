@@ -64,7 +64,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                 
                 // 5. For SFP, student course must match internship course
                 if ( type == PraktikumType.SFP) {
-                    if (internship.getCourse() != null && internship.getCourse() != null) {
+                    if (internship.getCourse() != null) {
                         Course internshipCourse = internship.getCourse();
                         StudentConfig config = demand.getStudentConfig();
                         boolean matches = internshipCourse.equals(config.getMainCourse());
@@ -75,26 +75,29 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
                 }
                 // 6. For ZSP, student course must match internship course
                 if (type == PraktikumType.ZSP) {
-                    if (internship.getCourse() != null && internship.getCourse() != null) {
+                    if (internship.getCourse() != null) {
                         Course internshipCourse = internship.getCourse();
                         StudentConfig config = demand.getStudentConfig();
-                        boolean matches = internshipCourse.equals(config.getMainCourse()) ||
-                                         internshipCourse.equals(config.getPrefCourse1()) ||
-                                         internshipCourse.equals(config.getPrefCourse2()) ||
-                                         internshipCourse.equals(config.getPrefCourse3());
+                        Course mainCourse = config.getMainCourse();
+                        Course prefCourse1 = config.getPrefCourse1();
+                        Course prefCourse2 = config.getPrefCourse2();
+                        Course prefCourse3 = config.getPrefCourse3();
+                        
+                        boolean matches = internshipCourse.equals(mainCourse) ||
+                                         internshipCourse.equals(prefCourse1) ||
+                                         internshipCourse.equals(prefCourse2) ||
+                                         internshipCourse.equals(prefCourse3);
                         if (!matches) {
                             softScore -= 30;
-                        } else {
-                            // SOFT: Reward matching preferred courses
-                            if (internshipCourse.equals(config.getMainCourse())) {
-                                softScore += 10;
-                            } else if (internshipCourse.equals(config.getPrefCourse1())) {
-                                softScore += 7;
-                            } else if (internshipCourse.equals(config.getPrefCourse2())) {
-                                softScore += 4;
-                            } else if (internshipCourse.equals(config.getPrefCourse3())) {
-                                softScore += 2;
-                            }
+                            continue;
+                        }else if (internshipCourse.equals(mainCourse)) {
+                            softScore += 10;
+                        } else if (internshipCourse.equals(prefCourse1)) {
+                            softScore += 7;
+                        } else if (internshipCourse.equals(prefCourse2)) {
+                            softScore += 4;
+                        } else if (internshipCourse.equals(prefCourse3)) {
+                            softScore += 2;
                         }
                     }
                 }
