@@ -57,6 +57,13 @@ public class Phase2Controller {
             return ResponseEntity.badRequest().build();
         }
 
+        // Delete existing assignments for this school year to avoid duplicates
+        List<InternshipAssignment> existingAssignments = assignmentRepository.findBySchoolYear(schoolYear);
+        if (!existingAssignments.isEmpty()) {
+            log.info("Deleting {} existing assignments for year {}", existingAssignments.size(), schoolYear);
+            assignmentRepository.deleteAll(existingAssignments);
+        }
+
         // Run Phase 2 optimization
         StudentAssignmentSolution phase2Solution = phase2OptimizationService.optimize(
                 studentConfigs, schoolYear, 70);
