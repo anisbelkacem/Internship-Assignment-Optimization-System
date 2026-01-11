@@ -3,11 +3,14 @@ import { useSearchParams } from "react-router-dom";
 import studentConfigService from "../services/studentConfigService";
 import plService from "../services/plService";
 import studentService from "../services/studentService";
+import internshipAssignmentService from "../services/internshipAssignmentService";
 import StudentConfigForm from "../components/InternshipsAssignment/InternshipAssignmentStudentForm";
 import TeacherConfigForm from "../components/InternshipsAssignment/TeacherConfigForm";
+import EditPlannedInternshipForm from "../components/InternshipsAssignment/EditPlannedInternshipForm";
 import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import type { Student } from "../services/studentService";
+import type { TeacherAssignmentResult, PlannedInternshipDto } from "../services/internshipAssignmentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
 
@@ -41,6 +44,12 @@ export default function InternshipAssignments() {
   // Assignment Results States
   const [showTeacherAssignments, setShowTeacherAssignments] = useState(false);
   const [showStudentAssignments, setShowStudentAssignments] = useState(false);
+  const [phase1Result, setPhase1Result] = useState<TeacherAssignmentResult | null>(null);
+  const [assigningPhase1, setAssigningPhase1] = useState(false);
+
+  // Edit Planned Internship Modal State
+  const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
+  const [editingInternship, setEditingInternship] = useState<PlannedInternshipDto | null>(null);
 
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
@@ -66,6 +75,7 @@ export default function InternshipAssignments() {
   useEffect(() => {
     if (selectedYear) {
       fetchStudentConfigsByYear();
+      fetchPlannedInternships(); // Load saved assignments
     }
   }, [selectedYear]);
 
@@ -183,6 +193,94 @@ const handleConfirmDeleteTeacherConfig = async () => {
   }
 };
 
+  // Phase 1 Optimization Handler
+  const handlePhase1Assignment = async () => {
+    if (!selectedYear) {
+      setError("Please select a school year first");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    setAssigningPhase1(true);
+    
+    try {
+      const result = await internshipAssignmentService.optimizePhase1(selectedYear);
+      setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
+      setTimeout(() => setSuccess(null), 5000);
+      
+      // Fetch saved results from database
+      await fetchPlannedInternships();
+      setShowTeacherAssignments(true);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Optimization failed";
+      setError(errorMsg);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setAssigningPhase1(false);
+    }
+  };
+
+  // Fetch planned internships from database
+  const fetchPlannedInternships = async () => {
+    if (!selectedYear) return;
+    
+    try {
+      const internships = await internshipAssignmentService.getPlannedInternships(selectedYear);
+      const mockResult: TeacherAssignmentResult = {
+        schoolYear: selectedYear,
+        totalPlannedInternships: internships.length,
+        assignedCount: internships.filter(i => i.teacherId).length,
+        unassignedCount: internships.filter(i => !i.teacherId).length,
+        score: "",
+        plannedInternships: internships
+      };
+      setPhase1Result(mockResult);
+      if (internships.length > 0) {
+        setShowTeacherAssignments(true);
+      }
+    } catch (err) {
+      console.error("Failed to fetch planned internships:", err);
+    }
+  };
+
+  // Delete all assignments for current year
+  const handleDeleteAllAssignments = async () => {
+    if (!selectedYear) return;
+    
+    if (!confirm(`Delete all teacher assignments for ${selectedYear}?`)) {
+      return;
+    }
+
+    try {
+      await internshipAssignmentService.deleteAllPlannedInternships(selectedYear);
+      setPhase1Result(null);
+      setShowTeacherAssignments(false);
+      setSuccess("All assignments deleted successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete assignments");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // Edit Planned Internship Handlers
+  const handleEditInternship = (internship: PlannedInternshipDto) => {
+    setEditingInternship(internship);
+    setShowEditInternshipModal(true);
+  };
+
+  const handleCloseEditInternshipModal = () => {
+    setShowEditInternshipModal(false);
+    setEditingInternship(null);
+  };
+
+  const handleSaveEditInternship = async () => {
+    handleCloseEditInternshipModal();
+    await fetchPlannedInternships();
+    setSuccess("Assignment updated successfully!");
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
   // New Year Handler
   const handleCreateNewYear = () => {
     setShowNewYearModal(true);
@@ -214,13 +312,22 @@ const handleConfirmNewYear = () => {
 };
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="schools-container">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="assign-root">
-      <div className="assign-header">
-        <h1>Praktikum Planning - {selectedYear || "Select Year"}</h1>
+    <div className="schools-container">
+      <div className="schools-header">
+        <div className="schools-header-content">
+          <h1>Praktikum Planning</h1>
+        </div>
         <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <select
             className="form-select-small year-selector"
@@ -246,16 +353,14 @@ const handleConfirmNewYear = () => {
       </div>
 
       {error && (
-        <div className="alert alert-error">
-          {error}
-          <button onClick={() => setError(null)} className="alert-close">×</button>
+        <div className="error-container">
+          <strong>Error:</strong> {error}
         </div>
       )}
 
       {success && (
-        <div className="alert alert-success">
-          {success}
-          <button onClick={() => setSuccess(null)} className="alert-close">×</button>
+        <div className="success-container">
+          <strong>Success:</strong> {success}
         </div>
       )}
 
@@ -263,204 +368,156 @@ const handleConfirmNewYear = () => {
       {activeTab === 'assignments' && (
         <>
           {/* Assignment for Teachers Results */}
-          <section className="section-container">
-            <div className="section-header">
-              <div>
-                <h2>Assignment for Teachers Results</h2>
-                <p style={{color: '#6f7276', fontSize: '13px', marginTop: '4px'}}>
-                  Übersicht der Lehrerzuweisungen
-                </p>
+          <div style={{marginBottom: '24px'}}>
+            <div className="schools-header" style={{marginBottom: '16px'}}>
+              <div className="schools-header-content">
+                <h1 style={{fontSize: '20px'}}>Lehrerzuweisungen</h1>
               </div>
-              <button 
-                className="btn btn-primary"
-                onClick={() => setShowTeacherAssignments(!showTeacherAssignments)}
-              >
-                {showTeacherAssignments ? "Löschen" : "Zuweisen"}
-              </button>
+              <div className="header-actions">
+                <button 
+                  className="btn-primary"
+                  onClick={handlePhase1Assignment}
+                  disabled={!selectedYear || assigningPhase1}
+                >
+                  {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
+                </button>
+              </div>
             </div>
 
-            <div className="table-card">
-              <div className="table-card-header">
-                <div className="table-card-title">
-                  <h3>Lehrerzuweisungen</h3>
-                  <span className="table-card-subtitle">Alle Praktikumszuweisungen für Lehrkräfte</span>
+            {/* Optimization Progress Bar */}
+            {assigningPhase1 && (
+              <div className="optimization-progress-container">
+                <span className="optimization-progress-text">⚙️ Optimierung läuft...</span>
+                <div className="progress-bar-wrapper">
+                  <div className="progress-bar-animated"></div>
                 </div>
               </div>
+            )}
 
-              {!showTeacherAssignments ? (
-                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+            <div className="schools-table-container">
+              {!showTeacherAssignments || !phase1Result ? (
+                <div className="empty-state">
+                  <h3>Keine Zuweisungen vorhanden</h3>
+                  <p>Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+                </div>
               ) : (
-                <div className="table-container">
+                <>
+                  {phase1Result && (
+                    <div style={{marginBottom: '16px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px'}}>
+                      <div style={{display: 'flex', gap: '24px', fontSize: '0.9em'}}>
+                        <span><strong>Total Internships:</strong> {phase1Result.totalPlannedInternships}</span>
+                        <span style={{color: '#15803d'}}><strong>Assigned:</strong> {phase1Result.assignedCount}</span>
+                        <span style={{color: '#dc2626'}}><strong>Unassigned:</strong> {phase1Result.unassignedCount}</span>
+                      </div>
+                    </div>
+                  )}
                   <table className="schools-table">
                     <thead>
                       <tr>
                         <th>Lehrername</th>
-                        <th>Praktikumszuweisungen</th>
+                        <th>Praktikumtyp</th>
+                        <th>Kurs</th>
+                        <th>Schule</th>
+                        <th>Zone</th>
+                        <th>Schultyp</th>
                         <th>Aktionen</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>Dr. Smith Johnson</td>
-                        <td>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                            <div>
-                              <strong>PDP-I</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Grundschule A, Mittelschule B
-                              </div>
-                            </div>
-                            <div>
-                              <strong>ZSP - Physics</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Grundschule C
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Smith Johnson')}>
-                            Bearbeiten
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Prof. Maria Garcia</td>
-                        <td>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                            <div>
-                              <strong>PDP-II - German Literature</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Grundschule C, Mittelschule D
-                              </div>
-                            </div>
-                            <div>
-                              <strong>SFP - History</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Grundschule A
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Prof. Maria Garcia')}>
-                            Bearbeiten
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Dr. Thomas Weber</td>
-                        <td>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                            <div>
-                              <strong>ZSP - Chemistry</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Mittelschule D, Grundschule A
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Thomas Weber')}>
-                            Bearbeiten
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Anna Schmidt</td>
-                        <td>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                            <div>
-                              <strong>PDP-I</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Grundschule A
-                              </div>
-                            </div>
-                            <div>
-                              <strong>PDP-II - Biology</strong>
-                              <div style={{fontSize: '0.9em', color: '#94a3b8', marginTop: '4px'}}>
-                                Schulen: Mittelschule B, Grundschule C
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Anna Schmidt')}>
-                            Bearbeiten
-                          </button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Dr. Michael Brown</td>
-                        <td>
-                          <div style={{color: '#d97706', fontStyle: 'italic'}}>
-                            Noch keine Zuweisungen
-                          </div>
-                        </td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => alert('Edit assignment for Dr. Michael Brown')}>
-                            Bearbeiten
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                        {phase1Result.plannedInternships.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="table-empty">
+                              No assignments generated
+                            </td>
+                          </tr>
+                        ) : (
+                          phase1Result.plannedInternships.map((pi) => (
+                            <tr key={pi.id}>
+                              <td>
+                                <span style={{
+                                  fontWeight: pi.teacherName ? '500' : 'normal',
+                                  color: pi.teacherName ? 'inherit' : '#dc2626'
+                                }}>
+                                  {pi.teacherName ?? 'Unassigned'}
+                                </span>
+                              </td>
+                              <td>{pi.praktikumType}</td>
+                              <td>{pi.course ?? '—'}</td>
+                              <td>{pi.schoolName ?? '—'}</td>
+                              <td>{pi.schoolZone ?? '—'}</td>
+                              <td>{pi.schoolType}</td>
+                              <td>
+                                <button 
+                                  className="action-btn edit-btn"
+                                  onClick={() => handleEditInternship(pi)}
+                                  title="Bearbeiten"
+                                >
+                                  ✏️
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                    
+                    {/* Delete All Button at Bottom */}
+                    <div className="table-footer-actions">
+                      <button 
+                        className="btn-delete-all" 
+                        onClick={handleDeleteAllAssignments}
+                      >
+                        <span className="delete-icon-circle">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </span>
+                        Alle Löschen
+                      </button>
+                    </div>
+                </>
               )}
             </div>
-
-            {showTeacherAssignments && (
-              <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
-                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
-                  Überprüfen
-                </button>
-              </div>
-            )}
-          </section>
+          </div>
 
           {/* Assignment Results - Student */}
-          <section className="section-container">
-            <div className="section-header">
-              <div>
-                <h2>Assignment Results - Students</h2>
-                <p style={{color: '#6f7276', fontSize: '13px', marginTop: '4px'}}>
-                  Übersicht der Praktikumszuweisungen
-                </p>
+          <div style={{marginBottom: '24px'}}>
+            <div className="schools-header" style={{marginBottom: '16px'}}>
+              <div className="schools-header-content">
+                <h1 style={{fontSize: '20px'}}>Studentenzuweisungen</h1>
+                <p>Übersicht der Praktikumszuweisungen für Studierende</p>
               </div>
-              <button 
-                className="btn btn-primary"
-                onClick={() => setShowStudentAssignments(!showStudentAssignments)}
-              >
-                {showStudentAssignments ? "Löschen" : "Zuweisen"}
-              </button>
+              <div className="header-actions">
+                <button 
+                  className="btn-primary"
+                  onClick={() => setShowStudentAssignments(!showStudentAssignments)}
+                >
+                  {showStudentAssignments ? "Löschen" : "Zuweisen"}
+                </button>
+              </div>
             </div>
 
-            <div className="table-card">
-              <div className="table-card-header">
-                <div className="table-card-title">
-                  <h3>Studentenzuweisungen</h3>
-                  <span className="table-card-subtitle">Alle Praktikumszuweisungen</span>
-                </div>
-              </div>
-
+            <div className="schools-table-container">
               {!showStudentAssignments ? (
-                <p className="table-empty">Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+                <div className="empty-state">
+                  <h3>Keine Zuweisungen vorhanden</h3>
+                  <p>Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
+                </div>
               ) : (
-                <div className="table-container">
-                  <table className="schools-table">
-                    <thead>
-                      <tr>
-                        <th>Schülername</th>
-                        <th>Betreuer</th>
-                        <th>Praktikumtyp</th>
-                        <th>Schule</th>
-                        <th>Startdatum</th>
-                        <th>Enddatum</th>
-                        <th>Status</th>
-                        <th>Aktionen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <table className="schools-table">
+                  <thead>
+                    <tr>
+                      <th>Schülername</th>
+                      <th>Betreuer</th>
+                      <th>Praktikumtyp</th>
+                      <th>Schule</th>
+                      <th>Startdatum</th>
+                      <th>Enddatum</th>
+                      <th>Status</th>
+                      <th>Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                       <tr>
                         <td>Emma Müller</td>
                         <td>Dr. Smith Johnson</td>
@@ -470,7 +527,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-15</td>
                         <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -482,7 +539,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-20</td>
                         <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -494,7 +551,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-25</td>
                         <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -506,7 +563,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-22</td>
                         <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -518,7 +575,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-28</td>
                         <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -530,7 +587,7 @@ const handleConfirmNewYear = () => {
                         <td>2025-03-30</td>
                         <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                       <tr>
@@ -542,31 +599,33 @@ const handleConfirmNewYear = () => {
                         <td>2025-04-02</td>
                         <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
                         <td>
-                          <button className="btn btn-ghost btn-sm">Bearbeiten</button>
+                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
                         </td>
                       </tr>
                     </tbody>
                   </table>
-                </div>
               )}
             </div>
 
             {showStudentAssignments && (
-              <div style={{marginTop: '16px', display: 'flex', justifyContent: 'flex-end'}}>
-                <button className="btn btn-primary" style={{backgroundColor: '#509CDB'}}>
+              <div className="schools-summary">
+                <button className="btn-primary">
                   Überprüfen
                 </button>
               </div>
             )}
-          </section>
+          </div>
         </>
       )}
 
       {/* Tab Content: PL Configuration */}
       {activeTab === 'pl-config' && (
-        <section className="section-container">
-          <div className="section-header">
-            <h2>PL Configuration</h2>
+        <div style={{marginBottom: '24px'}}>
+          <div className="schools-header" style={{marginBottom: '16px'}}>
+            <div className="schools-header-content">
+              <h1 style={{fontSize: '20px'}}>PL Configuration</h1>
+              <p>Praktikumslehrer Konfiguration und Präferenzen</p>
+            </div>
           </div>
           <div style={{marginBottom: '20px'}}>
                 <input
@@ -598,7 +657,7 @@ const handleConfirmNewYear = () => {
                   }}
                 />
           </div>
-            <div className="table-container" style={{overflowX: 'auto'}}>
+            <div className="schools-table-container">
               <table className="schools-table">
                 <thead>
                   <tr>
@@ -696,20 +755,25 @@ const handleConfirmNewYear = () => {
                 </tbody>
               </table>
             </div>
-        </section>
+        </div>
       )}
 
       {/* Tab Content: Student Configuration */}
       {activeTab === 'student-config' && (
-        <section className="section-container">
-          <div className="section-header">
-            <h2>Schülerkonfiguration</h2>
-            <button 
-              className="btn btn-primary"
-              onClick={() => handleOpenStudentConfigModal()}
-            >
-              Konfigurieren
-            </button>
+        <div style={{marginBottom: '24px'}}>
+          <div className="schools-header" style={{marginBottom: '16px'}}>
+            <div className="schools-header-content">
+              <h1 style={{fontSize: '20px'}}>Schülerkonfiguration</h1>
+              <p>Konfiguration der Studierenden für Praktikumszuweisungen</p>
+            </div>
+            <div className="header-actions">
+              <button 
+                className="btn-primary"
+                onClick={() => handleOpenStudentConfigModal()}
+              >
+                Konfigurieren
+              </button>
+            </div>
           </div>
           <div style={{marginBottom: '20px'}}>
                 <input
@@ -741,7 +805,7 @@ const handleConfirmNewYear = () => {
                   }}
                 />
           </div>
-            <div className="table-container" style={{overflowX: 'auto'}}>
+            <div className="schools-table-container">
               <table className="schools-table">
                 <thead>
                   <tr>
@@ -844,7 +908,7 @@ if (studentConfigsForYear.length === 0) {
 
               </table>
             </div>
-        </section>
+        </div>
       )}
 
       {/* New Year Modal */}
@@ -978,6 +1042,19 @@ if (studentConfigsForYear.length === 0) {
                 setSuccess(editingTeacherConfig?.config ? "Teacher configuration updated!" : "Teacher configuration created!");
                 setTimeout(() => setSuccess(null), 3000);
               }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Planned Internship Modal */}
+      {showEditInternshipModal && editingInternship && (
+        <div className="modal-overlay" onClick={handleCloseEditInternshipModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <EditPlannedInternshipForm
+              internship={editingInternship}
+              onClose={handleCloseEditInternshipModal}
+              onSave={handleSaveEditInternship}
             />
           </div>
         </div>
