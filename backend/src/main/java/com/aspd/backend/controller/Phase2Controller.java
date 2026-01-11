@@ -52,20 +52,15 @@ public class Phase2Controller {
             @RequestParam(name = "schoolYear") String schoolYear) {
         log.info("Received Phase 2 optimization request for year: {}", schoolYear);
 
-        // Load data
-        List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
-
+        // Load and validate student configs
+        List<StudentConfig> studentConfigs = loadStudentConfigs(schoolYear);
         if (studentConfigs.isEmpty()) {
             log.error("NO STUDENT CONFIGS FOUND FOR YEAR: {}", schoolYear);
             return ResponseEntity.badRequest().build();
         }
 
-        // Delete existing assignments for this school year to avoid duplicates
-        List<InternshipAssignment> existingAssignments = assignmentRepository.findBySchoolYear(schoolYear);
-        if (!existingAssignments.isEmpty()) {
-            log.info("Deleting {} existing assignments for year {}", existingAssignments.size(), schoolYear);
-            assignmentRepository.deleteAll(existingAssignments);
-        }
+        // Delete existing assignments to avoid duplicates
+        deleteExistingAssignments(schoolYear);
 
         // Run Phase 2 optimization
         StudentAssignmentSolution phase2Solution = phase2OptimizationService.optimize(
@@ -74,11 +69,35 @@ public class Phase2Controller {
         // Create and save final assignments
         List<InternshipAssignment> finalAssignments = phase2OptimizationService.createFinalAssignments(
                 phase2Solution.getStudentDemands(), schoolYear);
-
         assignmentRepository.saveAll(finalAssignments);
 
-        // Build response
-        StudentAssignmentResult result = StudentAssignmentResult.builder()
+        // Build and return response
+        StudentAssignmentResult result = buildAssignmentResult(phase2Solution, finalAssignments, schoolYear);
+        
+        log.info("Phase 2 complete: {}/{} students assigned",
+                result.getAssignedStudents(), result.getTotalStudents());
+
+        return ResponseEntity.ok(result);
+    }
+
+    private List<StudentConfig> loadStudentConfigs(String schoolYear) {
+        return studentConfigRepository.findByYear(schoolYear);
+    }
+
+    private void deleteExistingAssignments(String schoolYear) {
+        List<InternshipAssignment> existingAssignments = assignmentRepository.findBySchoolYear(schoolYear);
+        if (!existingAssignments.isEmpty()) {
+            log.info("Deleting {} existing assignments for year {}", existingAssignments.size(), schoolYear);
+            assignmentRepository.deleteAll(existingAssignments);
+        }
+    }
+
+    private StudentAssignmentResult buildAssignmentResult(
+            StudentAssignmentSolution phase2Solution,
+            List<InternshipAssignment> finalAssignments,
+            String schoolYear) {
+        
+        return StudentAssignmentResult.builder()
                 .schoolYear(schoolYear)
                 .totalStudents(phase2Solution.getStudentDemands().size())
                 .assignedStudents((int) phase2Solution.getStudentDemands().stream()
@@ -92,10 +111,5 @@ public class Phase2Controller {
                         .map(assignmentMapper::toDto)
                         .collect(Collectors.toList()))
                 .build();
-
-        log.info("Phase 2 complete: {}/{} students assigned",
-                result.getAssignedStudents(), result.getTotalStudents());
-
-        return ResponseEntity.ok(result);
     }
 }

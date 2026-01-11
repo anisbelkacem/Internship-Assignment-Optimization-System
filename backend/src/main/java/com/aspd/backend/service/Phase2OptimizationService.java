@@ -34,13 +34,13 @@ public class Phase2OptimizationService {
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
 
     /**
-     * Run Phase 2: Student assignment.
-     * Loads planned internships from Phase 1 and assigns students to them.
+     * Optimize Phase 2: Student assignment.
+     * Loads planned internships from Phase 1 and optimizes student assignments.
      * 
      * @param studentConfigs Student configurations
      * @param schoolYear Academic year (e.g., "2024/2025")
      * @param timeBudget Total hours budget (optional, for validation)
-     * @return Phase 2 solution with student assignments
+     * @return Phase 2 solution with optimized student assignments
      */
     @Transactional
     public StudentAssignmentSolution optimize(
@@ -96,32 +96,64 @@ public class Phase2OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        // Separate PDP and ZSP/SFP demands
-        List<StudentInternshipDemand> pdpDemands = studentDemands.stream()
-                .filter(d -> d.getPraktikumType() == PraktikumType.PDP_I || 
-                            d.getPraktikumType() == PraktikumType.PDP_II)
-                .collect(Collectors.toList());
-        
-        List<StudentInternshipDemand> zspSfpDemands = studentDemands.stream()
-                .filter(d -> d.getPraktikumType() == PraktikumType.ZSP || 
-                            d.getPraktikumType() == PraktikumType.SFP)
-                .collect(Collectors.toList());
+        // Separate demands by type
+        List<StudentInternshipDemand> pdpDemands = filterPdpDemands(studentDemands);
+        List<StudentInternshipDemand> zspSfpDemands = filterZspSfpDemands(studentDemands);
         
         // Filter internships by type
-        List<PlannedInternship> pdpInternships = plannedInternships.stream()
-                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I || 
-                            i.getPraktikumType() == PraktikumType.PDP_II)
-                .collect(Collectors.toList());
+        List<PlannedInternship> pdpInternships = filterPdpInternships(plannedInternships);
+        List<PlannedInternship> zspSfpInternships = filterZspSfpInternships(plannedInternships);
         
-        List<PlannedInternship> zspSfpInternships = plannedInternships.stream()
-                .filter(i -> i.getPraktikumType() == PraktikumType.ZSP || 
-                            i.getPraktikumType() == PraktikumType.SFP)
-                .collect(Collectors.toList());
-        
+        // Create solver factory
         SolverFactory<StudentAssignmentSolution> solverFactory = 
                 SolverFactory.createFromXmlResource("studentAssignmentSolverConfig.xml");
         
-        // ========== STEP 1: SOLVE PDP ONLY ==========
+        // Solve PDP and ZSP/SFP separately
+        StudentAssignmentSolution pdpSolution = solvePdpAssignments(
+                solverFactory, pdpInternships, pdpDemands, schoolYear, timeBudget);
+        
+        StudentAssignmentSolution zspSfpSolution = solveZspSfpAssignments(
+                solverFactory, zspSfpInternships, zspSfpDemands, schoolYear, timeBudget);
+        
+        // Merge and return results
+        return mergeSolutions(plannedInternships, pdpSolution, zspSfpSolution, schoolYear, timeBudget);
+    }
+
+    private List<StudentInternshipDemand> filterPdpDemands(List<StudentInternshipDemand> studentDemands) {
+        return studentDemands.stream()
+                .filter(d -> d.getPraktikumType() == PraktikumType.PDP_I || 
+                            d.getPraktikumType() == PraktikumType.PDP_II)
+                .collect(Collectors.toList());
+    }
+
+    private List<StudentInternshipDemand> filterZspSfpDemands(List<StudentInternshipDemand> studentDemands) {
+        return studentDemands.stream()
+                .filter(d -> d.getPraktikumType() == PraktikumType.ZSP || 
+                            d.getPraktikumType() == PraktikumType.SFP)
+                .collect(Collectors.toList());
+    }
+
+    private List<PlannedInternship> filterPdpInternships(List<PlannedInternship> plannedInternships) {
+        return plannedInternships.stream()
+                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I || 
+                            i.getPraktikumType() == PraktikumType.PDP_II)
+                .collect(Collectors.toList());
+    }
+
+    private List<PlannedInternship> filterZspSfpInternships(List<PlannedInternship> plannedInternships) {
+        return plannedInternships.stream()
+                .filter(i -> i.getPraktikumType() == PraktikumType.ZSP || 
+                            i.getPraktikumType() == PraktikumType.SFP)
+                .collect(Collectors.toList());
+    }
+
+    private StudentAssignmentSolution solvePdpAssignments(
+            SolverFactory<StudentAssignmentSolution> solverFactory,
+            List<PlannedInternship> pdpInternships,
+            List<StudentInternshipDemand> pdpDemands,
+            String schoolYear,
+            Integer timeBudget) {
+        
         Solver<StudentAssignmentSolution> pdpSolver = solverFactory.buildSolver();
         
         StudentAssignmentSolution pdpProblem = new StudentAssignmentSolution();
@@ -136,7 +168,16 @@ public class Phase2OptimizationService {
                 pdpSolution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
                 pdpDemands.size());
         
-        // ========== STEP 2: SOLVE ZSP/SFP ONLY ==========
+        return pdpSolution;
+    }
+
+    private StudentAssignmentSolution solveZspSfpAssignments(
+            SolverFactory<StudentAssignmentSolution> solverFactory,
+            List<PlannedInternship> zspSfpInternships,
+            List<StudentInternshipDemand> zspSfpDemands,
+            String schoolYear,
+            Integer timeBudget) {
+        
         Solver<StudentAssignmentSolution> zspSfpSolver = solverFactory.buildSolver();
         
         StudentAssignmentSolution zspSfpProblem = new StudentAssignmentSolution();
@@ -151,7 +192,16 @@ public class Phase2OptimizationService {
                 zspSfpSolution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
                 zspSfpDemands.size());
         
-        // ========== MERGE RESULTS ==========
+        return zspSfpSolution;
+    }
+
+    private StudentAssignmentSolution mergeSolutions(
+            List<PlannedInternship> plannedInternships,
+            StudentAssignmentSolution pdpSolution,
+            StudentAssignmentSolution zspSfpSolution,
+            String schoolYear,
+            Integer timeBudget) {
+        
         List<StudentInternshipDemand> allAssignedDemands = new ArrayList<>();
         allAssignedDemands.addAll(pdpSolution.getStudentDemands());
         allAssignedDemands.addAll(zspSfpSolution.getStudentDemands());
@@ -161,7 +211,6 @@ public class Phase2OptimizationService {
         solution.setStudentDemands(allAssignedDemands);
         solution.setSchoolYear(schoolYear);
         solution.setTimeBudget(timeBudget);
-        // Note: Combined score is not meaningful since they were solved separately
         solution.setScore(HardSoftScore.of(
                 pdpSolution.getScore().hardScore() + zspSfpSolution.getScore().hardScore(),
                 pdpSolution.getScore().softScore() + zspSfpSolution.getScore().softScore()
@@ -179,7 +228,10 @@ public class Phase2OptimizationService {
         
         List<StudentInternshipDemand> demands = new ArrayList<>();
         
-        int pdp1Count = 0, pdp2Count = 0, zspCount = 0, sfpCount = 0;
+        int pdp1Count = 0;
+        int pdp2Count = 0;
+        int zspCount = 0;
+        int sfpCount = 0;
         
         for (StudentConfig config : studentConfigs) {
             // PDP_I
