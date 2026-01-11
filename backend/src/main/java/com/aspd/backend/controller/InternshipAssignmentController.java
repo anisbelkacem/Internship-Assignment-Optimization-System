@@ -1,10 +1,10 @@
 package com.aspd.backend.controller;
 
 import com.aspd.backend.dto.AssignmentDto;
+import com.aspd.backend.mapper.AssignmentMapper;
 import com.aspd.backend.model.AssignmentStatus;
 import com.aspd.backend.model.InternshipAssignment;
-import com.aspd.backend.repository.InternshipAssignmentRepository;
-import lombok.RequiredArgsConstructor;
+import com.aspd.backend.service.InternshipAssignmentService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,10 +26,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/internship-assignments")
-@RequiredArgsConstructor
 public class InternshipAssignmentController {
 
-    private final InternshipAssignmentRepository assignmentRepository;
+    private final InternshipAssignmentService assignmentService;
+    private final AssignmentMapper assignmentMapper;
+
+    public InternshipAssignmentController(
+            InternshipAssignmentService assignmentService,
+            AssignmentMapper assignmentMapper) {
+        this.assignmentService = assignmentService;
+        this.assignmentMapper = assignmentMapper;
+    }
 
     /**
      * Get all internship assignments, optionally filtered by school year.
@@ -38,18 +45,12 @@ public class InternshipAssignmentController {
     public ResponseEntity<List<AssignmentDto>> getAllAssignments(
             @RequestParam(required = false) String schoolYear) {
         
-        List<InternshipAssignment> assignments;
-        
-        if (schoolYear != null && !schoolYear.isEmpty()) {
-            log.info("Fetching assignments for school year: {}", schoolYear);
-            assignments = assignmentRepository.findBySchoolYear(schoolYear);
-        } else {
-            log.info("Fetching all assignments");
-            assignments = assignmentRepository.findAll();
-        }
+        List<InternshipAssignment> assignments = (schoolYear != null && !schoolYear.isEmpty())
+                ? assignmentService.getBySchoolYear(schoolYear)
+                : assignmentService.getAllAssignments();
         
         List<AssignmentDto> dtos = assignments.stream()
-                .map(this::toDto)
+                .map(assignmentMapper::toDto)
                 .collect(Collectors.toList());
         
         return ResponseEntity.ok(dtos);
@@ -60,10 +61,8 @@ public class InternshipAssignmentController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<AssignmentDto> getAssignmentById(@PathVariable Long id) {
-        log.info("Fetching assignment with ID: {}", id);
-        
-        return assignmentRepository.findById(id)
-                .map(this::toDto)
+        return assignmentService.getById(id)
+                .map(assignmentMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -76,24 +75,9 @@ public class InternshipAssignmentController {
             @PathVariable Long id,
             @RequestBody InternshipAssignment updatedAssignment) {
         
-        log.info("Updating assignment with ID: {}", id);
-        
-        return assignmentRepository.findById(id)
-                .map(existing -> {
-                    // Update fields
-                    if (updatedAssignment.getStartDate() != null) {
-                        existing.setStartDate(updatedAssignment.getStartDate());
-                    }
-                    if (updatedAssignment.getEndDate() != null) {
-                        existing.setEndDate(updatedAssignment.getEndDate());
-                    }
-                    if (updatedAssignment.getStatus() != null) {
-                        existing.setStatus(updatedAssignment.getStatus());
-                    }
-                    
-                    InternshipAssignment saved = assignmentRepository.save(existing);
-                    return ResponseEntity.ok(toDto(saved));
-                })
+        return assignmentService.update(id, updatedAssignment)
+                .map(assignmentMapper::toDto)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -105,14 +89,9 @@ public class InternshipAssignmentController {
             @PathVariable Long id,
             @RequestParam AssignmentStatus status) {
         
-        log.info("Updating assignment {} status to: {}", id, status);
-        
-        return assignmentRepository.findById(id)
-                .map(assignment -> {
-                    assignment.setStatus(status);
-                    InternshipAssignment saved = assignmentRepository.save(assignment);
-                    return ResponseEntity.ok(toDto(saved));
-                })
+        return assignmentService.updateStatus(id, status)
+                .map(assignmentMapper::toDto)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -121,14 +100,9 @@ public class InternshipAssignmentController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAssignment(@PathVariable Long id) {
-        log.info("Deleting assignment with ID: {}", id);
-        
-        if (!assignmentRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        assignmentRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return assignmentService.delete(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     /**
@@ -138,42 +112,10 @@ public class InternshipAssignmentController {
     public ResponseEntity<Void> deleteAssignmentsBySchoolYear(
             @RequestParam String schoolYear) {
         
-        log.info("Deleting all assignments for school year: {}", schoolYear);
+        int deletedCount = assignmentService.deleteBySchoolYear(schoolYear);
         
-        List<InternshipAssignment> assignments = assignmentRepository.findBySchoolYear(schoolYear);
-        
-        if (assignments.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        assignmentRepository.deleteAll(assignments);
-        log.info("Deleted {} assignments for school year {}", assignments.size(), schoolYear);
-        
-        return ResponseEntity.noContent().build();
-    }
-
-    private AssignmentDto toDto(InternshipAssignment assignment) {
-        AssignmentDto dto = new AssignmentDto();
-        dto.setId(assignment.getId());
-        dto.setStudentName(assignment.getStudentConfig().getStudent().getFirstName() + " " +
-                assignment.getStudentConfig().getStudent().getLastName());
-        dto.setPraktikumType(assignment.getPraktikumType().toString());
-        
-        if (assignment.getCourse() != null) {
-            dto.setCourse(assignment.getCourse().getName());
-        }
-        
-        if (assignment.getTeacher() != null) {
-            dto.setTeacherName(assignment.getTeacher().getFirstName() + " " +
-                    assignment.getTeacher().getLastName());
-        }
-        
-        if (assignment.getSchool() != null) {
-            dto.setSchoolName(assignment.getSchool().getName());
-        }
-        
-        dto.setStatus(assignment.getStatus().toString());
-        
-        return dto;
+        return deletedCount > 0
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

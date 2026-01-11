@@ -2,6 +2,7 @@ package com.aspd.backend.controller;
 
 import com.aspd.backend.dto.AssignmentDto;
 import com.aspd.backend.dto.StudentAssignmentResult;
+import com.aspd.backend.mapper.AssignmentMapper;
 import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.repository.InternshipAssignmentRepository;
@@ -29,14 +30,17 @@ public class Phase2Controller {
     private final Phase2OptimizationService phase2OptimizationService;
     private final StudentConfigRepository studentConfigRepository;
     private final InternshipAssignmentRepository assignmentRepository;
+    private final AssignmentMapper assignmentMapper;
 
     public Phase2Controller(
             Phase2OptimizationService phase2OptimizationService,
             StudentConfigRepository studentConfigRepository,
-            InternshipAssignmentRepository assignmentRepository) {
+            InternshipAssignmentRepository assignmentRepository,
+            AssignmentMapper assignmentMapper) {
         this.phase2OptimizationService = phase2OptimizationService;
         this.studentConfigRepository = studentConfigRepository;
         this.assignmentRepository = assignmentRepository;
+        this.assignmentMapper = assignmentMapper;
     }
 
     /**
@@ -86,7 +90,7 @@ public class Phase2Controller {
                         .count())
                 .score(phase2Solution.getScore().toString())
                 .assignments(finalAssignments.stream()
-                        .map(this::toDto)
+                        .map(assignmentMapper::toDto)
                         .collect(Collectors.toList()))
                 .build();
 
@@ -94,32 +98,5 @@ public class Phase2Controller {
                 result.getAssignedStudents(), result.getTotalStudents());
 
         return ResponseEntity.ok(result);
-    }
-
-    private AssignmentDto toDto(InternshipAssignment assignment) {
-        AssignmentDto dto = new AssignmentDto();
-        dto.setId(assignment.getId());
-        dto.setStudentName(assignment.getStudentConfig().getStudent().getFirstName() + " " +
-                assignment.getStudentConfig().getStudent().getLastName());
-        dto.setPraktikumType(assignment.getPraktikumType().toString());
-        
-        // Course comes from the assignment
-        if (assignment.getCourse() != null) {
-            dto.setCourse(assignment.getCourse().toString());
-        }
-
-        // Teacher and school come from the denormalized fields
-        if (assignment.getTeacher() != null) {
-            dto.setTeacherName(assignment.getTeacher().getFirstName() + " " +
-                    assignment.getTeacher().getLastName());
-        }
-
-        if (assignment.getSchool() != null) {
-            dto.setSchoolName(assignment.getSchool().getName());
-        }
-
-        dto.setStatus(String.valueOf(assignment.getStatus()));
-
-        return dto;
     }
 }
