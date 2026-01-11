@@ -50,14 +50,8 @@ public class Phase2OptimizationService {
         
         log.info("\n========== PHASE 2: Student Assignment ==========");
         
-        // Load the PlannedInternships from Phase 1 (already saved in database)
-        List<PlannedInternship> plannedInternships = plannedInternshipRepository
-                .findBySchoolYear(schoolYear);
-        
-        if (plannedInternships.isEmpty()) {
-            log.error("No planned internships found for year {}. Run Phase 1 first!", schoolYear);
-            throw new IllegalStateException("Phase 1 must be run before Phase 2. No planned internships found.");
-        }
+        // Load and validate planned internships from Phase 1
+        List<PlannedInternship> plannedInternships = loadAndValidatePlannedInternships(schoolYear);
         
         log.info("Loaded {} planned internships from Phase 1", plannedInternships.size());
         log.info("Processing {} students\n", studentConfigs.size());
@@ -70,7 +64,23 @@ public class Phase2OptimizationService {
         StudentAssignmentSolution phase2Result = runPhase2(
                 plannedInternships, studentDemands, schoolYear, timeBudget);
         
-        // Save results to database
+        // Save and finalize results
+        return saveAndFinalizeResults(phase2Result);
+    }
+
+    private List<PlannedInternship> loadAndValidatePlannedInternships(String schoolYear) {
+        List<PlannedInternship> plannedInternships = plannedInternshipRepository
+                .findBySchoolYear(schoolYear);
+        
+        if (plannedInternships.isEmpty()) {
+            log.error("No planned internships found for year {}. Run Phase 1 first!", schoolYear);
+            throw new IllegalStateException("Phase 1 must be run before Phase 2. No planned internships found.");
+        }
+        
+        return plannedInternships;
+    }
+
+    private StudentAssignmentSolution saveAndFinalizeResults(StudentAssignmentSolution phase2Result) {
         List<StudentInternshipDemand> savedDemands = studentInternshipDemandRepository.saveAll(
                 phase2Result.getStudentDemands());
         
@@ -154,21 +164,7 @@ public class Phase2OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        Solver<StudentAssignmentSolution> pdpSolver = solverFactory.buildSolver();
-        
-        StudentAssignmentSolution pdpProblem = new StudentAssignmentSolution();
-        pdpProblem.setAvailableInternships(pdpInternships);
-        pdpProblem.setStudentDemands(pdpDemands);
-        pdpProblem.setSchoolYear(schoolYear);
-        pdpProblem.setTimeBudget(timeBudget);
-        
-        StudentAssignmentSolution pdpSolution = pdpSolver.solve(pdpProblem);
-        
-        log.info("PDP assignments: {}/{}", 
-                pdpSolution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
-                pdpDemands.size());
-        
-        return pdpSolution;
+        return solveAssignments(solverFactory, pdpInternships, pdpDemands, schoolYear, timeBudget, "PDP");
     }
 
     private StudentAssignmentSolution solveZspSfpAssignments(
@@ -178,21 +174,28 @@ public class Phase2OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        Solver<StudentAssignmentSolution> zspSfpSolver = solverFactory.buildSolver();
+        return solveAssignments(solverFactory, zspSfpInternships, zspSfpDemands, schoolYear, timeBudget, "ZSP/SFP");
+    }
+
+    private StudentAssignmentSolution solveAssignments(
+            SolverFactory<StudentAssignmentSolution> solverFactory,
+            List<PlannedInternship> internships,
+            List<StudentInternshipDemand> demands,
+            String schoolYear,
+            Integer timeBudget,
+            String assignmentType) {
         
-        StudentAssignmentSolution zspSfpProblem = new StudentAssignmentSolution();
-        zspSfpProblem.setAvailableInternships(zspSfpInternships);
-        zspSfpProblem.setStudentDemands(zspSfpDemands);
-        zspSfpProblem.setSchoolYear(schoolYear);
-        zspSfpProblem.setTimeBudget(timeBudget);
+        Solver<StudentAssignmentSolution> solver = solverFactory.buildSolver();
         
-        StudentAssignmentSolution zspSfpSolution = zspSfpSolver.solve(zspSfpProblem);
+        StudentAssignmentSolution problem = createSolution(internships, demands, schoolYear, timeBudget);
+        StudentAssignmentSolution solution = solver.solve(problem);
         
-        log.info("ZSP/SFP assignments: {}/{}", 
-                zspSfpSolution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
-                zspSfpDemands.size());
+        log.info("{} assignments: {}/{}", 
+                assignmentType,
+                solution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
+                demands.size());
         
-        return zspSfpSolution;
+        return solution;
     }
 
     private StudentAssignmentSolution mergeSolutions(
@@ -206,16 +209,26 @@ public class Phase2OptimizationService {
         allAssignedDemands.addAll(pdpSolution.getStudentDemands());
         allAssignedDemands.addAll(zspSfpSolution.getStudentDemands());
         
-        StudentAssignmentSolution solution = new StudentAssignmentSolution();
-        solution.setAvailableInternships(plannedInternships);
-        solution.setStudentDemands(allAssignedDemands);
-        solution.setSchoolYear(schoolYear);
-        solution.setTimeBudget(timeBudget);
+        StudentAssignmentSolution solution = createSolution(plannedInternships, allAssignedDemands, schoolYear, timeBudget);
         solution.setScore(HardSoftScore.of(
                 pdpSolution.getScore().hardScore() + zspSfpSolution.getScore().hardScore(),
                 pdpSolution.getScore().softScore() + zspSfpSolution.getScore().softScore()
         ));
         
+        return solution;
+    }
+
+    private StudentAssignmentSolution createSolution(
+            List<PlannedInternship> internships,
+            List<StudentInternshipDemand> demands,
+            String schoolYear,
+            Integer timeBudget) {
+        
+        StudentAssignmentSolution solution = new StudentAssignmentSolution();
+        solution.setAvailableInternships(internships);
+        solution.setStudentDemands(demands);
+        solution.setSchoolYear(schoolYear);
+        solution.setTimeBudget(timeBudget);
         return solution;
     }
 
@@ -234,39 +247,30 @@ public class Phase2OptimizationService {
         int sfpCount = 0;
         
         for (StudentConfig config : studentConfigs) {
-            // PDP_I
-            if (config.isPdpI()) {
-                demands.add(createStudentDemand(config, PraktikumType.PDP_I, 
-                                                config.getMainCourse(), schoolYear));
-                pdp1Count++;
-            }
-            
-            // PDP_II
-            if (config.isPdpII()) {
-                demands.add(createStudentDemand(config, PraktikumType.PDP_II, 
-                                                config.getMainCourse(), schoolYear));
-                pdp2Count++;
-            }
-            
-            // ZSP
-            if (config.isZsp()) {
-                demands.add(createStudentDemand(config, PraktikumType.ZSP, 
-                                                config.getMainCourse(), schoolYear));
-                zspCount++;
-            }
-            
-            // SFP
-            if (config.isSfp()) {
-                demands.add(createStudentDemand(config, PraktikumType.SFP, 
-                                                config.getMainCourse(), schoolYear));
-                sfpCount++;
-            }
+            pdp1Count += addDemandIfNeeded(demands, config, config.isPdpI(), PraktikumType.PDP_I, schoolYear);
+            pdp2Count += addDemandIfNeeded(demands, config, config.isPdpII(), PraktikumType.PDP_II, schoolYear);
+            zspCount += addDemandIfNeeded(demands, config, config.isZsp(), PraktikumType.ZSP, schoolYear);
+            sfpCount += addDemandIfNeeded(demands, config, config.isSfp(), PraktikumType.SFP, schoolYear);
         }
         
         log.info("Student demands created - PDP_I: {}, PDP_II: {}, ZSP: {}, SFP: {}, TOTAL: {}",
                 pdp1Count, pdp2Count, zspCount, sfpCount, demands.size());
         
         return demands;
+    }
+
+    private int addDemandIfNeeded(
+            List<StudentInternshipDemand> demands,
+            StudentConfig config,
+            boolean shouldAdd,
+            PraktikumType type,
+            String schoolYear) {
+        
+        if (shouldAdd) {
+            demands.add(createStudentDemand(config, type, config.getMainCourse(), schoolYear));
+            return 1;
+        }
+        return 0;
     }
 
     /**
@@ -297,26 +301,28 @@ public class Phase2OptimizationService {
         
         return studentDemands.stream()
                 .filter(demand -> demand.getAssignedInternship() != null)
-                .filter(demand -> {
-                    PlannedInternship internship = demand.getAssignedInternship();
-                    // Only create assignment if the internship has a teacher and school
-                    return internship.getAssignedTeacher() != null && 
-                           internship.getAssignedSchool() != null;
-                })
-                .map(demand -> {
-                    PlannedInternship internship = demand.getAssignedInternship();
-                    
-                    return InternshipAssignment.builder()
-                            .studentConfig(demand.getStudentConfig())
-                            .plannedInternship(internship)
-                            .teacher(internship.getAssignedTeacher())
-                            .school(internship.getAssignedSchool())
-                            .praktikumType(demand.getPraktikumType())
-                            .course(internship.getCourse())
-                            .schoolYear(schoolYear)
-                            .status(AssignmentStatus.PROPOSED)
-                            .build();
-                })
+                .filter(this::hasTeacherAndSchool)
+                .map(demand -> buildInternshipAssignment(demand, schoolYear))
                 .collect(Collectors.toList());
+    }
+
+    private boolean hasTeacherAndSchool(StudentInternshipDemand demand) {
+        PlannedInternship internship = demand.getAssignedInternship();
+        return internship.getAssignedTeacher() != null && internship.getAssignedSchool() != null;
+    }
+
+    private InternshipAssignment buildInternshipAssignment(StudentInternshipDemand demand, String schoolYear) {
+        PlannedInternship internship = demand.getAssignedInternship();
+        
+        return InternshipAssignment.builder()
+                .studentConfig(demand.getStudentConfig())
+                .plannedInternship(internship)
+                .teacher(internship.getAssignedTeacher())
+                .school(internship.getAssignedSchool())
+                .praktikumType(demand.getPraktikumType())
+                .course(internship.getCourse())
+                .schoolYear(schoolYear)
+                .status(AssignmentStatus.PROPOSED)
+                .build();
     }
 }
