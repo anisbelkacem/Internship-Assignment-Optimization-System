@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver xmlns="https://www.optaplanner.org/xsd/solver" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.optaplanner.org/xsd/solver https://www.optaplanner.org/xsd/solver/solver.xsd">
+
+    <!-- PHASE 2: Student-to-Internship Assignment -->
+    <!-- Assigns students to planned internships (with teachers and schools already assigned) -->
+    
+    <solutionClass>com.aspd.backend.solver.StudentAssignmentSolution</solutionClass>
+    <entityClass>com.aspd.backend.model.StudentInternshipDemand</entityClass>
+
+    <scoreDirectorFactory>
+        <easyScoreCalculatorClass>com.aspd.backend.solver.StudentAssignmentEasyScoreCalculator</easyScoreCalculatorClass>
+    </scoreDirectorFactory>
+
+    <termination>
+        <secondsSpentLimit>50</secondsSpentLimit>
+    </termination>
+</solver>
