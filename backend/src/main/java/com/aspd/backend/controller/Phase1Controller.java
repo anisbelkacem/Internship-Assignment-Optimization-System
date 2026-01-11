@@ -96,7 +96,7 @@ public class Phase1Controller {
                 .id(internship.getId())
                 .praktikumType(internship.getPraktikumType().toString())
                 .schoolType(internship.getSchoolType().toString())
-                .course(internship.getCourse() != null ? internship.getCourse().toString() : null)
+                .course(internship.getCourse() != null ? internship.getCourse().getName() : null)
                 .maxCapacity(internship.getMaxCapacity())
                 .teacherId(internship.getAssignedTeacher() != null ?
                         String.valueOf(internship.getAssignedTeacher().getTeacherId()) : null)
