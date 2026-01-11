@@ -1,6 +1,5 @@
 package com.aspd.backend.controller;
 
-import com.aspd.backend.dto.AssignmentDto;
 import com.aspd.backend.dto.StudentAssignmentResult;
 import com.aspd.backend.mapper.AssignmentMapper;
 import com.aspd.backend.model.InternshipAssignment;

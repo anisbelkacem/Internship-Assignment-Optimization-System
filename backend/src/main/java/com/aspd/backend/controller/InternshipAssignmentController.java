@@ -45,9 +45,12 @@ public class InternshipAssignmentController {
     public ResponseEntity<List<AssignmentDto>> getAllAssignments(
             @RequestParam(required = false) String schoolYear) {
         
-        List<InternshipAssignment> assignments = (schoolYear != null && !schoolYear.isEmpty())
-                ? assignmentService.getBySchoolYear(schoolYear)
-                : assignmentService.getAllAssignments();
+        List<InternshipAssignment> assignments;
+        if (schoolYear != null && !schoolYear.isEmpty()) {
+            assignments = assignmentService.getBySchoolYear(schoolYear);
+        } else {
+            assignments = assignmentService.getAllAssignments();
+        }
         
         List<AssignmentDto> dtos = assignments.stream()
                 .map(assignmentMapper::toDto)
@@ -100,9 +103,11 @@ public class InternshipAssignmentController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAssignment(@PathVariable Long id) {
-        return assignmentService.delete(id)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+        if (assignmentService.delete(id)) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
@@ -114,8 +119,10 @@ public class InternshipAssignmentController {
         
         int deletedCount = assignmentService.deleteBySchoolYear(schoolYear);
         
-        return deletedCount > 0
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
+        if (deletedCount > 0) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

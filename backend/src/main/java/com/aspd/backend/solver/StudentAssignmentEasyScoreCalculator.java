@@ -29,93 +29,20 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
             if (demand.getAssignedInternship() == null) {
                 // UNASSIGNED: -100 hard points
                 hardScore -= 100;
-            } else {
-                // ASSIGNED: +100 soft points (reward)
-                softScore += 100;
-                
-                PlannedInternship internship = demand.getAssignedInternship();
-                
-                // Check hard constraints
-                // 1. Type must match
-                if (!demand.getPraktikumType().equals(internship.getPraktikumType())) {
-                    hardScore -= 50;
-                }
-                
-                // 2. School type must match
-                if (demand.getStudentSchoolType() != null && 
-                    !demand.getStudentSchoolType().equals(internship.getSchoolType())) {
-                    hardScore -= 50;
-                }
-                
-                // 3. For ZSP/SFP, must have teacher and school
-                PraktikumType type = demand.getPraktikumType();
-                if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
-                    if (internship.getAssignedTeacher() == null || internship.getAssignedSchool() == null) {
-                        hardScore -= 100;
-                    }
-                }
-                
-                // 4. For PDP, course must be null (no course restriction)
-                if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
-                    if (internship.getCourse() != null) {
-                        hardScore -= 100;
-                    }
-                }
-                
-                // 5. For SFP, student course must match internship course
-                if ( type == PraktikumType.SFP) {
-                    if (internship.getCourse() != null) {
-                        Course internshipCourse = internship.getCourse();
-                        StudentConfig config = demand.getStudentConfig();
-                        boolean matches = internshipCourse.equals(config.getMainCourse());
-                        if (!matches) {
-                            hardScore -= 100;
-                        } 
-                    }
-                }
-                // 6. For ZSP, student course must match internship course
-                if (type == PraktikumType.ZSP) {
-                    if (internship.getCourse() != null) {
-                        Course internshipCourse = internship.getCourse();
-                        StudentConfig config = demand.getStudentConfig();
-                        Course mainCourse = config.getMainCourse();
-                        Course prefCourse1 = config.getPrefCourse1();
-                        Course prefCourse2 = config.getPrefCourse2();
-                        Course prefCourse3 = config.getPrefCourse3();
-                        
-                        boolean matches = internshipCourse.equals(mainCourse) ||
-                                         internshipCourse.equals(prefCourse1) ||
-                                         internshipCourse.equals(prefCourse2) ||
-                                         internshipCourse.equals(prefCourse3);
-                        if (!matches) {
-                            softScore -= 30;
-                            continue;
-                        }else if (internshipCourse.equals(mainCourse)) {
-                            softScore += 10;
-                        } else if (internshipCourse.equals(prefCourse1)) {
-                            softScore += 7;
-                        } else if (internshipCourse.equals(prefCourse2)) {
-                            softScore += 4;
-                        } else if (internshipCourse.equals(prefCourse3)) {
-                            softScore += 2;
-                        }
-                    }
-                }
-                
-                // SOFT: Distance penalty for PDP (minimize student-to-school distance)
-                if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
-                    if (demand.getStudentAddress() != null && internship.getAssignedSchool() != null) {
-                        String zone = internship.getAssignedSchool().getZone();
-                        if ("3".equals(zone)) {
-                            softScore -= 30;
-                        } else if ("2".equals(zone)) {
-                            softScore -= 15;
-                        } else if ("1".equals(zone)) {
-                            softScore -= 5;
-                        }
-                    }
-                }
+                continue;
             }
+            
+            // ASSIGNED: +100 soft points (reward)
+            softScore += 100;
+            
+            PlannedInternship internship = demand.getAssignedInternship();
+            PraktikumType type = demand.getPraktikumType();
+            
+            // Check hard constraints
+            hardScore += checkHardConstraints(demand, internship, type);
+            
+            // Check soft constraints
+            softScore += checkSoftConstraints(demand, internship, type);
         }
         
         // Check capacity constraints
@@ -142,5 +69,104 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         }
         
         return HardSoftScore.of(hardScore, softScore);
+    }
+
+    private int checkHardConstraints(StudentInternshipDemand demand, PlannedInternship internship, PraktikumType type) {
+        int penalty = 0;
+        
+        // 1. Type must match
+        if (!demand.getPraktikumType().equals(internship.getPraktikumType())) {
+            penalty -= 50;
+        }
+        
+        // 2. School type must match
+        if (demand.getStudentSchoolType() != null && 
+            !demand.getStudentSchoolType().equals(internship.getSchoolType())) {
+            penalty -= 50;
+        }
+        
+        // 3. For ZSP/SFP, must have teacher and school
+        if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
+            if (internship.getAssignedTeacher() == null || internship.getAssignedSchool() == null) {
+                penalty -= 100;
+            }
+        }
+        
+        // 4. For PDP, course must be null (no course restriction)
+        if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
+            if (internship.getCourse() != null) {
+                penalty -= 100;
+            }
+        }
+        
+        // 5. For SFP, student course must match internship course
+        if (type == PraktikumType.SFP && internship.getCourse() != null) {
+            Course internshipCourse = internship.getCourse();
+            StudentConfig config = demand.getStudentConfig();
+            if (!internshipCourse.equals(config.getMainCourse())) {
+                penalty -= 100;
+            }
+        }
+        
+        return penalty;
+    }
+
+    private int checkSoftConstraints(StudentInternshipDemand demand, PlannedInternship internship, PraktikumType type) {
+        int reward = 0;
+        
+        // For ZSP, student course must match internship course
+        if (type == PraktikumType.ZSP && internship.getCourse() != null) {
+            reward += evaluateZspCourseMatch(demand, internship.getCourse());
+        }
+        
+        // Distance penalty for PDP (minimize student-to-school distance)
+        if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
+            reward += evaluateDistancePenalty(demand, internship);
+        }
+        
+        return reward;
+    }
+
+    private int evaluateZspCourseMatch(StudentInternshipDemand demand, Course internshipCourse) {
+        StudentConfig config = demand.getStudentConfig();
+        Course mainCourse = config.getMainCourse();
+        Course prefCourse1 = config.getPrefCourse1();
+        Course prefCourse2 = config.getPrefCourse2();
+        Course prefCourse3 = config.getPrefCourse3();
+        
+        if (internshipCourse.equals(mainCourse)) {
+            return 10;
+        }
+        if (internshipCourse.equals(prefCourse1)) {
+            return 7;
+        }
+        if (internshipCourse.equals(prefCourse2)) {
+            return 4;
+        }
+        if (internshipCourse.equals(prefCourse3)) {
+            return 2;
+        }
+        
+        // No match found
+        return -30;
+    }
+
+    private int evaluateDistancePenalty(StudentInternshipDemand demand, PlannedInternship internship) {
+        if (demand.getStudentAddress() == null || internship.getAssignedSchool() == null) {
+            return 0;
+        }
+        
+        String zone = internship.getAssignedSchool().getZone();
+        if ("3".equals(zone)) {
+            return -30;
+        }
+        if ("2".equals(zone)) {
+            return -15;
+        }
+        if ("1".equals(zone)) {
+            return -5;
+        }
+        
+        return 0;
     }
 }
