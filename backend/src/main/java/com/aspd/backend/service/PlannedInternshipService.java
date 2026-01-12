@@ -1,17 +1,22 @@
 package com.aspd.backend.service;
 
+import com.aspd.backend.model.AuditAction;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.Teacher;
+import com.aspd.backend.model.User;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
+import com.aspd.backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -25,6 +30,8 @@ public class PlannedInternshipService {
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
+    private final AuditLogService auditLogService;
+    private final UserService userService;
 
     /**
      * Get all planned internships for a specific school year.
@@ -51,6 +58,9 @@ public class PlannedInternshipService {
         PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
 
+        // Capture previous state
+        Map<String, Object> previousValues = capturePlannedInternshipState(internship);
+
         // Update teacher if provided
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
@@ -69,7 +79,25 @@ public class PlannedInternshipService {
             internship.setAssignedSchool(null);
         }
 
-        return plannedInternshipRepository.save(internship);
+        PlannedInternship saved = plannedInternshipRepository.save(internship);
+        
+        // Log the change
+        User currentUser = getCurrentUser();
+        Map<String, Object> newValues = capturePlannedInternshipState(saved);
+        auditLogService.logChange(
+            "PlannedInternship",
+            id,
+            currentUser,
+            AuditAction.UPDATE,
+            previousValues,
+            newValues,
+            "Planned internship updated",
+            null,
+            saved.getAssignedSchool() != null ? saved.getAssignedSchool().getId() : null,
+            saved.getSchoolYear()
+        );
+        
+        return saved;
     }
 
     /**
@@ -78,7 +106,27 @@ public class PlannedInternshipService {
     @Transactional
     public void delete(Long id) {
         log.info("Deleting planned internship: {}", id);
+        
+        PlannedInternship internship = plannedInternshipRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
+        
+        Map<String, Object> deletedValues = capturePlannedInternshipState(internship);
         plannedInternshipRepository.deleteById(id);
+        
+        // Log the deletion
+        User currentUser = getCurrentUser();
+        auditLogService.logChange(
+            "PlannedInternship",
+            id,
+            currentUser,
+            AuditAction.DELETE,
+            deletedValues,
+            null,
+            "Planned internship deleted",
+            null,
+            internship.getAssignedSchool() != null ? internship.getAssignedSchool().getId() : null,
+            internship.getSchoolYear()
+        );
     }
 
     /**
@@ -90,4 +138,40 @@ public class PlannedInternshipService {
         List<PlannedInternship> internships = plannedInternshipRepository.findBySchoolYear(schoolYear);
         plannedInternshipRepository.deleteAll(internships);
     }
+
+    /**
+     * Capture the current state of a planned internship for audit logging
+     */
+    private Map<String, Object> capturePlannedInternshipState(PlannedInternship internship) {
+        Map<String, Object> state = new HashMap<>();
+        state.put("id", internship.getId());
+        state.put("praktikumType", internship.getPraktikumType().name());
+        state.put("schoolType", internship.getSchoolType().name());
+        state.put("maxCapacity", internship.getMaxCapacity());
+        state.put("currentAssignments", internship.getCurrentAssignments());
+        if (internship.getAssignedTeacher() != null) {
+            state.put("teacherId", internship.getAssignedTeacher().getTeacherId());
+            state.put("teacherName", internship.getAssignedTeacher().getFirstName() + " " + internship.getAssignedTeacher().getLastName());
+        }
+        if (internship.getAssignedSchool() != null) {
+            state.put("schoolId", internship.getAssignedSchool().getId());
+            state.put("schoolName", internship.getAssignedSchool().getName());
+        }
+        if (internship.getCourse() != null) {
+            state.put("courseId", internship.getCourse().getId());
+            state.put("courseName", internship.getCourse().getName());
+        }
+        state.put("schoolYear", internship.getSchoolYear());
+        return state;
+    }
+
+    /**
+     * Get the current user from security context
+     */
+    private User getCurrentUser() {
+        return SecurityUtils.getCurrentUser()
+            .flatMap(userService::getUserByEmail)
+            .orElseThrow(() -> new IllegalStateException("Current user not found"));
+    }
 }
+
