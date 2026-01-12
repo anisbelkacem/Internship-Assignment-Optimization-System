@@ -152,6 +152,17 @@ const Sidebar: FC = () => {
             </NavLink>
           </li>
           <li>
+            <NavLink to="/audit-logs" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+              <span className="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+              <span className="nav-label">Audit Logs</span>
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
