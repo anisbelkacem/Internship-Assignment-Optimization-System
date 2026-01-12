@@ -1,11 +1,8 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.AssignmentStatus;
-import com.aspd.backend.model.AuditAction;
 import com.aspd.backend.model.InternshipAssignment;
-import com.aspd.backend.model.User;
 import com.aspd.backend.repository.InternshipAssignmentRepository;
-import com.aspd.backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -98,19 +95,14 @@ public class InternshipAssignmentService {
                     InternshipAssignment saved = assignmentRepository.save(existing);
                     
                     // Log the change
-                    User currentUser = getCurrentUser();
                     Map<String, Object> newValues = captureAssignmentState(saved);
-                    auditLogService.logChange(
+                    auditLogService.log(
                         "InternshipAssignment",
                         id,
-                        currentUser,
-                        AuditAction.UPDATE,
-                        previousValues,
-                        newValues,
+                        "UPDATE",
                         "Internship assignment updated",
-                        existing.getStudentConfig() != null ? (long) existing.getStudentConfig().getStudent().getMatriculationNbr() : null,
-                        existing.getSchool() != null ? existing.getSchool().getId() : null,
-                        existing.getSchoolYear()
+                        previousValues,
+                        newValues
                     );
                     
                     return saved;
@@ -131,18 +123,13 @@ public class InternshipAssignmentService {
                     InternshipAssignment saved = assignmentRepository.save(assignment);
                     
                     // Log the change
-                    User currentUser = getCurrentUser();
-                    auditLogService.logChange(
+                    auditLogService.log(
                         "InternshipAssignment",
                         id,
-                        currentUser,
-                        AuditAction.UPDATE,
-                        Map.of("status", oldStatus.name()),
-                        Map.of("status", status.name()),
+                        "UPDATE",
                         "Assignment status changed from " + oldStatus + " to " + status,
-                        assignment.getStudentConfig() != null ? (long) assignment.getStudentConfig().getStudent().getMatriculationNbr() : null,
-                        assignment.getSchool() != null ? assignment.getSchool().getId() : null,
-                        assignment.getSchoolYear()
+                        Map.of("status", oldStatus.name()),
+                        Map.of("status", status.name())
                     );
                     
                     return saved;
@@ -168,18 +155,13 @@ public class InternshipAssignmentService {
             assignmentRepository.deleteById(id);
             
             // Log the deletion
-            User currentUser = getCurrentUser();
-            auditLogService.logChange(
+            auditLogService.log(
                 "InternshipAssignment",
                 id,
-                currentUser,
-                AuditAction.DELETE,
-                deletedValues,
-                null,
+                "DELETE",
                 "Internship assignment deleted",
-                assignment.getStudentConfig() != null ? (long) assignment.getStudentConfig().getStudent().getMatriculationNbr() : null,
-                assignment.getSchool() != null ? assignment.getSchool().getId() : null,
-                assignment.getSchoolYear()
+                deletedValues,
+                null
             );
         }
         
@@ -229,15 +211,6 @@ public class InternshipAssignmentService {
         }
         state.put("schoolYear", assignment.getSchoolYear());
         return state;
-    }
-
-    /**
-     * Get the current user from security context
-     */
-    private User getCurrentUser() {
-        return SecurityUtils.getCurrentUser()
-            .flatMap(userService::getUserByEmail)
-            .orElseThrow(() -> new IllegalStateException("Current user not found"));
     }
 }
 

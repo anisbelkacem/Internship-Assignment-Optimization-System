@@ -1,14 +1,11 @@
 package com.aspd.backend.service;
 
-import com.aspd.backend.model.AuditAction;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.Teacher;
-import com.aspd.backend.model.User;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
-import com.aspd.backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +28,6 @@ public class PlannedInternshipService {
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
     private final AuditLogService auditLogService;
-    private final UserService userService;
 
     /**
      * Get all planned internships for a specific school year.
@@ -82,19 +78,14 @@ public class PlannedInternshipService {
         PlannedInternship saved = plannedInternshipRepository.save(internship);
         
         // Log the change
-        User currentUser = getCurrentUser();
         Map<String, Object> newValues = capturePlannedInternshipState(saved);
-        auditLogService.logChange(
+        auditLogService.log(
             "PlannedInternship",
             id,
-            currentUser,
-            AuditAction.UPDATE,
-            previousValues,
-            newValues,
+            "UPDATE",
             "Planned internship updated",
-            null,
-            saved.getAssignedSchool() != null ? saved.getAssignedSchool().getId() : null,
-            saved.getSchoolYear()
+            previousValues,
+            newValues
         );
         
         return saved;
@@ -114,18 +105,13 @@ public class PlannedInternshipService {
         plannedInternshipRepository.deleteById(id);
         
         // Log the deletion
-        User currentUser = getCurrentUser();
-        auditLogService.logChange(
+        auditLogService.log(
             "PlannedInternship",
             id,
-            currentUser,
-            AuditAction.DELETE,
-            deletedValues,
-            null,
+            "DELETE",
             "Planned internship deleted",
-            null,
-            internship.getAssignedSchool() != null ? internship.getAssignedSchool().getId() : null,
-            internship.getSchoolYear()
+            deletedValues,
+            null
         );
     }
 
@@ -165,13 +151,5 @@ public class PlannedInternshipService {
         return state;
     }
 
-    /**
-     * Get the current user from security context
-     */
-    private User getCurrentUser() {
-        return SecurityUtils.getCurrentUser()
-            .flatMap(userService::getUserByEmail)
-            .orElseThrow(() -> new IllegalStateException("Current user not found"));
-    }
 }
 

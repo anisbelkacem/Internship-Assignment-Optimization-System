@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/api/audit-logs/**").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("MANAGE_USERS")
                         .anyRequest().authenticated()
                 )

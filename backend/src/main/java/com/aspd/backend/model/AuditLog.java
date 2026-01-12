@@ -41,7 +41,7 @@ public class AuditLog {
 
     // Who made the change
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "created_by_id", nullable = false)
+    @JoinColumn(name = "created_by_id")
     private User createdBy;
 
     // When the change happened
