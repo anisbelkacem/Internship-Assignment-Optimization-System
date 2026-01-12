@@ -152,29 +152,35 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="form-label">Employment Type</label>
-              <div className="checkbox-group horizontal">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="isPartTime"
-                    checked={form.isPartTime}
-                    onChange={(e) => onChange({
-                      target: {
-                        name: 'isPartTime',
-                        value: e.target.checked
-                      }
-                    } as any)}
-                  />
-                  <span>Part-Time Teacher</span>
-                </label>
-              </div>
-              <p style={{ 
-                fontSize: "0.85rem", 
-                color: "#64748b", 
-                marginTop: "8px"
-              }}>
-              </p>
+              <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+                <legend style={{ marginBottom: "8px", fontSize: "0.95rem", fontWeight: "500", color: "#1e293b", padding: 0 }}>
+                  Employment Type
+                </legend>
+                <div className="checkbox-group horizontal">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="isPartTime"
+                      name="isPartTime"
+                      checked={form.isPartTime}
+                      onChange={(e) => onChange({
+                        target: {
+                          name: 'isPartTime',
+                          value: e.target.checked
+                        }
+                      } as any)}
+                    />
+                    <span>Part-Time Teacher (workload &lt; 50%)</span>
+                  </label>
+                </div>
+                <p style={{ 
+                  fontSize: "0.85rem", 
+                  color: "#64748b", 
+                  marginTop: "8px"
+                }}>
+                  Part-time teachers can only be assigned to ZSP or SFP internships.
+                </p>
+              </fieldset>
             </div>
           </div>
 
