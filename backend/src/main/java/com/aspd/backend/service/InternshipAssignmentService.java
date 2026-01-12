@@ -63,6 +63,27 @@ public class InternshipAssignmentService {
                     if (updatedAssignment.getStatus() != null) {
                         existing.setStatus(updatedAssignment.getStatus());
                     }
+                    if (updatedAssignment.getTeacher() != null) {
+                        existing.setTeacher(updatedAssignment.getTeacher());
+                    }
+                    if (updatedAssignment.getSchool() != null) {
+                        existing.setSchool(updatedAssignment.getSchool());
+                    }
+                    if (updatedAssignment.getPraktikumType() != null) {
+                        existing.setPraktikumType(updatedAssignment.getPraktikumType());
+                    }
+                    if (updatedAssignment.getCourse() != null) {
+                        existing.setCourse(updatedAssignment.getCourse());
+                    }
+                    if (updatedAssignment.getStudentConfig() != null) {
+                        existing.setStudentConfig(updatedAssignment.getStudentConfig());
+                    }
+                    if (updatedAssignment.getPlannedInternship() != null) {
+                        existing.setPlannedInternship(updatedAssignment.getPlannedInternship());
+                    }
+                    if (updatedAssignment.getSchoolYear() != null) {
+                        existing.setSchoolYear(updatedAssignment.getSchoolYear());
+                    }
                     return assignmentRepository.save(existing);
                 });
     }
