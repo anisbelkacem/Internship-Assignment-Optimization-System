@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import studentConfigService from "../services/studentConfigService";
 import plService from "../services/plService";
 import studentService from "../services/studentService";
+import schoolService from "../services/schoolService";
 import internshipAssignmentService from "../services/internshipAssignmentService";
 import StudentConfigForm from "../components/InternshipsAssignment/InternshipAssignmentStudentForm";
 import TeacherConfigForm from "../components/InternshipsAssignment/TeacherConfigForm";
@@ -24,6 +25,7 @@ export default function InternshipAssignments() {
   const [studentConfigs, setStudentConfigs] = useState<StudentConfigDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -90,14 +92,16 @@ export default function InternshipAssignments() {
 const fetchInitialData = async () => {
   try {
     setLoading(true);
-    const [yearsData, teachersData, studentsData] = await Promise.all([
+    const [yearsData, teachersData, studentsData, schoolsData] = await Promise.all([
       studentConfigService.getAllYears(),
       plService.getAllPls(),
       studentService.getAllStudent(),
+      schoolService.getAllSchools(),
     ]);
     
     setAvailableYears(yearsData);
     setTeachers(teachersData);
+    setSchools(schoolsData);
     setStudents(studentsData);
     
     if (yearsData.length > 0) {
@@ -371,7 +375,27 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
   // Edit Student Assignment Handlers
   const handleEditAssignment = (assignment: AssignmentDto) => {
-    setEditingAssignment(assignment);
+    console.log('Original assignment:', assignment);
+    console.log('Available teachers:', teachers);
+    console.log('Available schools:', schools);
+    
+    // Find teacher and school IDs by matching names
+    const teacher = teachers.find(t => 
+      `${t.firstName} ${t.lastName}` === assignment.teacherName
+    );
+    const school = schools.find(s => s.name === assignment.schoolName);
+    
+    console.log('Found teacher:', teacher);
+    console.log('Found school:', school);
+    
+    const updatedAssignment = {
+      ...assignment,
+      teacherId: teacher?.teacherId || assignment.teacherId || null,
+      schoolId: school?.id || assignment.schoolId || null,
+    };
+    
+    console.log('Updated assignment with IDs:', updatedAssignment);
+    setEditingAssignment(updatedAssignment);
     setShowEditAssignmentModal(true);
   };
 
@@ -380,15 +404,59 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setEditingAssignment(null);
   };
 
-  const handleSaveEditAssignment = async (assignmentId: number, status: string) => {
+  const handleSaveEditAssignment = async () => {
+    if (!editingAssignment) return;
+    
+    console.log('=== SAVING ASSIGNMENT ===');
+    console.log('Full assignment object:', editingAssignment);
+    console.log('Saving assignment with data:', {
+      id: editingAssignment.id,
+      teacherId: editingAssignment.teacherId,
+      schoolId: editingAssignment.schoolId,
+      status: editingAssignment.status,
+    });
+    
     try {
-      await internshipAssignmentService.updateAssignmentStatus(assignmentId, status);
+      const result = await internshipAssignmentService.updateStudentAssignment(
+        editingAssignment.id,
+        {
+          teacherId: editingAssignment.teacherId || null,
+          schoolId: editingAssignment.schoolId || null,
+          status: editingAssignment.status,
+        }
+      );
+      console.log('Update result from backend:', result);
+      console.log('Fetching updated assignments...');
       await fetchStudentAssignments();
+      console.log('Student assignments refreshed');
       setSuccess("Student assignment updated successfully!");
       setTimeout(() => setSuccess(null), 3000);
       handleCloseEditAssignmentModal();
     } catch (err) {
+      console.error('Update error:', err);
       setError(err instanceof Error ? err.message : "Failed to update assignment");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleValidateAssignment = async (assignmentId: number) => {
+    const confirmed = window.confirm('Möchten Sie diese Zuweisung bestätigen?');
+    if (!confirmed) {
+      console.log('Validation cancelled by user');
+      return;
+    }
+    
+    console.log('Validating assignment:', assignmentId);
+    try {
+      const result = await internshipAssignmentService.updateAssignmentStatus(assignmentId, 'CONFIRMED');
+      console.log('Validation result:', result);
+      await fetchStudentAssignments();
+      console.log('Student assignments refreshed');
+      setSuccess("Assignment validated successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Validation error:', err);
+      setError(err instanceof Error ? err.message : "Failed to validate assignment");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -676,6 +744,14 @@ const handleConfirmNewYear = () => {
                                 title="Bearbeiten"
                               >
                                 ✏️
+                              </button>
+                              <button 
+                                className="action-btn validate-btn"
+                                onClick={() => handleValidateAssignment(assignment.id)}
+                                title="Bestätigen"
+                                style={{marginLeft: '8px'}}
+                              >
+                                ✓
                               </button>
                             </td>
                           </tr>
@@ -1166,12 +1242,36 @@ if (studentConfigsForYear.length === 0) {
               </div>
               <div className="form-group">
                 <label className="form-label">Betreuer</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={editingAssignment.teacherName || '—'}
-                  disabled
-                />
+                <select
+                  className="form-select"
+                  value={editingAssignment.teacherId?.toString() || ''}
+                  onChange={(e) => {
+                    console.log('Teacher changed, new value:', e.target.value);
+                    console.log('Available teachers:', teachers.map(t => ({ id: t.teacherId, name: `${t.firstName} ${t.lastName}` })));
+                    const teacherId = e.target.value ? parseInt(e.target.value, 10) : null;
+                    const teacher = teachers.find(t => t.teacherId?.toString() === e.target.value);
+                    console.log('Parsed teacherId:', teacherId);
+                    console.log('Found teacher:', teacher);
+                    
+                    // Automatically set school based on teacher
+                    const updated = {
+                      ...editingAssignment, 
+                      teacherId,
+                      teacherName: teacher ? `${teacher.firstName} ${teacher.lastName}` : null,
+                      schoolId: teacher?.schoolId || null,
+                      schoolName: teacher?.schoolName || null
+                    };
+                    console.log('Updating assignment to:', updated);
+                    setEditingAssignment(updated);
+                  }}
+                >
+                  <option value="">Kein Betreuer</option>
+                  {teachers.length > 0 ? teachers.map((teacher, idx) => (
+                    <option key={`teacher-${teacher.teacherId}-${idx}`} value={teacher.teacherId?.toString()}>
+                      {teacher.firstName} {teacher.lastName}
+                    </option>
+                  )) : <option disabled>Loading...</option>}
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Praktikumtyp</label>
@@ -1196,10 +1296,14 @@ if (studentConfigsForYear.length === 0) {
                 <select
                   className="form-select"
                   value={editingAssignment.status}
-                  onChange={(e) => setEditingAssignment({...editingAssignment, status: e.target.value})}
+                  onChange={(e) => {
+                    console.log('Status changed to:', e.target.value);
+                    const updated = {...editingAssignment, status: e.target.value};
+                    console.log('Updating assignment to:', updated);
+                    setEditingAssignment(updated);
+                  }}
                 >
                   <option value="PROPOSED">Vorgeschlagen</option>
-                  <option value="CONFIRMED">Bestätigt</option>
                   <option value="CANCELLED">Abgesagt</option>
                 </select>
               </div>
@@ -1213,7 +1317,7 @@ if (studentConfigsForYear.length === 0) {
               </button>
               <button
                 className="btn-primary"
-                onClick={() => handleSaveEditAssignment(editingAssignment.id, editingAssignment.status)}
+                onClick={handleSaveEditAssignment}
               >
                 Speichern
               </button>

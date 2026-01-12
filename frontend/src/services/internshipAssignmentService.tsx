@@ -27,7 +27,9 @@ export interface AssignmentDto {
   studentName: string;
   praktikumType: string;
   course: string | null;
+  teacherId?: number | null;
   teacherName: string | null;
+  schoolId?: number | null;
   schoolName: string | null;
   status: string;
 }
@@ -133,12 +135,29 @@ class InternshipAssignmentService {
   }
 
   /**
-   * Update student assignment status
+   * Update student assignment status only
    */
   async updateAssignmentStatus(id: number, status: string): Promise<AssignmentDto> {
     return apiService.patch<AssignmentDto>(
       `/api/internship-assignments/${id}/status?status=${status}`,
       {}
+    );
+  }
+
+  /**
+   * Update full student assignment (teacher, school, status, etc.)
+   */
+  async updateStudentAssignment(
+    id: number,
+    data: {
+      teacherId?: number | null;
+      schoolId?: number | null;
+      status?: string;
+    }
+  ): Promise<AssignmentDto> {
+    return apiService.put<AssignmentDto>(
+      `/api/internship-assignments/${id}`,
+      data
     );
   }
 }

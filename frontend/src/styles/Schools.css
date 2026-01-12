@@ -295,6 +295,12 @@
   color: #3b82f6;
 }
 
+.action-btn.validate-btn {
+  color: #10b981;
+  font-weight: bold;
+  font-size: 18px;
+}
+
 .action-btn.delete-btn {
   color: #ef4444;
 }
