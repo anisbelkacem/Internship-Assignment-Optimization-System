@@ -23,6 +23,7 @@ const initialForm: PlFormValues = {
   email: "",
   mainSubjectId: "",
   schoolId: "",
+  isPartTime: false,
 };
 
 export default function Pls() {
@@ -100,6 +101,7 @@ useEffect(() => {
         email: pl.email ?? "",
         mainSubjectId: pl.mainSubject ? pl.mainSubject.id : "",
         schoolId: pl.schoolId ?? "",
+        isPartTime: pl.isPartTime ?? false,
       });
     } else {
       resetForm();
@@ -124,6 +126,16 @@ useEffect(() => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
+    
+    // Handle checkbox separately
+    if (name === "isPartTime") {
+      setForm((prev) => ({
+        ...prev,
+        isPartTime: typeof value === 'boolean' ? value : (e.target as HTMLInputElement).checked,
+      }));
+      return;
+    }
+    
     setForm((prev) => ({
       ...prev,
 [name]:
@@ -166,6 +178,7 @@ const teacherPayload = {
   email: form.email.trim(),
   mainSubject: selectedCourse,
   schoolId: { id: form.schoolId as number },
+  isPartTime: form.isPartTime,
 };
 
 
@@ -309,13 +322,14 @@ const teacherPayload = {
                   <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Schule</th>
                   <th style={{ whiteSpace: 'nowrap' }}>E-Mail</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Beschäftigungsart</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Aktionen</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPls.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="empty-state">
+                    <td colSpan={6} className="empty-state">
                       {searchTerm ? "Keine PLs gefunden" : "Es sind keine PLs vorhanden"}
                     </td>
                   </tr>
@@ -326,6 +340,33 @@ const teacherPayload = {
                       <td>{pl.mainSubject.name.charAt(0).toUpperCase() + pl.mainSubject.name.slice(1)}</td>
                       <td>{pl.schoolName ?? "-"}</td>
                       <td>{pl.email}</td>
+                      <td>
+                        {pl.isPartTime ? (
+                          <span style={{
+                            padding: "4px 12px",
+                            backgroundColor: "#fef3c7",
+                            color: "#92400e",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            display: "inline-block"
+                          }}>
+                            Teilzeit
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: "4px 12px",
+                            backgroundColor: "#e0f2fe",
+                            color: "#075985",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            display: "inline-block"
+                          }}>
+                            Vollzeit
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                           <button

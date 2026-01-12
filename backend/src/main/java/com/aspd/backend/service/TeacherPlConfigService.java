@@ -3,6 +3,7 @@ package com.aspd.backend.service;
 import com.aspd.backend.dto.TeacherPlConfigDto;
 import com.aspd.backend.dto.TeacherPlConfigRequest;
 import com.aspd.backend.model.Course;
+import com.aspd.backend.model.PraktikumType;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.model.TeacherPlConfig;
 import com.aspd.backend.repository.CourseRepository;
@@ -43,6 +44,8 @@ public class TeacherPlConfigService {
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new IllegalArgumentException("Teacher not found: " + teacherId));
 
+        validatePartTimeTeacherPreferences(teacher, request);
+
         TeacherPlConfig cfg = new TeacherPlConfig();
         cfg.setTeacher(teacher);
         applyRequest(cfg, request);
@@ -54,6 +57,8 @@ public class TeacherPlConfigService {
     public TeacherPlConfigDto update(Long configId, TeacherPlConfigRequest request) {
         TeacherPlConfig cfg = plConfigRepository.findById(configId)
                 .orElseThrow(() -> new IllegalArgumentException("PL config not found: " + configId));
+
+        validatePartTimeTeacherPreferences(cfg.getTeacher(), request);
 
         applyRequest(cfg, request);
 
@@ -80,6 +85,20 @@ public class TeacherPlConfigService {
         }
         cfg.setSubjectSpecializations(courses);
         cfg.setInternshipPreferences(request.internshipPreferences());
+    }
+
+    private void validatePartTimeTeacherPreferences(Teacher teacher, TeacherPlConfigRequest request) {
+        if (teacher.isPartTime() && request.internshipPreferences() != null) {
+            boolean hasInvalidPreference = request.internshipPreferences().stream()
+                    .anyMatch(type -> type == PraktikumType.PDP_I || type == PraktikumType.PDP_II);
+
+            if (hasInvalidPreference) {
+                throw new IllegalArgumentException(
+                        "Part-time teachers can only be assigned to ZSP or SFP internships. " +
+                        "PDP_I and PDP_II are not allowed for part-time teachers."
+                );
+            }
+        }
     }
 
     private TeacherPlConfigDto toDto(TeacherPlConfig cfg) {

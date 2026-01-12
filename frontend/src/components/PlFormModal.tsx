@@ -15,6 +15,7 @@ export interface PlFormValues {
   email: string;
   mainSubjectId: number | "";
   schoolId: number | "";
+  isPartTime: boolean;
 }
 
 export interface PlFormModalProps {
@@ -148,6 +149,32 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Employment Type</label>
+              <div className="checkbox-group horizontal">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="isPartTime"
+                    checked={form.isPartTime}
+                    onChange={(e) => onChange({
+                      target: {
+                        name: 'isPartTime',
+                        value: e.target.checked
+                      }
+                    } as any)}
+                  />
+                  <span>Part-Time Teacher</span>
+                </label>
+              </div>
+              <p style={{ 
+                fontSize: "0.85rem", 
+                color: "#64748b", 
+                marginTop: "8px"
+              }}>
+              </p>
             </div>
           </div>
 

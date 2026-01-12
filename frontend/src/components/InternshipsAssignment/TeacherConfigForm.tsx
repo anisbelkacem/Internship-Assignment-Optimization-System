@@ -105,6 +105,19 @@ export default function TeacherConfigForm({
 
       <p className="teacher-name">
         Teacher: {teacher.firstName} {teacher.lastName}
+        {teacher.isPartTime && (
+          <span style={{ 
+            marginLeft: "12px", 
+            padding: "4px 12px", 
+            backgroundColor: "#fef3c7",
+            color: "#92400e",
+            borderRadius: "4px",
+            fontSize: "0.85rem",
+            fontWeight: "bold"
+          }}>
+            Part-Time
+          </span>
+        )}
       </p>
       <p className="teacher-main-subject">
         Main Subject: {teacher.mainSubject?.name || "Not specified"}
@@ -201,18 +214,44 @@ export default function TeacherConfigForm({
             <label style={{ marginBottom: "12px", display: "block" }}>
               Internship Preferences
             </label>
+            {teacher.isPartTime && (
+              <div style={{
+                padding: "8px 12px",
+                backgroundColor: "#fef3c7",
+                border: "1px solid #fbbf24",
+                borderRadius: "4px",
+                marginBottom: "12px",
+                fontSize: "0.9rem",
+                color: "#92400e"
+              }}>
+                ⚠️ Part-time teachers can only be assigned to ZSP or SFP internships.
+              </div>
+            )}
 
             <div className="checkbox-group horizontal">
-              {Object.values(PraktikumType).map((pref) => (
-                <label key={pref} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={form.internshipPreferences.includes(pref)}
-                    onChange={() => handleToggleInternshipPref(pref)}
-                  />
-                  <span>{pref.replace("_", "-")}</span>
-                </label>
-              ))}
+              {Object.values(PraktikumType).map((pref) => {
+                const isPdp = pref === PraktikumType.PDP_I || pref === PraktikumType.PDP_II;
+                const isDisabled = teacher.isPartTime && isPdp;
+                
+                return (
+                  <label 
+                    key={pref} 
+                    className="checkbox-label"
+                    style={{
+                      opacity: isDisabled ? 0.5 : 1,
+                      cursor: isDisabled ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.internshipPreferences.includes(pref)}
+                      onChange={() => handleToggleInternshipPref(pref)}
+                      disabled={isDisabled}
+                    />
+                    <span>{pref.replace("_", "-")}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
