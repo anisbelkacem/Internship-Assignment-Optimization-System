@@ -10,7 +10,7 @@ import EditPlannedInternshipForm from "../components/InternshipsAssignment/EditP
 import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import type { Student } from "../services/studentService";
-import type { TeacherAssignmentResult, PlannedInternshipDto } from "../services/internshipAssignmentService";
+import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentResult, AssignmentDto } from "../services/internshipAssignmentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
 
@@ -46,10 +46,17 @@ export default function InternshipAssignments() {
   const [showStudentAssignments, setShowStudentAssignments] = useState(false);
   const [phase1Result, setPhase1Result] = useState<TeacherAssignmentResult | null>(null);
   const [assigningPhase1, setAssigningPhase1] = useState(false);
+  const [phase2Result, setPhase2Result] = useState<StudentAssignmentResult | null>(null);
+  const [assigningPhase2, setAssigningPhase2] = useState(false);
+  const [studentAssignments, setStudentAssignments] = useState<AssignmentDto[]>([]);
 
   // Edit Planned Internship Modal State
   const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
   const [editingInternship, setEditingInternship] = useState<PlannedInternshipDto | null>(null);
+
+  // Edit Student Assignment Modal State
+  const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<AssignmentDto | null>(null);
 
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
@@ -75,7 +82,8 @@ export default function InternshipAssignments() {
   useEffect(() => {
     if (selectedYear) {
       fetchStudentConfigsByYear();
-      fetchPlannedInternships(); // Load saved assignments
+      fetchPlannedInternships(); // Load saved teacher assignments
+      fetchStudentAssignments(); // Load saved student assignments
     }
   }, [selectedYear]);
 
@@ -263,6 +271,86 @@ const handleConfirmDeleteTeacherConfig = async () => {
     }
   };
 
+  // Phase 2: Student Assignment Optimization
+  const handleAssignPhase2 = async () => {
+    if (!selectedYear) {
+      setError("Please select a school year");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    setAssigningPhase2(true);
+    
+    try {
+      const result = await internshipAssignmentService.optimizePhase2(selectedYear);
+      setPhase2Result(result);
+      setStudentAssignments(result.assignments);
+      setSuccess(`Phase 2 optimization complete! Assigned ${result.assignedStudents}/${result.totalStudents} students.`);
+      setTimeout(() => setSuccess(null), 5000);
+      setShowStudentAssignments(true);
+    } catch (err: any) {
+      console.error("Phase 2 optimization error:", err);
+      let errorMsg = "Phase 2 optimization failed";
+      
+      if (err.status === 401 || err.status === 403) {
+        errorMsg = "Authentication error: Please log in again";
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      setError(errorMsg);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setAssigningPhase2(false);
+    }
+  };
+
+  // Fetch student assignments from database
+  const fetchStudentAssignments = async () => {
+    if (!selectedYear) return;
+    
+    try {
+      const assignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
+      setStudentAssignments(assignments);
+      if (assignments.length > 0) {
+        setShowStudentAssignments(true);
+        // Build mock result for display
+        const mockResult: StudentAssignmentResult = {
+          schoolYear: selectedYear,
+          totalStudents: assignments.length,
+          assignedStudents: assignments.length,
+          unassignedStudents: 0,
+          score: "",
+          assignments: assignments
+        };
+        setPhase2Result(mockResult);
+      }
+    } catch (err) {
+      console.error("Failed to fetch student assignments:", err);
+    }
+  };
+
+  // Delete all student assignments for current year
+  const handleDeleteAllStudentAssignments = async () => {
+    if (!selectedYear) return;
+    
+    if (!confirm(`Delete all student assignments for ${selectedYear}?`)) {
+      return;
+    }
+
+    try {
+      await internshipAssignmentService.deleteAllStudentAssignments(selectedYear);
+      setPhase2Result(null);
+      setStudentAssignments([]);
+      setShowStudentAssignments(false);
+      setSuccess("All student assignments deleted successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete student assignments");
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   // Edit Planned Internship Handlers
   const handleEditInternship = (internship: PlannedInternshipDto) => {
     setEditingInternship(internship);
@@ -279,6 +367,30 @@ const handleConfirmDeleteTeacherConfig = async () => {
     await fetchPlannedInternships();
     setSuccess("Assignment updated successfully!");
     setTimeout(() => setSuccess(null), 3000);
+  };
+
+  // Edit Student Assignment Handlers
+  const handleEditAssignment = (assignment: AssignmentDto) => {
+    setEditingAssignment(assignment);
+    setShowEditAssignmentModal(true);
+  };
+
+  const handleCloseEditAssignmentModal = () => {
+    setShowEditAssignmentModal(false);
+    setEditingAssignment(null);
+  };
+
+  const handleSaveEditAssignment = async (assignmentId: number, status: string) => {
+    try {
+      await internshipAssignmentService.updateAssignmentStatus(assignmentId, status);
+      await fetchStudentAssignments();
+      setSuccess("Student assignment updated successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+      handleCloseEditAssignmentModal();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update assignment");
+      setTimeout(() => setError(null), 3000);
+    }
   };
 
   // New Year Handler
@@ -485,17 +597,27 @@ const handleConfirmNewYear = () => {
             <div className="schools-header" style={{marginBottom: '16px'}}>
               <div className="schools-header-content">
                 <h1 style={{fontSize: '20px'}}>Studentenzuweisungen</h1>
-                <p>Übersicht der Praktikumszuweisungen für Studierende</p>
               </div>
               <div className="header-actions">
                 <button 
                   className="btn-primary"
-                  onClick={() => setShowStudentAssignments(!showStudentAssignments)}
+                  onClick={handleAssignPhase2}
+                  disabled={assigningPhase2 || !phase1Result}
                 >
-                  {showStudentAssignments ? "Löschen" : "Zuweisen"}
+                  {assigningPhase2 ? "Läuft..." : "Zuweisen"}
                 </button>
               </div>
             </div>
+
+            {/* Phase 2 Progress Bar */}
+            {assigningPhase2 && (
+              <div className="optimization-progress-container">
+                <span className="optimization-progress-text">Optimierung läuft...</span>
+                <div className="progress-bar-wrapper">
+                  <div className="progress-bar-animated"></div>
+                </div>
+              </div>
+            )}
 
             <div className="schools-table-container">
               {!showStudentAssignments ? (
@@ -504,116 +626,81 @@ const handleConfirmNewYear = () => {
                   <p>Klicken Sie auf „Zuweisen", um Zuweisungen zu generieren</p>
                 </div>
               ) : (
-                <table className="schools-table">
-                  <thead>
-                    <tr>
-                      <th>Schülername</th>
-                      <th>Betreuer</th>
-                      <th>Praktikumtyp</th>
-                      <th>Schule</th>
-                      <th>Startdatum</th>
-                      <th>Enddatum</th>
-                      <th>Status</th>
-                      <th>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  <table className="schools-table">
+                    <thead>
                       <tr>
-                        <td>Emma Müller</td>
-                        <td>Dr. Smith Johnson</td>
-                        <td>PDP-I</td>
-                        <td>Grundschule A</td>
-                        <td>2025-03-01</td>
-                        <td>2025-03-15</td>
-                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
+                        <th>Schülername</th>
+                        <th>Betreuer</th>
+                        <th>Praktikumtyp</th>
+                        <th>Kurs</th>
+                        <th>Schule</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
                       </tr>
-                      <tr>
-                        <td>Lukas Wagner</td>
-                        <td>Prof. Maria Garcia</td>
-                        <td>PDP-II</td>
-                        <td>Mittelschule B</td>
-                        <td>2025-03-05</td>
-                        <td>2025-03-20</td>
-                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Sophie Fischer</td>
-                        <td>Dr. Thomas Weber</td>
-                        <td>SFP</td>
-                        <td>Grundschule C</td>
-                        <td>2025-03-10</td>
-                        <td>2025-03-25</td>
-                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Max Schneider</td>
-                        <td>Anna Schmidt</td>
-                        <td>PDP-I</td>
-                        <td>Mittelschule D</td>
-                        <td>2025-03-08</td>
-                        <td>2025-03-22</td>
-                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Lisa Hoffmann</td>
-                        <td>Prof. Maria Garcia</td>
-                        <td>ZSP</td>
-                        <td>Mittelschule B</td>
-                        <td>2025-03-12</td>
-                        <td>2025-03-28</td>
-                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Jonas Becker</td>
-                        <td>Dr. Smith Johnson</td>
-                        <td>PDP-I</td>
-                        <td>Grundschule A</td>
-                        <td>2025-03-15</td>
-                        <td>2025-03-30</td>
-                        <td><span style={{color: '#15803d', fontWeight: 600}}>Bestätigt</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>Mia Koch</td>
-                        <td>Anna Schmidt</td>
-                        <td>PDP-II</td>
-                        <td>Mittelschule D</td>
-                        <td>2025-03-18</td>
-                        <td>2025-04-02</td>
-                        <td><span style={{color: '#d97706', fontWeight: 600}}>Ausstehend</span></td>
-                        <td>
-                          <button className="action-btn edit-btn" title="Bearbeiten">✏️</button>
-                        </td>
-                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentAssignments.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="table-empty">
+                            No student assignments generated
+                          </td>
+                        </tr>
+                      ) : (
+                        studentAssignments.map((assignment) => (
+                          <tr key={assignment.id}>
+                            <td>
+                              <span style={{fontWeight: '500'}}>
+                                {assignment.studentName}
+                              </span>
+                            </td>
+                            <td>{assignment.teacherName ?? '—'}</td>
+                            <td>{assignment.praktikumType}</td>
+                            <td>{assignment.course ?? '—'}</td>
+                            <td>{assignment.schoolName ?? '—'}</td>
+                            <td>
+                              <span className={`status-badge ${
+                                assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
+                                assignment.status === 'PROPOSED' ? 'status-proposed' : 
+                                'status-other'
+                              }`}>
+                                {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
+                                 assignment.status === 'PROPOSED' ? 'Vorgeschlagen' : 
+                                 assignment.status}
+                              </span>
+                            </td>
+                            <td>
+                              <button 
+                                className="action-btn edit-btn"
+                                onClick={() => handleEditAssignment(assignment)}
+                                title="Bearbeiten"
+                              >
+                                ✏️
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
+                  
+                  {/* Delete All Button at Bottom */}
+                  <div className="table-footer-actions">
+                    <button 
+                      className="btn-delete-all" 
+                      onClick={handleDeleteAllStudentAssignments}
+                    >
+                      <span className="delete-icon-circle">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                      Alle Löschen
+                    </button>
+                  </div>
+                </>
               )}
             </div>
-
-            {showStudentAssignments && (
-              <div className="schools-summary">
-                <button className="btn-primary">
-                  Überprüfen
-                </button>
-              </div>
-            )}
           </div>
         </>
       )}
@@ -1056,6 +1143,81 @@ if (studentConfigsForYear.length === 0) {
               onClose={handleCloseEditInternshipModal}
               onSave={handleSaveEditInternship}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Assignment Modal */}
+      {showEditAssignmentModal && editingAssignment && (
+        <div className="modal-overlay" onClick={handleCloseEditAssignmentModal}>
+          <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Zuweisung bearbeiten</h2>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Schüler</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingAssignment.studentName}
+                  disabled
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Betreuer</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingAssignment.teacherName || '—'}
+                  disabled
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Praktikumtyp</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingAssignment.praktikumType}
+                  disabled
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Schule</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingAssignment.schoolName || '—'}
+                  disabled
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  value={editingAssignment.status}
+                  onChange={(e) => setEditingAssignment({...editingAssignment, status: e.target.value})}
+                >
+                  <option value="PROPOSED">Vorgeschlagen</option>
+                  <option value="CONFIRMED">Bestätigt</option>
+                  <option value="CANCELLED">Abgesagt</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-cancel"
+                onClick={handleCloseEditAssignmentModal}
+              >
+                Abbrechen
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => handleSaveEditAssignment(editingAssignment.id, editingAssignment.status)}
+              >
+                Speichern
+              </button>
+            </div>
           </div>
         </div>
       )}

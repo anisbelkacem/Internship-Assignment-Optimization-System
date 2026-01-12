@@ -22,6 +22,25 @@ export interface TeacherAssignmentResult {
   plannedInternships: PlannedInternshipDto[];
 }
 
+export interface AssignmentDto {
+  id: number;
+  studentName: string;
+  praktikumType: string;
+  course: string | null;
+  teacherName: string | null;
+  schoolName: string | null;
+  status: string;
+}
+
+export interface StudentAssignmentResult {
+  schoolYear: string;
+  totalStudents: number;
+  assignedStudents: number;
+  unassignedStudents: number;
+  score: string;
+  assignments: AssignmentDto[];
+}
+
 class InternshipAssignmentService {
   /**
    * Trigger Phase 1 optimization: assigns teachers and schools to planned internships
@@ -76,6 +95,50 @@ class InternshipAssignmentService {
   async deleteAllPlannedInternships(schoolYear: string): Promise<void> {
     return apiService.delete<void>(
       `/api/planned-internships?schoolYear=${encodeURIComponent(schoolYear)}`
+    );
+  }
+
+  /**
+   * Trigger Phase 2 optimization: assigns students to planned internships
+   * @param schoolYear - Academic year in format "YYYY/YYYY" (e.g., "2024/2025")
+   * @returns StudentAssignmentResult with optimization score and assignments
+   */
+  async optimizePhase2(schoolYear: string): Promise<StudentAssignmentResult> {
+    console.log('Calling Phase 2 optimization for year:', schoolYear);
+    console.log('Token present:', !!sessionStorage.getItem('token'));
+    return apiService.post<StudentAssignmentResult>(
+      `/api/internships/phase2/optimize?schoolYear=${encodeURIComponent(schoolYear)}`,
+      {}
+    );
+  }
+
+  /**
+   * Get student assignments from database for a specific school year
+   * @param schoolYear - Academic year (e.g., "2024/2025")
+   * @returns List of student assignments
+   */
+  async getStudentAssignments(schoolYear: string): Promise<AssignmentDto[]> {
+    return apiService.get<AssignmentDto[]>(
+      `/api/internship-assignments?schoolYear=${encodeURIComponent(schoolYear)}`
+    );
+  }
+
+  /**
+   * Delete all student assignments for a school year
+   */
+  async deleteAllStudentAssignments(schoolYear: string): Promise<void> {
+    return apiService.delete<void>(
+      `/api/internship-assignments?schoolYear=${encodeURIComponent(schoolYear)}`
+    );
+  }
+
+  /**
+   * Update student assignment status
+   */
+  async updateAssignmentStatus(id: number, status: string): Promise<AssignmentDto> {
+    return apiService.patch<AssignmentDto>(
+      `/api/internship-assignments/${id}/status?status=${status}`,
+      {}
     );
   }
 }
