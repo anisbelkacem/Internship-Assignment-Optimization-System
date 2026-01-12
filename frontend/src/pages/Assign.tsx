@@ -46,7 +46,7 @@ export default function InternshipAssignments() {
   const [showStudentAssignments, setShowStudentAssignments] = useState(false);
   const [phase1Result, setPhase1Result] = useState<TeacherAssignmentResult | null>(null);
   const [assigningPhase1, setAssigningPhase1] = useState(false);
-  const [phase2Result, setPhase2Result] = useState<StudentAssignmentResult | null>(null);
+  const [_phase2Result, setPhase2Result] = useState<StudentAssignmentResult | null>(null);
   const [assigningPhase2, setAssigningPhase2] = useState(false);
   const [studentAssignments, setStudentAssignments] = useState<AssignmentDto[]>([]);
 
