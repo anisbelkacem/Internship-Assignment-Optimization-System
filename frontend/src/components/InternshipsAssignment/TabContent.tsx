@@ -19,6 +19,8 @@ export default function TabContent({ tabName }: TabContentProps) {
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [selectedConfig, setSelectedConfig] = useState<StudentConfigDto | undefined>(undefined);
 
+      const [studentRefreshKey, setStudentRefreshKey] = useState(0);
+
     return (
         <div className="tab-container">
             <h2>Configurations for {tabName}</h2>
@@ -60,6 +62,8 @@ export default function TabContent({ tabName }: TabContentProps) {
                                 setSelectedConfig(cfg);
                                 setShowStudentModal(true);
                             }}
+                            refreshKey={studentRefreshKey}
+
                         />
                     </div>
                 )}
@@ -104,7 +108,10 @@ export default function TabContent({ tabName }: TabContentProps) {
                         config={selectedConfig}
                         year={tabName}
                         onClose={() => setShowStudentModal(false)}
-                        onSave={() => setShowStudentModal(false)}
+                        onSave={() => {
+              setShowStudentModal(false);
+              setStudentRefreshKey((k) => k + 1);
+            }}
                     />
                 </InternshipAssignmentModal>
             )}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import studentConfigService from "../services/studentConfigService";
@@ -66,6 +67,9 @@ export default function InternshipAssignments() {
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  const [validationResult, setValidationResult] = useState<any>(null);
 
   useEffect(() => {
     // Read tab from URL params on component mount
@@ -397,11 +401,13 @@ const handleConfirmDeleteTeacherConfig = async () => {
     console.log('Updated assignment with IDs:', updatedAssignment);
     setEditingAssignment(updatedAssignment);
     setShowEditAssignmentModal(true);
+    setValidationResult(null);
   };
 
   const handleCloseEditAssignmentModal = () => {
     setShowEditAssignmentModal(false);
     setEditingAssignment(null);
+    setValidationResult(null);
   };
 
   const handleSaveEditAssignment = async () => {
@@ -432,10 +438,21 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setSuccess("Student assignment updated successfully!");
       setTimeout(() => setSuccess(null), 3000);
       handleCloseEditAssignmentModal();
-    } catch (err) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err:any) {
       console.error('Update error:', err);
-      setError(err instanceof Error ? err.message : "Failed to update assignment");
-      setTimeout(() => setError(null), 3000);
+
+    //  backend validation (AssignmentValidationException -> ValidationResult) comes here
+    if (err?.status === 400 && err?.hardViolations) {
+      setValidationResult(err);       // store full ValidationResult
+      setError(null);                 // don't show generic "Error"
+      return;                         // keep modal open
+    }
+
+    // fallback generic error
+    setValidationResult(null);
+    setError(err?.message || "Failed to update assignment");
+    setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -1231,6 +1248,8 @@ if (studentConfigsForYear.length === 0) {
               <h2>Zuweisung bearbeiten</h2>
             </div>
             <div className="modal-body">
+
+
               <div className="form-group">
                 <label className="form-label">Schüler</label>
                 <input
@@ -1306,7 +1325,18 @@ if (studentConfigsForYear.length === 0) {
                   <option value="PROPOSED">Vorgeschlagen</option>
                   <option value="CANCELLED">Abgesagt</option>
                 </select>
+                  {validationResult && validationResult.hardValid === false && (
+    <div className="error-container" style={{ marginBottom: "12px" }}>
+      <strong>Nicht speicherbar:</strong>
+      <ul style={{ margin: "8px 0 0 18px" }}>
+        {validationResult.hardViolations?.map((v: any, i: number) => (
+          <li key={i}>{v.message}</li>
+        ))}
+      </ul>
+    </div>
+  )}
               </div>
+              
             </div>
             <div className="modal-footer">
               <button
@@ -1318,6 +1348,8 @@ if (studentConfigsForYear.length === 0) {
               <button
                 className="btn-primary"
                 onClick={handleSaveEditAssignment}
+                disabled={validationResult && validationResult.hardValid === false}
+
               >
                 Speichern
               </button>
