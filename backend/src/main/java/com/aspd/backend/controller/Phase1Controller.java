@@ -69,6 +69,13 @@ public class Phase1Controller {
             return ResponseEntity.badRequest().build();
         }
 
+        // Delete existing planned internships for this school year to avoid duplicates
+        List<PlannedInternship> existingInternships = plannedInternshipRepository.findBySchoolYear(schoolYear);
+        if (!existingInternships.isEmpty()) {
+            log.info("Deleting {} existing planned internships for year {}", existingInternships.size(), schoolYear);
+            plannedInternshipRepository.deleteAll(existingInternships);
+        }
+
         // Run Phase 1 optimization
         InternshipSolution phase1Solution = phase1OptimizationService.optimize(
                 teachers, schools, studentConfigs, schoolYear, 70);
