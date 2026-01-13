@@ -26,9 +26,24 @@ const AuditLogs: React.FC = () => {
     setLoading(false);
   };
 
-  const parseChanges = (changeDetails: string) => {
+  const parseChanges = (previousValues: string, newValues: string) => {
     try {
-      return JSON.parse(changeDetails);
+      const prev = previousValues ? JSON.parse(previousValues) : {};
+      const next = newValues ? JSON.parse(newValues) : {};
+      
+      // Build changes object with old/new for each field
+      const changes: Record<string, {old: any, new: any}> = {};
+      
+      // Get all unique keys from both objects
+      const allKeys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+      
+      allKeys.forEach(key => {
+        if (prev[key] !== next[key]) {
+          changes[key] = { old: prev[key], new: next[key] };
+        }
+      });
+      
+      return changes;
     } catch {
       return {};
     }
@@ -60,7 +75,7 @@ const AuditLogs: React.FC = () => {
             </thead>
             <tbody>
               {logs.map((log) => {
-                const changes = parseChanges(log.changeDetails);
+                const changes = parseChanges(log.previousValues, log.newValues);
                 const hasChanges = Object.keys(changes).length > 0;
 
                 return (

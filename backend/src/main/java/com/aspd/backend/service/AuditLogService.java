@@ -39,7 +39,8 @@ public class AuditLogService {
                     .entityType(entityType)
                     .entityId(entityId)
                     .action(action)
-                    .createdBy(null)  // Set to current user principal as needed
+                    .createdBy(null)
+                    .createdByUsername(username)  // Store username directly
                     .timestamp(LocalDateTime.now())
                     .description(description)
                     .previousValues(previousValuesJson)

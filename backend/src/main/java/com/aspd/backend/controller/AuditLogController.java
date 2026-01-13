@@ -39,6 +39,7 @@ public class AuditLogController {
                 .entityType(auditLog.getEntityType())
                 .entityId(auditLog.getEntityId())
                 .action(auditLog.getAction().name())
+                .createdBy(auditLog.getCreatedByUsername())
                 .timestamp(auditLog.getTimestamp())
                 .description(auditLog.getDescription())
                 .previousValues(auditLog.getPreviousValues())

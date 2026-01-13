@@ -5,10 +5,11 @@ export interface AuditLogEntry {
   entityType: string;
   entityId: number;
   action: string;
-  createdBy: string;        // username
+  createdBy: string;
   timestamp: string;
   description: string;
-  changeDetails: string;    // JSON string
+  previousValues: string;  // JSON string
+  newValues: string;       // JSON string
 }
 
 export interface AuditLogPage {

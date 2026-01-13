@@ -43,6 +43,9 @@ public class AuditLog {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "created_by_id")
     private User createdBy;
+    
+    @Column(name = "created_by_username")
+    private String createdByUsername; // Simple username string for audit trail
 
     // When the change happened
     @Column(nullable = false)
