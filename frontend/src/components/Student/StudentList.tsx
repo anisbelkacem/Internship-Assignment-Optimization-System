@@ -3,6 +3,7 @@ import type { Student } from "../../services/studentService";
 import StudentService from "../../services/studentService";
 import type { Course } from "../../services/courseService";
 import CourseService from "../../services/courseService";
+import SearchFilter, { type FilterConfig } from "../SearchFilter";
 import StudentForm from "./StudentForm";
 import StudentModal from "./StudentModal";
 import "../../styles/StudentStyles/StudentList.css";
@@ -12,6 +13,12 @@ const StudentList: React.FC = () => {
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [filters, setFilters] = useState<Record<string, string>>({
+        schoolType: '',
+        mainCourse: '',
+        registred: '',
+        oriented: '',
+    });
     const [showForm, setShowForm] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
@@ -57,10 +64,25 @@ const StudentList: React.FC = () => {
         setSelectedStudent(null);
     };
 
-    const filteredStudents = students.filter(student => {
-        const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-        return fullName.includes(searchTerm.toLowerCase());
-    });
+    const filteredStudents = useMemo(() => {
+        return students.filter(student => {
+            const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+            const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                                 student.matriculationNbr.toString().includes(searchTerm);
+            const matchesSchoolType = !filters.schoolType || student.schoolType === filters.schoolType;
+            const matchesMainCourse = !filters.mainCourse || 
+                                     (student.mainCourseId?.toString() === filters.mainCourse);
+            const matchesRegistred = !filters.registred ||
+                                    (filters.registred === 'true' && student.registred) ||
+                                    (filters.registred === 'false' && !student.registred);
+            const matchesOriented = !filters.oriented ||
+                                   (filters.oriented === 'true' && student.oriented) ||
+                                   (filters.oriented === 'false' && !student.oriented);
+            
+            return matchesSearch && matchesSchoolType && matchesMainCourse && 
+                   matchesRegistred && matchesOriented;
+        });
+    }, [students, searchTerm, filters]);
 
     const courseNameById = useMemo(() => {
         const map = new Map<number, string>();
@@ -75,6 +97,53 @@ const StudentList: React.FC = () => {
         const courseName = courseNameById.get(courseId);
         if (!courseName) return courseId;
         return courseName.charAt(0).toUpperCase() + courseName.slice(1);
+    };
+
+    // Build filter configurations
+    const filterConfigs: FilterConfig[] = useMemo(() => [
+        {
+            field: 'schoolType',
+            label: 'Schultyp',
+            options: [
+                { label: 'Grundschule (GS)', value: 'GS', field: 'schoolType' },
+                { label: 'Mittelschule (MS)', value: 'MS', field: 'schoolType' }
+            ]
+        },
+        {
+            field: 'mainCourse',
+            label: 'Hauptfach',
+            options: courses
+                .filter(c => c.active)
+                .map(course => ({
+                    label: course.name.charAt(0).toUpperCase() + course.name.slice(1),
+                    value: course.id.toString(),
+                    field: 'mainCourse'
+                }))
+        },
+        {
+            field: 'registred',
+            label: 'Registriert',
+            options: [
+                { label: 'Ja', value: 'true', field: 'registred' },
+                { label: 'Nein', value: 'false', field: 'registred' }
+            ]
+        },
+        {
+            field: 'oriented',
+            label: 'Orientiert',
+            options: [
+                { label: 'Ja', value: 'true', field: 'oriented' },
+                { label: 'Nein', value: 'false', field: 'oriented' }
+            ]
+        }
+    ], [courses]);
+
+    const handleFilterChange = (field: string, value: string) => {
+        setFilters(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleClearFilters = () => {
+        setFilters({ schoolType: '', mainCourse: '', registred: '', oriented: '' });
     };
 
     if (loading) return <div className="assign-root"><p>Loading students...</p></div>;
@@ -99,37 +168,16 @@ const StudentList: React.FC = () => {
 
             {/* Main Content Section */}
             <section className="section-container">
-                {/* Search Bar */}
-                <div style={{marginBottom: '20px'}}>
-                    <input
-                        type="text"
-                        placeholder="🔍 Search students..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            fontSize: '14px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            outline: 'none',
-                            transition: 'all 0.2s ease',
-                            backgroundColor: '#f8fafc',
-                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                            color: '#000000'
-                        }}
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#3b82f6';
-                            e.target.style.backgroundColor = '#ffffff';
-                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#e2e8f0';
-                            e.target.style.backgroundColor = '#f8fafc';
-                            e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                        }}
-                    />
-                </div>
+                {/* Search and Filter */}
+                <SearchFilter
+                    searchPlaceholder="Suche nach Name oder Matrikelnummer..."
+                    searchValue={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    filters={filterConfigs}
+                    activeFilters={filters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={handleClearFilters}
+                />
 
                 {/* Students Table */}
                 <div className="table-container" style={{overflowX: 'auto'}}>
