@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import auditLogService from '../../services/auditLogService';
-import type { AuditLogEntry, AuditLogPage } from '../../services/auditLogService';
+import type { AuditLogEntry } from '../../services/auditLogService';
 import './AuditHistoryTable.css';
 
 interface AuditHistoryTableProps {
@@ -48,19 +48,7 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
         }
     };
 
-    const renderValueChange = (prev: any, next: any) => {
-        if (prev === undefined || prev === null) {
-            return <span className="value-new">+ {JSON.stringify(next)}</span>;
-        }
-        if (next === undefined || next === null) {
-            return <span className="value-removed">- {JSON.stringify(prev)}</span>;
-        }
-        return (
-            <span>
-                <span className="value-old">{JSON.stringify(prev)}</span> → <span className="value-new">{JSON.stringify(next)}</span>
-            </span>
-        );
-    };
+
 
     if (loading && auditLogs.length === 0) {
         return <div className="audit-loading">Loading audit history...</div>;
@@ -94,7 +82,7 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                     </span>
                                 </td>
                                 <td className="audit-user">
-                                    {log.createdBy.firstName} {log.createdBy.lastName}
+                                    {log.createdBy}
                                 </td>
                                 <td className="audit-description">{log.description}</td>
                                 <td className="audit-actions">
@@ -110,51 +98,68 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                     )}
                                 </td>
                             </tr>
-                            {expandedId === log.id && (log.previousValues || log.newValues) && (
-                                <tr className="audit-details-row">
-                                    <td colSpan={5}>
-                                        <div className="audit-details">
-                                            {log.previousValues && log.newValues && (
-                                                <div className="changes-table">
-                                                    <h4>Changes:</h4>
-                                                    <table className="inner-table">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Field</th>
-                                                                <th>Previous Value</th>
-                                                                <th>New Value</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {Object.keys(log.newValues || {}).map((key) => (
-                                                                <tr key={key}>
-                                                                    <td className="field-name">{key}</td>
-                                                                    <td className="field-value">
-                                                                        {log.previousValues?.[key] !== undefined
-                                                                            ? JSON.stringify(log.previousValues[key])
-                                                                            : '—'}
-                                                                    </td>
-                                                                    <td className="field-value">
-                                                                        {log.newValues?.[key] !== undefined
-                                                                            ? JSON.stringify(log.newValues[key])
-                                                                            : '—'}
-                                                                    </td>
+                            {expandedId === log.id && (log.previousValues || log.newValues) && (() => {
+                                const prevValues = log.previousValues ? JSON.parse(log.previousValues) : {};
+                                const newValues = log.newValues ? JSON.parse(log.newValues) : {};
+                                const allKeys = new Set([...Object.keys(prevValues), ...Object.keys(newValues)]);
+                                return (
+                                    <tr className="audit-details-row">
+                                        <td colSpan={5}>
+                                            <div className="audit-details">
+                                                {(log.previousValues || log.newValues) && (
+                                                    <div className="changes-table">
+                                                        <h4>Changes:</h4>
+                                                        <table className="inner-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Field</th>
+                                                                    <th>Previous Value</th>
+                                                                    <th>New Value</th>
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                {Array.from(allKeys).map((key) => (
+                                                                    <tr key={key}>
+                                                                        <td className="field-name">{key}</td>
+                                                                        <td className="field-value">
+                                                                            {prevValues[key] !== undefined
+                                                                                ? JSON.stringify(prevValues[key])
+                                                                                : '—'}
+                                                                        </td>
+                                                                        <td className="field-value">
+                                                                            {newValues[key] !== undefined
+                                                                                ? JSON.stringify(newValues[key])
+                                                                                : '—'}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
                                                 </div>
                                             )}
-                                            {log.previousValues && !log.newValues && (
-                                                <div className="deleted-data">
-                                                    <h4>Deleted Data:</h4>
-                                                    <pre>{JSON.stringify(log.previousValues, null, 2)}</pre>
-                                                </div>
-                                            )}
+                                            {log.newValues && !log.previousValues && (() => {
+                                                const newVals = JSON.parse(log.newValues);
+                                                return (
+                                                    <div className="created-data">
+                                                        <h4>Created Data:</h4>
+                                                        <pre>{JSON.stringify(newVals, null, 2)}</pre>
+                                                    </div>
+                                                );
+                                            })()}
+                                            {log.previousValues && !log.newValues && (() => {
+                                                const prevVals = JSON.parse(log.previousValues);
+                                                return (
+                                                    <div className="deleted-data">
+                                                        <h4>Deleted Data:</h4>
+                                                        <pre>{JSON.stringify(prevVals, null, 2)}</pre>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </td>
                                 </tr>
-                            )}
+                                );
+                            })()}
                         </React.Fragment>
                     ))}
                 </tbody>

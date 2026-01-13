@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import auditLogService from '../services/auditLogService';
-import type { AuditLogEntry, AuditLogPage } from '../services/auditLogService';
+import type { AuditLogEntry } from '../services/auditLogService';
 import './AuditLogs.css';
 
 const AuditLogs: React.FC = () => {
