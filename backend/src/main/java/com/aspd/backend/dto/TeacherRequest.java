@@ -8,6 +8,7 @@ public record TeacherRequest(
         String lastName,
         Course mainSubject,
         School schoolId,
-        String email
+        String email,
+        boolean isPartTime
 ) {
 }

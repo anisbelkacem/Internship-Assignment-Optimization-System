@@ -52,6 +52,7 @@ export type TeacherDto = {
   schoolId: number | null;
   schoolName: string | null;
   schoolZone: string | null;
+  isPartTime: boolean;
   plConfigs: TeacherPlConfigDto[];
 };
 
@@ -62,6 +63,7 @@ export interface TeacherRequest {
   mainSubject: Course;
   schoolId: { id: number } | null;
   email: string;
+  isPartTime: boolean;
 }
 
 export interface TeacherPlConfigRequest {
