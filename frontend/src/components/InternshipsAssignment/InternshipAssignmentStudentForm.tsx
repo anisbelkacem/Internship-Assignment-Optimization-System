@@ -84,8 +84,8 @@ const [validating, setValidating] = useState(false);
 
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const hasFieldViolation = (field: string) =>
-  !!validation?.hardViolations?.some(v => v.fields?.includes(field));
+//   const hasFieldViolation = (field: string) =>
+//   !!validation?.hardViolations?.some(v => v.fields?.includes(field));
 
 const validateBackend = async (payload: any) => {
   setValidating(true);
