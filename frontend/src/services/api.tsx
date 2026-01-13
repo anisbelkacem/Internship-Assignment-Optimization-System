@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import API_BASE_URL from '../config/api';
 
 interface ApiError {
@@ -42,15 +43,43 @@ class ApiService {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.error('Unauthorized/Forbidden - Token might be invalid or missing');
-      }
-      
-      const error: ApiError = {
-        message: `HTTP error! status: ${response.status}`,
-        status: response.status,
-      };
-      throw error;
+      if (!response.ok) {
+  if (response.status === 401 || response.status === 403) {
+    console.error('Unauthorized/Forbidden - Token might be invalid or missing');
+  }
+
+  // try to parse backend error response (ValidationResult JSON)
+  const contentType = response.headers.get('content-type') || '';
+  let errorBody: any = null;
+
+  try {
+    if (contentType.includes('application/json')) {
+      errorBody = await response.json();
+    } else {
+      const text = await response.text();
+      errorBody = text ? { message: text } : null;
+    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    // ignore parse errors
+  }
+
+  //  if backend returned structured validation (your ValidationResult)
+  if (errorBody && typeof errorBody === 'object') {
+    throw {
+      ...errorBody,
+      status: response.status, // keep status for UI
+    };
+  }
+
+  // fallback
+  const error: ApiError = {
+    message: `HTTP error! status: ${response.status}`,
+    status: response.status,
+  };
+  throw error;
+}
+
     }
 
     if (response.status === 204 || response.headers.get('content-length') === '0') {

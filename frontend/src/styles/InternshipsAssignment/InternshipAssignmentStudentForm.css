@@ -317,3 +317,11 @@ textarea.student-config-input {
 }
 
 
+.form-select.invalid {
+  border: 2px solid #d9534f;
+  background: #fff5f5;
+}
+.student-config-input.invalid {
+  border: 2px solid #d9534f;
+  background: #fff5f5;
+}

@@ -11,6 +11,18 @@ interface Props {
   onClose: () => void;
   onSave: (savedConfig: StudentConfigDto) => void;
 }
+type ValidationViolation = {
+  code: string;
+  severity: "HARD" | "WARNING";
+  message: string;
+  fields: string[];
+};
+
+type ValidationResult = {
+  hardValid: boolean;
+  hardViolations: ValidationViolation[];
+  warnings: ValidationViolation[];
+};
 
 export default function StudentConfigForm({ config, year, onClose, onSave }: Props) {
   const [form, setForm] = useState<StudentConfigDto>({
@@ -31,6 +43,9 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
 
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+const [validating, setValidating] = useState(false);
+
   useEffect(() => {
     const loadCourses = async () => {
       try {
@@ -46,6 +61,50 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
     };
     loadCourses();
   }, []);
+  useEffect(() => {
+  const payload = {
+    id: form.id || null,
+    studentId: form.studentId,
+    schoolType: form.schoolType,
+    pdpI: form.pdpI,
+    pdpII: form.pdpII,
+    zsp: form.zsp,
+    sfp: form.sfp,
+    year: form.year,
+    mainCourse: form.mainCourse,
+    prefCourse1: form.prefCourse1,
+    prefCourse2: form.prefCourse2,
+    prefCourse3: form.prefCourse3
+  };
+
+  // avoid spamming when studentId is empty
+  validateBackend(payload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [form]);
+
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+//   const hasFieldViolation = (field: string) =>
+//   !!validation?.hardViolations?.some(v => v.fields?.includes(field));
+
+const validateBackend = async (payload: any) => {
+  setValidating(true);
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const res = await fetch(`${baseUrl}/api/validation/student-config`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json()) as ValidationResult;
+    setValidation(data);
+  } finally {
+    setValidating(false);
+  }
+};
 
   const handleChange = <K extends keyof StudentConfigDto>(key: K, value: StudentConfigDto[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -126,6 +185,15 @@ const handleSubmit = async () => {
       <h3 className="student-config-form-title">
         {config?.id ? "Edit Configuration" : "Create Configuration"}
       </h3>
+      {validation && !validation.hardValid && (
+  <div className="error-message">
+    <strong>Nicht speicherbar:</strong>
+    <ul>
+      {validation.hardViolations.map((v, i) => <li key={i}>{v.message}</li>)}
+    </ul>
+  </div>
+)}
+
 
       <div className="student-config-split-layout">
         {/* Left Side: Student Info & Checkboxes */}
@@ -225,7 +293,7 @@ const handleSubmit = async () => {
         <button 
           className="student-config-btn" 
           onClick={handleSubmit}
-          disabled={loadingCourses || courses.length === 0}
+          disabled={loadingCourses || courses.length === 0 || validating || (validation ? !validation.hardValid : false)}
         >
           {config ? "Update" : "Create"}
         </button>

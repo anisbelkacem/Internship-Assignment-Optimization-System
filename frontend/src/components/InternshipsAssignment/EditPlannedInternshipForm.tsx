@@ -11,6 +11,19 @@ interface EditPlannedInternshipFormProps {
   onSave: () => void;
 }
 
+type ValidationViolation = {
+  code: string;
+  severity: "HARD" | "WARNING";
+  message: string;
+  fields: string[];
+};
+
+type ValidationResult = {
+  hardValid: boolean;
+  hardViolations: ValidationViolation[];
+  warnings: ValidationViolation[];
+};
+
 export default function EditPlannedInternshipForm({
   internship,
   onClose,
@@ -26,10 +39,49 @@ export default function EditPlannedInternshipForm({
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [validating, setValidating] = useState(false);
+
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+  validate(selectedTeacherId, selectedSchoolId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedTeacherId, selectedSchoolId]);
+
+
+  const hasFieldViolation = (field: string) => {
+  if (!validation) return false;
+  return validation.hardViolations.some(v => v.fields?.includes(field));
+};
+const validate = async (tId: number | null, sId: number | null) => {
+  setValidating(true);
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const res = await fetch(`${baseUrl}/api/validation/planned-internships/update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        internshipId: internship.id,
+        teacherId: tId,
+        schoolId: sId,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Validation call failed");
+    const data = (await res.json()) as ValidationResult;
+    setValidation(data);
+  } finally {
+    setValidating(false);
+  }
+};
+
 
   const loadData = async () => {
     try {
@@ -146,7 +198,7 @@ export default function EditPlannedInternshipForm({
             <label htmlFor="teacher">Lehrkraft *</label>
             <select
               id="teacher"
-              className="form-select"
+                className={`form-select ${hasFieldViolation("teacherId") ? "invalid" : ""}`}
               value={selectedTeacherId ?? ""}
               onChange={(e) => setSelectedTeacherId(e.target.value ? parseInt(e.target.value) : null)}
             >
@@ -163,7 +215,7 @@ export default function EditPlannedInternshipForm({
             <label htmlFor="school">Schule *</label>
             <select
               id="school"
-              className="form-select"
+              className={`form-select ${hasFieldViolation("schoolId") ? "invalid" : ""}`}
               value={selectedSchoolId ?? ""}
               onChange={(e) => setSelectedSchoolId(e.target.value ? parseInt(e.target.value) : null)}
             >
@@ -177,6 +229,16 @@ export default function EditPlannedInternshipForm({
           </div>
         </div>
       </div>
+      {validation && !validation.hardValid && (
+  <div className="error-message">
+    <strong>Nicht speicherbar:</strong>
+    <ul>
+      {validation.hardViolations.map((v, idx) => (
+            <li key={idx}>{v.message}</li>
+            ))}
+            </ul>
+          </div>
+        )}
 
       <div className="modal-form-actions">
         <button
@@ -191,9 +253,9 @@ export default function EditPlannedInternshipForm({
           type="button"
           className="btn-save"
           onClick={handleSave}
-          disabled={loading}
-        >
-          {loading ? "Speichern..." : "Speichern"}
+           disabled={loading || validating || (validation ? !validation.hardValid : false)}
+>
+  {loading ? "Speichern..." : validating ? "Prüfe..." : "Speichern"}
         </button>
       </div>
     </div>
