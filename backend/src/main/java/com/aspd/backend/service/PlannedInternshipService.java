@@ -6,9 +6,6 @@ import com.aspd.backend.model.Teacher;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
-import com.aspd.backend.validation.AssignmentValidationException;
-import com.aspd.backend.validation.PlannedInternshipValidationService;
-import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,8 +25,6 @@ public class PlannedInternshipService {
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
-    private final PlannedInternshipValidationService validationService;
-
 
     /**
      * Get all planned internships for a specific school year.
@@ -55,11 +50,6 @@ public class PlannedInternshipService {
         
         PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
-
-        ValidationResult validation = validationService.validatePlannedInternshipUpdate(id, teacherId, schoolId);
-        if (!validation.isHardValid()) {
-            throw new AssignmentValidationException(validation);
-        }
 
         // Update teacher if provided
         if (teacherId != null) {

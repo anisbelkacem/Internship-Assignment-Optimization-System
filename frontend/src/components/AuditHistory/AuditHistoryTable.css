@@ -1,0 +1,258 @@
+.audit-history-table {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.audit-history-table h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.audit-history-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+}
+
+.audit-history-table thead {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.audit-history-table th,
+.audit-history-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.audit-history-table th {
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.audit-timestamp {
+    font-size: 0.9rem;
+    color: #666;
+    white-space: nowrap;
+}
+
+.audit-user {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.audit-description {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Action badges */
+.badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-create {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge-update {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.badge-delete {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Expand button */
+.audit-actions {
+    text-align: center;
+}
+
+.btn-expand {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    color: #0066cc;
+    transition: color 0.2s;
+}
+
+.btn-expand:hover {
+    color: #0051a3;
+}
+
+/* Expanded details row */
+.audit-details-row td {
+    padding: 1rem;
+    background-color: #f0f7ff;
+    border-top: 2px solid #0066cc;
+}
+
+.audit-details {
+    background-color: white;
+    border-radius: 4px;
+    padding: 1rem;
+}
+
+.audit-details h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+/* Changes table */
+.changes-table {
+    margin-bottom: 1rem;
+}
+
+.inner-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.inner-table th,
+.inner-table td {
+    padding: 0.5rem;
+    text-align: left;
+    border: 1px solid #e0e0e0;
+}
+
+.inner-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.field-name {
+    font-weight: 500;
+    width: 20%;
+    color: #333;
+}
+
+.field-value {
+    color: #666;
+    word-break: break-word;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.value-old {
+    color: #d32f2f;
+    text-decoration: line-through;
+}
+
+.value-new {
+    color: #388e3c;
+    font-weight: 500;
+}
+
+.value-removed {
+    color: #d32f2f;
+}
+
+/* Deleted data */
+.deleted-data pre {
+    background-color: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    color: #333;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.pagination button {
+    padding: 0.5rem 1rem;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #0051a3;
+}
+
+.pagination button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.pagination span {
+    font-size: 0.95rem;
+    color: #666;
+}
+
+/* Loading and empty states */
+.audit-loading,
+.audit-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #999;
+    font-size: 0.95rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .audit-history-table {
+        padding: 1rem;
+    }
+
+    .audit-history-table th,
+    .audit-history-table td {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .inner-table th,
+    .inner-table td {
+        padding: 0.3rem;
+    }
+
+    .audit-details {
+        padding: 0.5rem;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .pagination button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
