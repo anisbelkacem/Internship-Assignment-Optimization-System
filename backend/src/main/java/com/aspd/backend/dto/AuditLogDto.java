@@ -15,9 +15,9 @@ public class AuditLogDto {
     private String entityType;
     private Long entityId;
     private String action;
-    private String createdBy;      // username string
+    private String createdBy;
     private LocalDateTime timestamp;
     private String description;
-    private String previousValues; // JSON string
-    private String newValues;      // JSON string
+    private String previousValues;
+    private String newValues;
 }

@@ -34,7 +34,7 @@ public class AuditLog {
 
     // What entity was modified
     @Column(nullable = false)
-    private String entityType; // e.g., "InternshipAssignment", "PlannedInternship"
+    private String entityType;
 
     @Column(nullable = false)
     private Long entityId; // The ID of the modified entity
@@ -45,7 +45,7 @@ public class AuditLog {
     private User createdBy;
     
     @Column(name = "created_by_username")
-    private String createdByUsername; // Simple username string for audit trail
+    private String createdByUsername;
 
     // When the change happened
     @Column(nullable = false)
@@ -54,21 +54,18 @@ public class AuditLog {
     // What action was performed
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AuditAction action; // CREATE, UPDATE, DELETE
+    private AuditAction action;
 
-    // Optional: denormalized data for quick filtering
-    private Long relatedStudentId; // For student-related changes
-    private Long relatedSchoolId;  // For school-related changes
-    private String schoolYear;      // For filtering by academic year
-
-    // The actual changes (JSON format for flexibility)
-    @Column(columnDefinition = "LONGTEXT")
-    private String previousValues; // JSON string of old values
+    private Long relatedStudentId;
+    private Long relatedSchoolId;
+    private String schoolYear;
 
     @Column(columnDefinition = "LONGTEXT")
-    private String newValues; // JSON string of new values
+    private String previousValues;
 
-    // Additional context
+    @Column(columnDefinition = "LONGTEXT")
+    private String newValues;
+
     @Column(columnDefinition = "TEXT")
-    private String description; // Human-readable description of the change
+    private String description;
 }

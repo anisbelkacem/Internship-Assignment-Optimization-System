@@ -140,7 +140,7 @@ public class PlannedInternshipService {
             state.put("teacherName", internship.getAssignedTeacher().getFirstName() + " " + internship.getAssignedTeacher().getLastName());
         }
         if (internship.getAssignedSchool() != null) {
-            state.put("schoolId", internship.getAssignedSchool().getId());
+            state.put("schoolI  d", internship.getAssignedSchool().getId());
             state.put("schoolName", internship.getAssignedSchool().getName());
         }
         if (internship.getCourse() != null) {
