@@ -6,6 +6,9 @@ import com.aspd.backend.model.Student;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.repository.StudentConfigRepository;
 import com.aspd.backend.repository.StudentRepository;
+import com.aspd.backend.validation.AssignmentValidationException;
+import com.aspd.backend.validation.StudentConfigValidationService;
+import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +20,13 @@ public class StudentConfigService {
 
     private final StudentConfigRepository configRepository;
     private final StudentRepository studentRepository;
+    private final StudentConfigValidationService validationService;
+
 
     public StudentConfigDto createConfig(StudentConfigDto dto) {
+        ValidationResult vr = validationService.validate(dto);
+        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+
         Student student = studentRepository.findById(dto.getStudentId())
                 .orElseThrow(() -> new NotFoundException("Student", dto.getStudentId()));
 
@@ -64,6 +72,11 @@ public class StudentConfigService {
     }
 
     public StudentConfigDto updateConfig(Long id, StudentConfigDto dto) {
+        dto.setId(id);
+
+        ValidationResult vr = validationService.validate(dto);
+        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+
         StudentConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("StudentConfig", id));
 

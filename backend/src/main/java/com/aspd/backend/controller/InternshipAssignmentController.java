@@ -1,6 +1,7 @@
 package com.aspd.backend.controller;
 
 import com.aspd.backend.dto.AssignmentDto;
+import com.aspd.backend.dto.InternshipAssignmentUpdateRequest;
 import com.aspd.backend.mapper.AssignmentMapper;
 import com.aspd.backend.model.AssignmentStatus;
 import com.aspd.backend.model.InternshipAssignment;
@@ -80,9 +81,9 @@ public class InternshipAssignmentController {
     @PutMapping("/{id}")
     public ResponseEntity<AssignmentDto> updateAssignment(
             @PathVariable Long id,
-            @RequestBody InternshipAssignment updatedAssignment) {
-        
-        return assignmentService.update(id, updatedAssignment)
+            @RequestBody InternshipAssignmentUpdateRequest req) {
+
+        return assignmentService.updateByIds(id, req)
                 .map(assignmentMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
