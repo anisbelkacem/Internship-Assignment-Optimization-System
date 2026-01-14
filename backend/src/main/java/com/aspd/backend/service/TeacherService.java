@@ -131,7 +131,7 @@ public class TeacherService {
         teacher.setMainSubject(request.mainSubject());
         teacher.setSchool(request.schoolId());
         teacher.setEmail(request.email().trim());
-
+        teacher.setPartTime(request.isPartTime());
     }
 
     private TeacherDto toDto(Teacher teacher) {
@@ -168,11 +168,10 @@ public class TeacherService {
                 schoolName,
                 schoolZone,
                 teacher.getEmail(),
+                teacher.isPartTime(),
                 configDtos
         );
     }
-
-
 
     // Excel IMPORT / EXPORT for Teachers (PLs)
     @Transactional

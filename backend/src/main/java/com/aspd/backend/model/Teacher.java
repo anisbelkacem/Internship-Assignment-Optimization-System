@@ -36,6 +36,9 @@ public class Teacher {
     @Column(name = "email", nullable = false, unique = true)
     private String email; // email, main identifier for duplicates
 
+    @Column(name = "is_part_time", nullable = false)
+    private boolean isPartTime = false; // Indicates if teacher is part-time (<50% workload)
+
     @OneToMany(
             mappedBy = "teacher",
             orphanRemoval = true
@@ -98,6 +101,13 @@ public class Teacher {
         this.email = email;
     }
 
+    public boolean isPartTime() {
+        return isPartTime;
+    }
+
+    public void setPartTime(boolean partTime) {
+        isPartTime = partTime;
+    }
 
     public void addPlConfig(TeacherPlConfig cfg) {
         plConfigs.add(cfg);

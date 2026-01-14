@@ -7,9 +7,10 @@ interface Props {
     tabName: string;
     editMode: boolean;
     onEdit: (cfg: StudentConfigDto) => void;
+     refreshKey: number;
 }
 
-export default function StudentConfigTable({ tabName, editMode, onEdit }: Props) {
+export default function StudentConfigTable({ tabName, editMode, onEdit ,refreshKey}: Props) {
     const [configs, setConfigs] = useState<StudentConfigDto[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -18,7 +19,7 @@ export default function StudentConfigTable({ tabName, editMode, onEdit }: Props)
         StudentConfigService.getConfigsByYear(tabName)
             .then((data) => setConfigs(data))
             .finally(() => setLoading(false));
-    }, [tabName]);
+    }, [tabName,refreshKey]);
 
     const handleDelete = (id: number) => {
         StudentConfigService.deleteConfig(id).then(() => {

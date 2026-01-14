@@ -11,9 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -27,7 +25,6 @@ public class PlannedInternshipService {
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
-    private final AuditLogService auditLogService;
 
     /**
      * Get all planned internships for a specific school year.
@@ -54,9 +51,6 @@ public class PlannedInternshipService {
         PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
 
-        // Capture previous state
-        Map<String, Object> previousValues = capturePlannedInternshipState(internship);
-
         // Update teacher if provided
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
@@ -75,20 +69,7 @@ public class PlannedInternshipService {
             internship.setAssignedSchool(null);
         }
 
-        PlannedInternship saved = plannedInternshipRepository.save(internship);
-        
-        // Log the change
-        Map<String, Object> newValues = capturePlannedInternshipState(saved);
-        auditLogService.log(
-            "PlannedInternship",
-            id,
-            "UPDATE",
-            "Planned internship updated",
-            previousValues,
-            newValues
-        );
-        
-        return saved;
+        return plannedInternshipRepository.save(internship);
     }
 
     /**
@@ -97,22 +78,7 @@ public class PlannedInternshipService {
     @Transactional
     public void delete(Long id) {
         log.info("Deleting planned internship: {}", id);
-        
-        PlannedInternship internship = plannedInternshipRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
-        
-        Map<String, Object> deletedValues = capturePlannedInternshipState(internship);
         plannedInternshipRepository.deleteById(id);
-        
-        // Log the deletion
-        auditLogService.log(
-            "PlannedInternship",
-            id,
-            "DELETE",
-            "Planned internship deleted",
-            deletedValues,
-            null
-        );
     }
 
     /**
@@ -124,32 +90,4 @@ public class PlannedInternshipService {
         List<PlannedInternship> internships = plannedInternshipRepository.findBySchoolYear(schoolYear);
         plannedInternshipRepository.deleteAll(internships);
     }
-
-    /**
-     * Capture the current state of a planned internship for audit logging
-     */
-    private Map<String, Object> capturePlannedInternshipState(PlannedInternship internship) {
-        Map<String, Object> state = new HashMap<>();
-        state.put("id", internship.getId());
-        state.put("praktikumType", internship.getPraktikumType().name());
-        state.put("schoolType", internship.getSchoolType().name());
-        state.put("maxCapacity", internship.getMaxCapacity());
-        state.put("currentAssignments", internship.getCurrentAssignments());
-        if (internship.getAssignedTeacher() != null) {
-            state.put("teacherId", internship.getAssignedTeacher().getTeacherId());
-            state.put("teacherName", internship.getAssignedTeacher().getFirstName() + " " + internship.getAssignedTeacher().getLastName());
-        }
-        if (internship.getAssignedSchool() != null) {
-            state.put("schoolI  d", internship.getAssignedSchool().getId());
-            state.put("schoolName", internship.getAssignedSchool().getName());
-        }
-        if (internship.getCourse() != null) {
-            state.put("courseId", internship.getCourse().getId());
-            state.put("courseName", internship.getCourse().getName());
-        }
-        state.put("schoolYear", internship.getSchoolYear());
-        return state;
-    }
-
 }
-

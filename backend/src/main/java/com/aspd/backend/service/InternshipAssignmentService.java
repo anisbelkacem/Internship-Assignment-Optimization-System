@@ -1,8 +1,16 @@
 package com.aspd.backend.service;
 
+import com.aspd.backend.dto.InternshipAssignmentUpdateRequest;
 import com.aspd.backend.model.AssignmentStatus;
 import com.aspd.backend.model.InternshipAssignment;
+import com.aspd.backend.model.School;
+import com.aspd.backend.model.Teacher;
 import com.aspd.backend.repository.InternshipAssignmentRepository;
+import com.aspd.backend.repository.SchoolRepository;
+import com.aspd.backend.repository.TeacherRepository;
+import com.aspd.backend.validation.AssignmentValidationException;
+import com.aspd.backend.validation.InternshipAssignmentValidationService;
+import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +32,9 @@ public class InternshipAssignmentService {
     private final InternshipAssignmentRepository assignmentRepository;
     private final AuditLogService auditLogService;
     private final UserService userService;
+    private final TeacherRepository teacherRepository;
+    private final SchoolRepository schoolRepository;
+    private final InternshipAssignmentValidationService validationService;
 
     /**
      * Get all assignments for a specific school year.
@@ -211,6 +222,32 @@ public class InternshipAssignmentService {
         }
         state.put("schoolYear", assignment.getSchoolYear());
         return state;
+    }
+
+    @Transactional
+    public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req) {
+
+        ValidationResult vr = validationService.validateUpdate(id, req.getTeacherId(), req.getSchoolId());
+        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+
+        return assignmentRepository.findById(id).map(existing -> {
+
+            if (req.getStatus() != null) existing.setStatus(req.getStatus());
+
+            if (req.getTeacherId() != null) {
+                Teacher t = teacherRepository.findById(req.getTeacherId())
+                        .orElseThrow(() -> new RuntimeException("Teacher not found: " + req.getTeacherId()));
+                existing.setTeacher(t);
+            }
+
+            if (req.getSchoolId() != null) {
+                School s = schoolRepository.findById(req.getSchoolId())
+                        .orElseThrow(() -> new RuntimeException("School not found: " + req.getSchoolId()));
+                existing.setSchool(s);
+            }
+
+            return assignmentRepository.save(existing);
+        });
     }
 }
 

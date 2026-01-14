@@ -1,5 +1,6 @@
 package com.aspd.backend.common.exception;
 
+import com.aspd.backend.validation.AssignmentValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -70,4 +71,10 @@ public class GlobalExceptionHandler {
         body.put("error", "I/O error while reading Excel file: " + ex.getMessage());
         return ResponseEntity.badRequest().body(body);
     }
+
+    @ExceptionHandler(AssignmentValidationException.class)
+    public ResponseEntity<?> handleAssignmentValidation(AssignmentValidationException ex) {
+        return ResponseEntity.badRequest().body(ex.getResult());
+    }
+
 }
