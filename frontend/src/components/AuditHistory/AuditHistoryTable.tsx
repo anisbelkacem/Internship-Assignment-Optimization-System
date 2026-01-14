@@ -84,7 +84,9 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                 <td className="audit-user">
                                     {typeof log.createdBy === 'string' 
                                         ? log.createdBy 
-                                        : `${log.createdBy.firstName} ${log.createdBy.lastName}`}
+                                        : (log.createdBy as any)?.firstName && (log.createdBy as any)?.lastName
+                                            ? `${(log.createdBy as any).firstName} ${(log.createdBy as any).lastName}`
+                                            : 'Unknown'}
                                 </td>
                                 <td className="audit-description">{log.description}</td>
                                 <td className="audit-actions">
