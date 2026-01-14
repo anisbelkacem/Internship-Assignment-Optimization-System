@@ -82,7 +82,9 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                     </span>
                                 </td>
                                 <td className="audit-user">
-                                    {log.createdBy}
+                                    {typeof log.createdBy === 'string' 
+                                        ? log.createdBy 
+                                        : `${log.createdBy.firstName} ${log.createdBy.lastName}`}
                                 </td>
                                 <td className="audit-description">{log.description}</td>
                                 <td className="audit-actions">
@@ -99,8 +101,12 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                 </td>
                             </tr>
                             {expandedId === log.id && (log.previousValues || log.newValues) && (() => {
-                                const prevValues = log.previousValues ? JSON.parse(log.previousValues) : {};
-                                const newValues = log.newValues ? JSON.parse(log.newValues) : {};
+                                const prevValues = log.previousValues 
+                                    ? (typeof log.previousValues === 'string' ? JSON.parse(log.previousValues) : log.previousValues)
+                                    : {};
+                                const newValues = log.newValues 
+                                    ? (typeof log.newValues === 'string' ? JSON.parse(log.newValues) : log.newValues)
+                                    : {};
                                 const allKeys = new Set([...Object.keys(prevValues), ...Object.keys(newValues)]);
                                 return (
                                     <tr className="audit-details-row">
@@ -138,7 +144,9 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                                 </div>
                                             )}
                                             {log.newValues && !log.previousValues && (() => {
-                                                const newVals = JSON.parse(log.newValues);
+                                                const newVals = typeof log.newValues === 'string' 
+                                                    ? JSON.parse(log.newValues) 
+                                                    : log.newValues;
                                                 return (
                                                     <div className="created-data">
                                                         <h4>Created Data:</h4>
@@ -147,7 +155,9 @@ const AuditHistoryTable: React.FC<AuditHistoryTableProps> = ({ entityType, entit
                                                 );
                                             })()}
                                             {log.previousValues && !log.newValues && (() => {
-                                                const prevVals = JSON.parse(log.previousValues);
+                                                const prevVals = typeof log.previousValues === 'string' 
+                                                    ? JSON.parse(log.previousValues) 
+                                                    : log.previousValues;
                                                 return (
                                                     <div className="deleted-data">
                                                         <h4>Deleted Data:</h4>
