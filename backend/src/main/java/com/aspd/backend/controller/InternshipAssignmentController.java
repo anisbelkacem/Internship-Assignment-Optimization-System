@@ -5,7 +5,10 @@ import com.aspd.backend.mapper.AssignmentMapper;
 import com.aspd.backend.model.AssignmentStatus;
 import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.service.InternshipAssignmentService;
+import com.aspd.backend.util.AssignmentExcelExporter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -123,6 +127,44 @@ public class InternshipAssignmentController {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Export internship assignments to Excel file.
+     * Returns a complete Excel spreadsheet with all assignment details including embedded information
+     * (student names, teacher names, school names, etc.).
+     * 
+     * @param schoolYear optional school year to filter assignments
+     * @return Excel file as byte array with appropriate headers
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportAssignmentsToExcel(
+            @RequestParam(required = false) String schoolYear) {
+        
+        try {
+            List<InternshipAssignment> assignments;
+            if (schoolYear != null && !schoolYear.isEmpty()) {
+                assignments = assignmentService.getBySchoolYear(schoolYear);
+                log.info("Exporting {} assignments for school year: {}", assignments.size(), schoolYear);
+            } else {
+                assignments = assignmentService.getAllAssignments();
+                log.info("Exporting {} assignments (all years)", assignments.size());
+            }
+            
+            byte[] excelFile = AssignmentExcelExporter.exportAssignmentsToExcel(assignments);
+            
+            String filename = schoolYear != null && !schoolYear.isEmpty() 
+                    ? "assignments_" + schoolYear + ".xlsx"
+                    : "assignments_all.xlsx";
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.valueOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .body(excelFile);
+        } catch (IOException e) {
+            log.error("Error exporting assignments to Excel", e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

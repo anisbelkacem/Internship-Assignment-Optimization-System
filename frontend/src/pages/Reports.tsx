@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/Reports.css";
+import API_BASE_URL from '../config/api';
 
 type Status = "Assigned" | "Not Assigned" | "Completed";
 
@@ -32,6 +33,36 @@ export default function Reports() {
   const [internshipType, setInternshipType] = useState<string>("");
   const [zone, setZone] = useState<string>("");
   const [status, setStatus] = useState<string>("");
+
+  const handleExcelExport = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (semester) params.append("schoolYear", semester);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/api/internship-assignments/export?${params.toString()}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `assignments_${semester || "all"}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error exporting assignments:", error);
+    }
+  };
 
   const semesters = ["WiSe 24/25", "SoSe 24", "WiSe 23/24", "SoSe 23"];
   const districts = ["Passau", "Deggendorf", "Regen", "Freyung", "Landau"];
@@ -76,8 +107,8 @@ export default function Reports() {
         <div className="section-header">
           <h2>🔍 Filter & Export</h2>
           <div className="section-header-actions">
+            <button className="btn btn-ghost" onClick={handleExcelExport}>📊 Excel</button>
             <button className="btn btn-ghost">📄 PDF</button>
-            <button className="btn btn-ghost">📊 Excel</button>
             <button className="btn btn-primary">📬 Briefe</button>
             <button className="btn btn-secondary">📈 Historie</button>
           </div>
