@@ -56,8 +56,9 @@ public class Phase1Controller {
     // @PreAuthorize("hasAuthority('MANAGE_USERS')")  // Temporarily disabled for testing
     @PostMapping("/optimize")
     public ResponseEntity<TeacherAssignmentResult> optimize(
-            @RequestParam(name = "schoolYear") String schoolYear) {
-        log.info("Received Phase 1 optimization request for year: {}", schoolYear);
+            @RequestParam(name = "schoolYear") String schoolYear,
+            @RequestParam(name = "budget") Integer budget) {
+        log.info("Received Phase 1 optimization request for year: {} with budget: {}", schoolYear, budget);
 
         // Load data
         List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
@@ -78,7 +79,7 @@ public class Phase1Controller {
 
         // Run Phase 1 optimization
         InternshipSolution phase1Solution = phase1OptimizationService.optimize(
-                teachers, schools, studentConfigs, schoolYear, 25);
+                teachers, schools, studentConfigs, schoolYear, budget);
 
         // Save the planned internships to the database so Phase 2 can use them
         List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(

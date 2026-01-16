@@ -76,13 +76,12 @@ public class Phase1OptimizationService {
                 teachers, schools, courses, plannedInternships, schoolYear, timeBudget, zspDistribution);
         
         // Remove inactive internships (solver decided we don't need them)
-        // List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
-        //         .filter(PlannedInternship::isActive)
-        //         .toList();
+        List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
+                .filter(PlannedInternship::isActive)
+                .toList();
         
         // Save only active internships to database
-        // List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(activeInternships);
-        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(phase1Result.getPlannedInternships());
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(activeInternships);
         
         phase1Result.setPlannedInternships(savedInternships);
         
