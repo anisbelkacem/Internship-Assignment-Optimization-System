@@ -1,6 +1,7 @@
 package com.aspd.backend.solver;
 import com.aspd.backend.model.Course;
 import com.aspd.backend.model.InternshipBudget;
+import com.aspd.backend.model.InternshipTypeRequirement;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.PraktikumType;
 import com.aspd.backend.model.SchoolType;
@@ -97,102 +98,74 @@ public class InternshipConstraintProvider implements ConstraintProvider {
 
     /**
      * HARD: At least half of PDP_I slots per school type must be active.
-     * Since PDP_I slots hold up to 2 students, activating half the slots preserves capacity.
+     * Uses pre-calculated requirements to avoid groupBy caching issues.
      */
     Constraint ensureMinimumPdpIActivatedPerSchoolType(ConstraintFactory constraintFactory) {
-        return constraintFactory.forEach(PlannedInternship.class)
-                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I)
-                .groupBy(PlannedInternship::getSchoolType,
-                        ConstraintCollectors.count(),
-                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
-                .filter((schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 2.0);
-                    boolean violation = active < required;
-                    if (violation) {
-                        System.out.println("[DEBUG] PDP_I " + schoolType + ": " + active + "/" + total + " active, required: " + required);
-                    }
-                    return violation;
-                })
-                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 2.0);
-                    return Math.max(0, required - active) * 200;
-                })
+        return constraintFactory.forEach(InternshipTypeRequirement.class)
+                .filter(req -> req.getType() == PraktikumType.PDP_I)
+                .join(constraintFactory.forEach(PlannedInternship.class)
+                        .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I),
+                        Joiners.equal(req -> req.getSchoolType(), PlannedInternship::getSchoolType))
+                .groupBy((req, internships) -> req,
+                        ConstraintCollectors.countDistinct((req, i) -> i.isActive() ? i : null))
+                .filter((req, activeCount) -> activeCount < req.getRequiredActive())
+                .penalize(HardSoftScore.ONE_HARD, (req, activeCount) -> 
+                        Math.max(0, req.getRequiredActive() - activeCount.intValue()) * 200)
                 .asConstraint("ensureMinimumPdpIActivatedPerSchoolType");
     }
 
     /**
      * HARD: At least half of PDP_II slots per school type must be active.
-     * PDP_II slots also carry up to 2 students, so half the slots cover full demand.
+     * Uses pre-calculated requirements to avoid groupBy caching issues.
      */
     Constraint ensureMinimumPdpIIActivatedPerSchoolType(ConstraintFactory constraintFactory) {
-        return constraintFactory.forEach(PlannedInternship.class)
-                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_II)
-                .groupBy(PlannedInternship::getSchoolType,
-                        ConstraintCollectors.count(),
-                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
-                .filter((schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 2.0);
-                    boolean violation = active < required;
-                    if (violation) {
-                        System.out.println("[DEBUG] PDP_II " + schoolType + ": " + active + "/" + total + " active, required: " + required);
-                    }
-                    return violation;
-                })
-                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 2.0);
-                    return Math.max(0, required - active) * 200;
-                })
+        return constraintFactory.forEach(InternshipTypeRequirement.class)
+                .filter(req -> req.getType() == PraktikumType.PDP_II)
+                .join(constraintFactory.forEach(PlannedInternship.class)
+                        .filter(i -> i.getPraktikumType() == PraktikumType.PDP_II),
+                        Joiners.equal(req -> req.getSchoolType(), PlannedInternship::getSchoolType))
+                .groupBy((req, internships) -> req,
+                        ConstraintCollectors.countDistinct((req, i) -> i.isActive() ? i : null))
+                .filter((req, activeCount) -> activeCount < req.getRequiredActive())
+                .penalize(HardSoftScore.ONE_HARD, (req, activeCount) -> 
+                        Math.max(0, req.getRequiredActive() - activeCount.intValue()) * 200)
                 .asConstraint("ensureMinimumPdpIIActivatedPerSchoolType");
     }
 
     /**
      * HARD: At least a quarter of ZSP slots per school type must be active.
-     * ZSP slots hold up to 4 students; activating a quarter preserves capacity coverage.
+     * Uses pre-calculated requirements to avoid groupBy caching issues.
      */
     Constraint ensureMinimumZspActivatedPerSchoolType(ConstraintFactory constraintFactory) {
-        return constraintFactory.forEach(PlannedInternship.class)
-                .filter(i -> i.getPraktikumType() == PraktikumType.ZSP)
-                .groupBy(PlannedInternship::getSchoolType,
-                        ConstraintCollectors.count(),
-                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
-                .filter((schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 4.0);
-                    boolean violation = active < required;
-                    if (violation) {
-                        System.out.println("[DEBUG] ZSP " + schoolType + ": " + active + "/" + total + " active, required: " + required);
-                    }
-                    return violation;
-                })
-                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 4.0);
-                    return Math.max(0, required - active) * 200;
-                })
+        return constraintFactory.forEach(InternshipTypeRequirement.class)
+                .filter(req -> req.getType() == PraktikumType.ZSP)
+                .join(constraintFactory.forEach(PlannedInternship.class)
+                        .filter(i -> i.getPraktikumType() == PraktikumType.ZSP),
+                        Joiners.equal(req -> req.getSchoolType(), PlannedInternship::getSchoolType))
+                .groupBy((req, internships) -> req,
+                        ConstraintCollectors.countDistinct((req, i) -> i.isActive() ? i : null))
+                .filter((req, activeCount) -> activeCount < req.getRequiredActive())
+                .penalize(HardSoftScore.ONE_HARD, (req, activeCount) -> 
+                        Math.max(0, req.getRequiredActive() - activeCount.intValue()) * 200)
                 .asConstraint("ensureMinimumZspActivatedPerSchoolType");
     }
 
     /**
      * HARD: At least a quarter of SFP slots per (school type, course) must be active.
-     * SFP slots hold up to 4 students; activating a quarter preserves capacity coverage.
+     * Uses pre-calculated requirements to avoid groupBy caching issues.
      */
     Constraint ensureMinimumSfpActivatedPerSchoolCourse(ConstraintFactory constraintFactory) {
-        return constraintFactory.forEach(PlannedInternship.class)
-                .filter(i -> i.getPraktikumType() == PraktikumType.SFP && i.getCourse() != null)
-                .groupBy(PlannedInternship::getSchoolType,
-                        PlannedInternship::getCourse,
-                        ConstraintCollectors.count(),
-                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
-                .filter((schoolType, course, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 4.0);
-                    boolean violation = active < required;
-                    if (violation) {
-                        System.out.println("[DEBUG] SFP " + schoolType + " " + course + ": " + active + "/" + total + " active, required: " + required);
-                    }
-                    return violation;
-                })
-                .penalize(HardSoftScore.ONE_HARD, (schoolType, course, total, active) -> {
-                    int required = (int) Math.ceil(total.intValue() / 4.0);
-                    return Math.max(0, required - active) * 200;
-                })
+        return constraintFactory.forEach(InternshipTypeRequirement.class)
+                .filter(req -> req.getType() == PraktikumType.SFP && req.getCourse() != null)
+                .join(constraintFactory.forEach(PlannedInternship.class)
+                        .filter(i -> i.getPraktikumType() == PraktikumType.SFP && i.getCourse() != null),
+                        Joiners.equal(req -> req.getSchoolType(), PlannedInternship::getSchoolType),
+                        Joiners.equal(req -> req.getCourse(), PlannedInternship::getCourse))
+                .groupBy((req, internships) -> req,
+                        ConstraintCollectors.countDistinct((req, i) -> i.isActive() ? i : null))
+                .filter((req, activeCount) -> activeCount < req.getRequiredActive())
+                .penalize(HardSoftScore.ONE_HARD, (req, activeCount) -> 
+                        Math.max(0, req.getRequiredActive() - activeCount.intValue()) * 200)
                 .asConstraint("ensureMinimumSfpActivatedPerSchoolCourse");
     }
 

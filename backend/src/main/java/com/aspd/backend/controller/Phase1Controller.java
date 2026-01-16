@@ -78,7 +78,7 @@ public class Phase1Controller {
 
         // Run Phase 1 optimization
         InternshipSolution phase1Solution = phase1OptimizationService.optimize(
-                teachers, schools, studentConfigs, schoolYear, 24);
+                teachers, schools, studentConfigs, schoolYear, 25);
 
         // Save the planned internships to the database so Phase 2 can use them
         List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(

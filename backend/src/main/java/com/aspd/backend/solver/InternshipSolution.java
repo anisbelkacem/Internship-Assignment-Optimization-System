@@ -31,6 +31,14 @@ public class InternshipSolution {
     @ProblemFactCollectionProperty
     private List<Teacher> availableTeachers;
 
+    /**
+     * All courses available for ZSP assignment.
+     * OptaPlanner will select appropriate courses for ZSP internships.
+     */
+    @ValueRangeProvider(id = "courseRange")
+    @ProblemFactCollectionProperty
+    private List<Course> availableCourses;
+
     // School is derived from the assigned teacher; no explicit school range needed.
     /**
      * Boolean range for active/inactive decision.
@@ -65,4 +73,7 @@ public class InternshipSolution {
     
     @ProblemFactProperty
     private ZspCourseDistribution zspCourseDistribution; // Weighted ZSP course preferences
+    
+    @ProblemFactCollectionProperty
+    private List<InternshipTypeRequirement> typeRequirements; // Pre-calculated minimum activation requirements
 }

@@ -59,9 +59,27 @@ public class PlannedInternship {
     @Column(nullable = false)
     private SchoolType schoolType; // GRUNDSCHULE or MITTELSCHULE
 
+    /**
+     * The course/subject for this internship.
+     * - For SFP: Fixed (set from student's main course - must not change)
+     * - For ZSP: Planning variable (OptaPlanner decides which course)
+     * - For PDP_I/PDP_II: null (no course requirement)
+     */
+    @PlanningVariable(
+            valueRangeProviderRefs = "courseRange",
+            nullable = true
+    )
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "course_id")
-    private Course course; // Required for ZSP/SFP, null for PDP_I/PDP_II
+    private Course course;
+
+    /**
+     * Original course value for SFP internships (to ensure they don't change).
+     * For ZSP and PDP, this is null.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "original_course_id")
+    private Course originalCourse;
 
     @Column(name = "school_year", nullable = false)
     private String schoolYear; // e.g., "2025"

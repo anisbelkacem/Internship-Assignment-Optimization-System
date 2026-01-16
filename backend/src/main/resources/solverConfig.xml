@@ -9,7 +9,7 @@
     <entityClass>com.aspd.backend.model.PlannedInternship</entityClass>
 
     <scoreDirectorFactory>
-        <constraintProviderClass>com.aspd.backend.solver.InternshipConstraintProvider</constraintProviderClass>
+        <easyScoreCalculatorClass>com.aspd.backend.solver.InternshipEasyScoreCalculator</easyScoreCalculatorClass>
     </scoreDirectorFactory>
 
     <termination>
