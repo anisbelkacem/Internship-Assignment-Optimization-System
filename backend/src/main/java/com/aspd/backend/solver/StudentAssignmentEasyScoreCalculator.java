@@ -87,7 +87,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         
         // 3. For ZSP/SFP, must have teacher and school
         if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
-            if (internship.getAssignedTeacher() == null || internship.getAssignedSchool() == null) {
+            if (internship.getAssignedTeacher() == null || internship.getSchool() == null) {
                 penalty -= 100;
             }
         }
@@ -152,11 +152,11 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
     }
 
     private int evaluateDistancePenalty(StudentInternshipDemand demand, PlannedInternship internship) {
-        if (demand.getStudentAddress() == null || internship.getAssignedSchool() == null) {
+        if (demand.getStudentAddress() == null || internship.getSchool() == null) {
             return 0;
         }
         
-        String zone = internship.getAssignedSchool().getZone();
+        String zone = internship.getSchool().getZone();
         if ("3".equals(zone)) {
             return -30;
         }

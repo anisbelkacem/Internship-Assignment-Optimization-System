@@ -1,14 +1,14 @@
 package com.aspd.backend.solver;
-
 import com.aspd.backend.model.Course;
+import com.aspd.backend.model.InternshipBudget;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.PraktikumType;
+import com.aspd.backend.model.SchoolType;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.model.TeacherPlConfig;
+import com.aspd.backend.model.ZspCourseDistribution;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.score.stream.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.aspd.backend.common.constants.InternshipConstants.*;
 
@@ -23,30 +23,177 @@ import static com.aspd.backend.common.constants.InternshipConstants.*;
  * - Output: Each PlannedInternship has an assigned Teacher and School
  */
 public class InternshipConstraintProvider implements ConstraintProvider {
-    
-    private static final Logger log = LoggerFactory.getLogger(InternshipConstraintProvider.class);
 
     @Override
     public Constraint[] defineConstraints(ConstraintFactory constraintFactory) {
         return new Constraint[]{
-                // HARD CONSTRAINTS - Teacher Assignment Rules
+            // HARD CONSTRAINTS - Internship Activation & Budget
+            respectTotalInternshipBudget(constraintFactory),
+
+                // HARD CONSTRAINTS - Minimum activation by type
+                ensureMinimumPdpIActivatedPerSchoolType(constraintFactory),
+                ensureMinimumPdpIIActivatedPerSchoolType(constraintFactory),
+                ensureMinimumZspActivatedPerSchoolType(constraintFactory),
+                ensureMinimumSfpActivatedPerSchoolCourse(constraintFactory),
+
+                // HARD CONSTRAINTS - Teacher Assignment Rules (only for active internships)
                 teacherCanOnlyTake_0_1_2_or_4_Internships(constraintFactory),
                 teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes(constraintFactory),
                 teacherMustSupportPraktikumType(constraintFactory),
                 teacherMustMatchCourseForZspAndSfp(constraintFactory),
-
+        
+            // school type must match
+                schoolTypeMustMatch(constraintFactory),
+                                
+                // teacher must be assigned (only if active)
+                teacherMustBeAssigned(constraintFactory),
                 // HARD CONSTRAINTS - School and Zone Rules
                 internshipsMustBeInAcceptableZones(constraintFactory),
 
                 // SOFT CONSTRAINTS - Basic Assignment
-                rewardTeacherAssignment(constraintFactory),
+                //rewardTeacherAssignment(constraintFactory),
 
                 // SOFT CONSTRAINTS - Workload Optimization
                 preferTeachersWithExactly2Internships(constraintFactory),
 
                 // SOFT CONSTRAINTS - Diversity
                 preferDiverseInternshipTypesPerSchool(constraintFactory),
+                
+                // SOFT CONSTRAINTS - ZSP Course Preferences
+                alignZspCourseDistributionWithPreferences(constraintFactory),
         };
+    }
+
+    // ================================================================================
+    // HARD CONSTRAINTS - Internship Activation & Budget
+    // ================================================================================
+
+    // ================================================================================
+    // HARD CONSTRAINTS - Internship Activation & Budget
+    // ================================================================================
+
+    /**
+     * HARD: Total active internships must equal the budget.
+     *
+     * The solver must activate exactly budget.maxActiveInternships slots.
+     * More or fewer activations are penalized proportionally.
+     * 
+     * This aggregates the active count FIRST, then joins with budget to ensure
+     * the penalty is applied exactly once, not multiplied by each match.
+     */
+    Constraint respectTotalInternshipBudget(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .groupBy(ConstraintCollectors.sum(pi -> pi.isActive() ? 1 : 0))
+                .join(InternshipBudget.class)
+                .filter((activeCount, budget) -> activeCount != budget.getMaxActiveInternships())
+                .penalize(HardSoftScore.ONE_HARD, (activeCount, budget) -> {
+                    int deviation = Math.abs(activeCount - budget.getMaxActiveInternships());
+                    return deviation * 1000;
+                })
+                .asConstraint("respectTotalInternshipBudget");
+    }
+
+
+
+    /**
+     * HARD: At least half of PDP_I slots per school type must be active.
+     * Since PDP_I slots hold up to 2 students, activating half the slots preserves capacity.
+     */
+    Constraint ensureMinimumPdpIActivatedPerSchoolType(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I)
+                .groupBy(PlannedInternship::getSchoolType,
+                        ConstraintCollectors.count(),
+                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
+                .filter((schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 2.0);
+                    boolean violation = active < required;
+                    if (violation) {
+                        System.out.println("[DEBUG] PDP_I " + schoolType + ": " + active + "/" + total + " active, required: " + required);
+                    }
+                    return violation;
+                })
+                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 2.0);
+                    return Math.max(0, required - active) * 200;
+                })
+                .asConstraint("ensureMinimumPdpIActivatedPerSchoolType");
+    }
+
+    /**
+     * HARD: At least half of PDP_II slots per school type must be active.
+     * PDP_II slots also carry up to 2 students, so half the slots cover full demand.
+     */
+    Constraint ensureMinimumPdpIIActivatedPerSchoolType(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_II)
+                .groupBy(PlannedInternship::getSchoolType,
+                        ConstraintCollectors.count(),
+                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
+                .filter((schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 2.0);
+                    boolean violation = active < required;
+                    if (violation) {
+                        System.out.println("[DEBUG] PDP_II " + schoolType + ": " + active + "/" + total + " active, required: " + required);
+                    }
+                    return violation;
+                })
+                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 2.0);
+                    return Math.max(0, required - active) * 200;
+                })
+                .asConstraint("ensureMinimumPdpIIActivatedPerSchoolType");
+    }
+
+    /**
+     * HARD: At least a quarter of ZSP slots per school type must be active.
+     * ZSP slots hold up to 4 students; activating a quarter preserves capacity coverage.
+     */
+    Constraint ensureMinimumZspActivatedPerSchoolType(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(i -> i.getPraktikumType() == PraktikumType.ZSP)
+                .groupBy(PlannedInternship::getSchoolType,
+                        ConstraintCollectors.count(),
+                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
+                .filter((schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 4.0);
+                    boolean violation = active < required;
+                    if (violation) {
+                        System.out.println("[DEBUG] ZSP " + schoolType + ": " + active + "/" + total + " active, required: " + required);
+                    }
+                    return violation;
+                })
+                .penalize(HardSoftScore.ONE_HARD, (schoolType, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 4.0);
+                    return Math.max(0, required - active) * 200;
+                })
+                .asConstraint("ensureMinimumZspActivatedPerSchoolType");
+    }
+
+    /**
+     * HARD: At least a quarter of SFP slots per (school type, course) must be active.
+     * SFP slots hold up to 4 students; activating a quarter preserves capacity coverage.
+     */
+    Constraint ensureMinimumSfpActivatedPerSchoolCourse(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(i -> i.getPraktikumType() == PraktikumType.SFP && i.getCourse() != null)
+                .groupBy(PlannedInternship::getSchoolType,
+                        PlannedInternship::getCourse,
+                        ConstraintCollectors.count(),
+                        ConstraintCollectors.sum(i -> i.isActive() ? 1 : 0))
+                .filter((schoolType, course, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 4.0);
+                    boolean violation = active < required;
+                    if (violation) {
+                        System.out.println("[DEBUG] SFP " + schoolType + " " + course + ": " + active + "/" + total + " active, required: " + required);
+                    }
+                    return violation;
+                })
+                .penalize(HardSoftScore.ONE_HARD, (schoolType, course, total, active) -> {
+                    int required = (int) Math.ceil(total.intValue() / 4.0);
+                    return Math.max(0, required - active) * 200;
+                })
+                .asConstraint("ensureMinimumSfpActivatedPerSchoolCourse");
     }
 
     // ================================================================================
@@ -58,10 +205,11 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      *
      * This constraint enforces valid workload distribution. Teachers cannot
      * take exactly 3 internships or more than 4 internships.
+     * Only counts ACTIVE internships.
      */
     Constraint teacherCanOnlyTake_0_1_2_or_4_Internships(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
                 .groupBy(PlannedInternship::getAssignedTeacher, ConstraintCollectors.count())
                 .filter((teacher, count) -> count == 3 || count > 4)
                 .penalize(HardSoftScore.ONE_HARD, (teacher, count) -> count.intValue())
@@ -76,7 +224,7 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
                 .groupBy(PlannedInternship::getAssignedTeacher, 
                          ConstraintCollectors.toList())
                 .filter((teacher, internships) -> {
@@ -107,7 +255,7 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint teacherMustSupportPraktikumType(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
                 .filter(internship -> {
                     Teacher teacher = internship.getAssignedTeacher();
                     String schoolYear = internship.getSchoolYear();
@@ -120,76 +268,84 @@ public class InternshipConstraintProvider implements ConstraintProvider {
                             .orElse(null);
                     
                     if (config == null) {
-                        log.warn("CONSTRAINT VIOLATION: Teacher {} has no config for year {}", 
-                                teacher.getTeacherId(), schoolYear);
                         return true; // No config = violates constraint
                     }
                     
                     // Check if teacher's preferences include this type
-                    boolean violation = !config.getInternshipPreferences().contains(type);
-                    if (violation) {
-                        log.warn("CONSTRAINT VIOLATION: Teacher {} does not support {} (preferences: {})",
-                                teacher.getTeacherId(), type, config.getInternshipPreferences());
-                    }
-                    return violation;
+                    return !config.getInternshipPreferences().contains(type);
                 })
                 .penalize(HardSoftScore.ONE_HARD)
                 .asConstraint("teacherMustSupportPraktikumType");
     }
 
     /**
-     * HARD: For ZSP and SFP, teacher must match the course requirement.
+     * HARD: For SFP, teacher must match the course requirement.
      *
-     * Teachers may only supervise ZSP/SFP internships in subjects from:
+     * Teachers may only supervise SFP internships in subjects from:
      * - Their main subject (Teacher.mainSubject), OR
      * - Their subject specializations (TeacherPlConfig.subjectSpecializations)
      *
+     * Note: ZSP course matching is now handled via soft constraints using weighted preference distribution.
      * This does not apply to PDP_I and PDP_II internships.
      */
     Constraint teacherMustMatchCourseForZspAndSfp(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
-                .filter(internship -> internship.getCourse() != null) // Only ZSP/SFP have courses (PDP has null)
-                .filter(internship -> {
-                    PraktikumType type = internship.getPraktikumType();
-                    return type == PraktikumType.ZSP || type == PraktikumType.SFP;
-                })
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.getCourse() != null) // Only SFP has course set
+                .filter(internship -> internship.getPraktikumType() == PraktikumType.SFP)
                 .filter(internship -> {
                     Teacher teacher = internship.getAssignedTeacher();
                     Course requiredCourse = internship.getCourse();
                     String schoolYear = internship.getSchoolYear();
-                    
+
                     // Check if main subject matches
                     if (teacher.getMainSubject() == requiredCourse) {
                         return false; // No violation
                     }
-                    
+
                     // Check if any specialization matches
                     TeacherPlConfig config = teacher.getPlConfigs().stream()
                             .filter(c -> c.getSchoolYear().equals(schoolYear))
                             .findFirst()
                             .orElse(null);
-                    
-                    if (config != null && config.getSubjectSpecializations().contains(requiredCourse)) {
-                        return false; // No violation
-                    }
-                    
-                    log.warn("CONSTRAINT VIOLATION: Teacher {} (main: {}, specs: {}) doesn't match course {} for {}",
-                            teacher.getTeacherId(), teacher.getMainSubject(), 
-                            config != null ? config.getSubjectSpecializations() : "no config",
-                            requiredCourse, internship.getPraktikumType());
-                    return true; // Violation: teacher doesn't match course
+
+                    return config == null || !config.getSubjectSpecializations().contains(requiredCourse);
                 })
                 .penalize(HardSoftScore.ONE_HARD)
-                .asConstraint("teacherMustMatchCourseForZspAndSfp");
+                .asConstraint("teacherMustMatchCourseForSfp");
     }
 
+    // Teacher belongs to exactly one school; school is derived from teacher, so no constraint needed.
+
+    /**
+     * HARD: Active internships must have a teacher assigned.
+     * Inactive internships are not subject to this constraint.
+    */
+    Constraint teacherMustBeAssigned(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() == null)
+                .penalize(HardSoftScore.ONE_HARD)
+                .asConstraint("teacher must be assigned");
+    }
+
+    
     // ================================================================================
     // HARD CONSTRAINTS - School and Zone Rules
     // ================================================================================
-
+    /**
+     * HARD: School type must match.
+     * Only applies to active internships.
+    */
+    Constraint schoolTypeMustMatch(ConstraintFactory constraintFactory) {
+        return constraintFactory
+            .forEach(PlannedInternship.class)
+            .filter(internship -> internship.isActive() && internship.getSchool() != null && internship.getSchool().getType() != internship.getSchoolType())
+            .penalize(HardSoftScore.ONE_HARD)
+            .asConstraint("School type must match");
+    }
     /**
      * HARD: Internships must be located in acceptable geographic zones.
+     * Only applies to active internships.
      *
      * Zone requirements by praktikum type:
      * - ZSP / SFP:
@@ -203,11 +359,11 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint internshipsMustBeInAcceptableZones(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedSchool() != null)
+            .filter(internship -> internship.isActive() && internship.getSchool() != null)
                 .filter(internship -> {
                     PraktikumType type = internship.getPraktikumType();
-                    String zone = internship.getAssignedSchool().getZone();
-                    Boolean hasOepnv = internship.getAssignedSchool().getOepnv();
+                String zone = internship.getSchool().getZone();
+                Boolean hasOepnv = internship.getSchool().getOepnv();
                     
                     if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
                         // Zone 1 is OK
@@ -247,7 +403,7 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint rewardTeacherAssignment(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
                 .reward(HardSoftScore.ONE_SOFT, internship -> 100)
                 .asConstraint("rewardTeacherAssignment");
     }
@@ -264,7 +420,7 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint preferTeachersWithExactly2Internships(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedTeacher() != null)
+                .filter(internship -> internship.isActive() && internship.getAssignedTeacher() != null)
                 .groupBy(PlannedInternship::getAssignedTeacher, ConstraintCollectors.count())
                 .filter((teacher, count) -> count == IDEAL_TEACHER_INTERNSHIPS)
                 .reward(HardSoftScore.ONE_SOFT, (teacher, count) -> 10) // Bonus points
@@ -273,6 +429,7 @@ public class InternshipConstraintProvider implements ConstraintProvider {
 
     /**
      * SOFT: Prefer diverse internship types within the same school.
+     * Only counts active internships.
      *
      * If multiple teachers are assigned to the same school:
      * - Homogeneous types are penalized (e.g., 5 × ZSP in same school = low score)
@@ -280,12 +437,59 @@ public class InternshipConstraintProvider implements ConstraintProvider {
      */
     Constraint preferDiverseInternshipTypesPerSchool(ConstraintFactory constraintFactory) {
         return constraintFactory.forEach(PlannedInternship.class)
-                .filter(internship -> internship.getAssignedSchool() != null)
-                .groupBy(PlannedInternship::getAssignedSchool,
+            .filter(internship -> internship.isActive() && internship.getSchool() != null)
+            .groupBy(PlannedInternship::getSchool,
                          PlannedInternship::getPraktikumType,
                          ConstraintCollectors.count())
                 .filter((school, type, count) -> count > 1)
                 .penalize(HardSoftScore.ONE_SOFT, (school, type, count) -> (count.intValue() - 1) * 2)
                 .asConstraint("preferDiverseInternshipTypesPerSchool");
+    }
+
+    // ================================================================================
+    // SOFT CONSTRAINTS - ZSP Course Preferences
+    // ================================================================================
+
+    /**
+     * SOFT: Align ZSP course distribution with student preferences.
+     *
+     * For each active ZSP internship with an assigned teacher, we tally the courses
+     * by school type (GS/MS) and compare against the weighted preference distribution.
+     * 
+     * The constraint measures the distance between:
+     * - Actual: Count of active ZSP internships per course
+     * - Desired: Weighted preference sum from student configs (main=0.5, pref1=0.3, etc.)
+     * 
+     * Note: Multiple students may be assigned to the same internship slot, so actual
+     * counts may be lower than preference weights. This is an approximation.
+     */
+    Constraint alignZspCourseDistributionWithPreferences(ConstraintFactory constraintFactory) {
+        return constraintFactory.forEach(PlannedInternship.class)
+                .filter(internship -> internship.isActive() 
+                        && internship.getPraktikumType() == PraktikumType.ZSP
+                        && internship.getAssignedTeacher() != null)
+                .groupBy(PlannedInternship::getSchoolType,
+                         internship -> internship.getAssignedTeacher().getMainSubject(),
+                         ConstraintCollectors.count())
+                .join(ZspCourseDistribution.class)
+                .penalize(HardSoftScore.ONE_SOFT, (schoolType, course, actualCount, distribution) -> {
+                    if (course == null) {
+                        return 0; // No penalty if teacher has no main subject
+                    }
+                    
+                    // Get the desired weight from the appropriate distribution map
+                    double desiredWeight;
+                    if (schoolType == SchoolType.GS) {
+                        desiredWeight = distribution.getGsDistribution().getOrDefault(course, 0.0);
+                    } else {
+                        desiredWeight = distribution.getMsDistribution().getOrDefault(course, 0.0);
+                    }
+                    
+                    // Calculate distance: |actual - desired|
+                    // Scale by 10 to make the penalty more significant
+                    double distance = Math.abs(actualCount.intValue() - desiredWeight);
+                    return (int) Math.round(distance * 10);
+                })
+                .asConstraint("alignZspCourseDistributionWithPreferences");
     }
 }

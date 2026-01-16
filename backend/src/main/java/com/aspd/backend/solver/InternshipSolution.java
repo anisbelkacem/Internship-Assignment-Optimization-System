@@ -5,10 +5,12 @@ import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty
 import org.optaplanner.core.api.domain.solution.PlanningScore;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
 import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
+import org.optaplanner.core.api.domain.solution.ProblemFactProperty;
 import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import lombok.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @PlanningSolution
@@ -29,13 +31,14 @@ public class InternshipSolution {
     @ProblemFactCollectionProperty
     private List<Teacher> availableTeachers;
 
+    // School is derived from the assigned teacher; no explicit school range needed.
     /**
-     * All schools that can host internships.
-     * Each school has a type (GS/MS) and geographic zone.
+     * Boolean range for active/inactive decision.
      */
-    @ValueRangeProvider(id = "schoolRange")
-    @ProblemFactCollectionProperty
-    private List<School> availableSchools;
+    @ValueRangeProvider(id = "booleanRange")
+    public List<Boolean> getBooleanRange() {
+        return Arrays.asList(true, false);
+    }
 
     // PLANNING ENTITIES TO OPTIMIZE
     
@@ -54,5 +57,12 @@ public class InternshipSolution {
     // METADATA
     private String schoolYear; // e.g., "2025"
     
-    private Integer timeBudget; // Total hours available (e.g., 210)
+    @ProblemFactProperty
+    private Integer timeBudget; // Total active internship slots budget (e.g., 25)
+    
+    @ProblemFactProperty
+    private InternshipBudget budget; // Budget wrapper for constraint access
+    
+    @ProblemFactProperty
+    private ZspCourseDistribution zspCourseDistribution; // Weighted ZSP course preferences
 }

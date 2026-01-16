@@ -11,7 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.aspd.backend.common.constants.InternshipConstants.*;
 
@@ -28,12 +30,17 @@ public class Phase1OptimizationService {
     /**
      * Run Phase 1: Teacher and School assignment.
      * 
+     * This phase:
+     * 1. Creates upper bounds for internship slots (max needed for each type)
+     * 2. Lets the solver decide which slots to activate
+     * 3. Assigns teachers and schools to active slots
+     * 
      * @param teachers Available teachers with their configurations
      * @param schools Available schools
      * @param studentConfigs Student configurations (to determine demand)
      * @param schoolYear Academic year (e.g., "2024/2025")
-     * @param timeBudget Total hours budget (optional, for validation)
-     * @return Phase 1 solution with teacher and school assignments
+     * @param timeBudget Total internship slots budget (e.g., 50 slots max)
+     * @return Phase 1 solution with active internship assignments
      */
     @Transactional
     public InternshipSolution optimize(
@@ -44,53 +51,56 @@ public class Phase1OptimizationService {
             Integer timeBudget) {
         
         log.info("\n========== PHASE 1: Teacher & School Assignment ==========");
-        log.info("Input: {} teachers, {} schools, {} students\n", 
+        log.info("Input: {} teachers, {} schools, {} students", 
                  teachers.size(), schools.size(), studentConfigs.size());
+        log.info("[BUDGET CHECK] Received timeBudget parameter: {}", timeBudget);
+        log.info("Total internship slots budget: {}\n", timeBudget);
         
-        // Create planned internship slots based on student demand
+        // Create internship slots (one per student per checked type)
         List<PlannedInternship> plannedInternships = createPlannedInternshipsFromDemand(
                 studentConfigs, schoolYear);
         
-        log.info("Created {} planned internship slots\n", plannedInternships.size());
+        // Build ZSP course distribution maps from student preferences
+        ZspCourseDistribution zspDistribution = buildZspCourseDistribution(studentConfigs);
+        
+        log.info("Created {} internship slots\n", plannedInternships.size());
         
         // Run Phase 1
         InternshipSolution phase1Result = runPhase1(
-                teachers, schools, plannedInternships, schoolYear, timeBudget);
+                teachers, schools, plannedInternships, schoolYear, timeBudget, zspDistribution);
         
-        // Save PlannedInternships to database
-        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(
-                phase1Result.getPlannedInternships());
+        // Remove inactive internships (solver decided we don't need them)
+        // List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
+        //         .filter(PlannedInternship::isActive)
+        //         .toList();
+        
+        // Save only active internships to database
+        // List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(activeInternships);
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(phase1Result.getPlannedInternships());
         
         phase1Result.setPlannedInternships(savedInternships);
         
-        long assignedCount = savedInternships.stream()
-                .filter(i -> i.getAssignedTeacher() != null)
+        long activeCount = savedInternships.stream()
+                .filter(PlannedInternship::isActive)
                 .count();
         
         log.info("========== PHASE 1 COMPLETE ==========");
-        log.info("Assigned: {}/{}", assignedCount, savedInternships.size());
+        log.info("Active internships: {}/{}", activeCount, savedInternships.size());
         log.info("Score: {}\n", phase1Result.getScore());
         
         return phase1Result;
     }
 
     /**
-     * PHASE 1: Assign teachers and schools to planned internships.
+     * PHASE 1: Activate internship slots and assign teachers/schools.
      */
     private InternshipSolution runPhase1(
             List<Teacher> teachers,
             List<School> schools,
             List<PlannedInternship> plannedInternships,
             String schoolYear,
-            Integer timeBudget) {
-        
-        log.info("Running Phase 1: Teacher-to-Internship Assignment");
-        log.info("Available schools: {}", schools.size());
-        schools.forEach(school -> {
-            log.info("  - School {} ({}) Zone {} [{}]", 
-                    school.getId(), school.getName(), school.getZone(), school.getType());
-        });
-        log.info("Planned internships to assign: {}", plannedInternships.size());
+            Integer timeBudget,
+            ZspCourseDistribution zspDistribution) {
         
         // Create solver for Phase 1
         SolverFactory<InternshipSolution> solverFactory = 
@@ -100,116 +110,121 @@ public class Phase1OptimizationService {
         // Prepare problem
         InternshipSolution unsolvedProblem = new InternshipSolution();
         unsolvedProblem.setAvailableTeachers(teachers);
-        unsolvedProblem.setAvailableSchools(schools);
         unsolvedProblem.setPlannedInternships(plannedInternships);
         unsolvedProblem.setSchoolYear(schoolYear);
         unsolvedProblem.setTimeBudget(timeBudget);
+        unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
+        unsolvedProblem.setZspCourseDistribution(zspDistribution);
         
         // Solve
         InternshipSolution solution = solver.solve(unsolvedProblem);
-        
-        log.info("Phase 1 - Best score: {}", solution.getScore());
-        long assignedCount = solution.getPlannedInternships().stream()
-                         .filter(i -> i.getAssignedTeacher() != null)
-                         .count();
-        log.info("Phase 1 - Internships with teachers: {}/{}", 
-                 assignedCount, solution.getPlannedInternships().size());
-        
-        // Log detailed Phase 1 assignments
-        log.info("=== PHASE 1 RESULTS ===");
-        solution.getPlannedInternships().forEach(internship -> {
-            if (internship.getAssignedTeacher() != null) {
-                log.info("  ✓ {} {} [Course: {}] → Teacher {} @ School {} (Zone {})",
-                        internship.getPraktikumType(),
-                        internship.getSchoolType(),
-                        internship.getCourse() != null ? internship.getCourse() : "N/A",
-                        internship.getAssignedTeacher().getTeacherId(),
-                        internship.getAssignedSchool() != null ? internship.getAssignedSchool().getId() : "NULL",
-                        internship.getAssignedSchool() != null ? internship.getAssignedSchool().getZone() : "NULL");
-            } else {
-                log.warn("  ✗ {} {} [Course: {}] → NO TEACHER ASSIGNED",
-                        internship.getPraktikumType(),
-                        internship.getSchoolType(),
-                        internship.getCourse() != null ? internship.getCourse() : "N/A");
-            }
-        });
-        log.info("=======================");
-        
-        if (assignedCount == 0) {
-            log.error("Phase 1 FAILED: No teachers assigned to any internships!");
-            log.error("This means constraints are preventing all teacher assignments.");
-        }
         
         return solution;
     }
 
     /**
-     * Creates planned internship slots based on student demand.
+     * Creates one planned internship slot per student per checked internship type.
+     * 
+     * Logic:
+     * - PDP_I/II: Create slot with no course
+     * - SFP: Create slot with student's main course
+     * - ZSP: Create slot with NO course (course assignment will be guided by weighted preference maps)
+     * 
+     * For ZSP, we build weighted course distribution maps (GS and MS separately):
+     * - Main course: 0.5
+     * - Pref1: 0.3
+     * - Pref2: 0.15
+     * - Pref3: 0.05
+     * These maps will be used as soft constraint targets.
      */
     private List<PlannedInternship> createPlannedInternshipsFromDemand(
             List<StudentConfig> studentConfigs,
             String schoolYear) {
         
-        log.info("Creating planned internships from {} student configs", studentConfigs.size());
         List<PlannedInternship> internships = new ArrayList<>();
         
+        // Create one slot per student per checked internship type
         for (StudentConfig config : studentConfigs) {
-            log.debug("Processing student {}: pdpI={}, pdpII={}, zsp={}, sfp={}", 
-                     config.getStudent().getMatriculationNbr(),
-                     config.isPdpI(), config.isPdpII(), config.isZsp(), config.isSfp());
             SchoolType schoolType = config.getSchoolType();
             
-            // PDP_I - null course to allow assignment to any teacher
             if (config.isPdpI()) {
                 internships.add(createInternshipSlot(
                         PraktikumType.PDP_I, schoolType, null, schoolYear, PDP_CAPACITY));
             }
             
-            // PDP_II - null course to allow assignment to any teacher
             if (config.isPdpII()) {
                 internships.add(createInternshipSlot(
                         PraktikumType.PDP_II, schoolType, null, schoolYear, PDP_CAPACITY));
             }
             
-            // ZSP - needs course matching
             if (config.isZsp()) {
                 internships.add(createInternshipSlot(
-                        PraktikumType.ZSP, schoolType, config.getMainCourse(), 
-                        schoolYear, ZSP_CAPACITY));
+                        PraktikumType.ZSP, schoolType, null, schoolYear, ZSP_CAPACITY));
             }
             
-            // SFP - needs course matching
             if (config.isSfp()) {
                 internships.add(createInternshipSlot(
-                        PraktikumType.SFP, schoolType, config.getMainCourse(), 
-                        schoolYear, SFP_CAPACITY));
+                        PraktikumType.SFP, schoolType, config.getMainCourse(), schoolYear, SFP_CAPACITY));
             }
         }
         
-        log.info("Created {} planned internship slots", internships.size());
-        internships.forEach(i -> log.debug("  - {} {} {} (capacity: {})", 
-                                          i.getPraktikumType(), i.getSchoolType(), 
-                                          i.getCourse(), i.getMaxCapacity()));
         return internships;
     }
 
     /**
-     * Creates a single planned internship slot.
+     * Builds weighted course distribution maps for ZSP preferences.
+     * 
+     * For each student with ZSP checked, adds weighted preferences to the appropriate map (GS or MS):
+     * - Main course: 0.5
+     * - Preference 1: 0.3
+     * - Preference 2: 0.15
+     * - Preference 3: 0.05
      */
-    private PlannedInternship createInternshipSlot(
+    private ZspCourseDistribution buildZspCourseDistribution(List<StudentConfig> studentConfigs) {
+        Map<Course, Double> gsDistribution = new HashMap<>();
+        Map<Course, Double> msDistribution = new HashMap<>();
+        
+        for (StudentConfig config : studentConfigs) {
+            if (!config.isZsp()) {
+                continue;
+            }
+            
+            Map<Course, Double> targetMap = config.getSchoolType() == SchoolType.GS 
+                    ? gsDistribution 
+                    : msDistribution;
+            
+            if (config.getMainCourse() != null) {
+                targetMap.merge(config.getMainCourse(), 0.5, Double::sum);
+            }
+            if (config.getPrefCourse1() != null) {
+                targetMap.merge(config.getPrefCourse1(), 0.3, Double::sum);
+            }
+            if (config.getPrefCourse2() != null) {
+                targetMap.merge(config.getPrefCourse2(), 0.15, Double::sum);
+            }
+            if (config.getPrefCourse3() != null) {
+                targetMap.merge(config.getPrefCourse3(), 0.05, Double::sum);
+            }
+        }
+        
+        return new ZspCourseDistribution(gsDistribution, msDistribution);
+    }
+
+        private PlannedInternship createInternshipSlot(
             PraktikumType type,
             SchoolType schoolType,
             Course course,
             String schoolYear,
             int capacity) {
-        
         return PlannedInternship.builder()
-                .praktikumType(type)
-                .schoolType(schoolType)
-                .course(course)
-                .schoolYear(schoolYear)
-                .maxCapacity(capacity)
-                .currentAssignments(0)
-                .build();
+            .praktikumType(type)
+            .schoolType(schoolType)
+            .course(course)
+            .schoolYear(schoolYear)
+            .maxCapacity(capacity)
+            .currentAssignments(0)
+            .active(Boolean.FALSE)
+            .assignedTeacher(null)
+            .build();
     }
 }

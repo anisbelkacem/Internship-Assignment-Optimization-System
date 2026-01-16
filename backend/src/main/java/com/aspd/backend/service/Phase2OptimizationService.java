@@ -306,10 +306,10 @@ public class Phase2OptimizationService {
                 .collect(Collectors.toList());
     }
 
-    private boolean hasTeacherAndSchool(StudentInternshipDemand demand) {
-        PlannedInternship internship = demand.getAssignedInternship();
-        return internship.getAssignedTeacher() != null && internship.getAssignedSchool() != null;
-    }
+        private boolean hasTeacherAndSchool(StudentInternshipDemand demand) {
+                PlannedInternship internship = demand.getAssignedInternship();
+                return internship.getAssignedTeacher() != null && internship.getSchool() != null;
+        }
 
     private InternshipAssignment buildInternshipAssignment(StudentInternshipDemand demand, String schoolYear) {
         PlannedInternship internship = demand.getAssignedInternship();
@@ -318,7 +318,7 @@ public class Phase2OptimizationService {
                 .studentConfig(demand.getStudentConfig())
                 .plannedInternship(internship)
                 .teacher(internship.getAssignedTeacher())
-                .school(internship.getAssignedSchool())
+                .school(internship.getSchool())
                 .praktikumType(demand.getPraktikumType())
                 .course(internship.getCourse())
                 .schoolYear(schoolYear)

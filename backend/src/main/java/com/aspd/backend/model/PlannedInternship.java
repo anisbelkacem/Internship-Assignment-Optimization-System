@@ -76,8 +76,24 @@ public class PlannedInternship {
     // OUTPUT: What OptaPlanner assigns
     
     /**
+     * Whether this internship slot is active (opened).
+     * OptaPlanner decides if we need this slot or not.
+     * Active slots must have a teacher and school assigned.
+     * Inactive slots don't consume from the total internship budget.
+     * Uses Boolean (wrapper) not boolean (primitive) to allow OptaPlanner to represent uninitialized state.
+     */
+    @PlanningVariable(
+            valueRangeProviderRefs = "booleanRange",
+            nullable = false
+    )
+    @Column(nullable = true, columnDefinition = "BOOLEAN DEFAULT false")
+    @lombok.Builder.Default
+    private Boolean active = false;
+
+    /**
      * The teacher assigned to supervise this internship.
      * OptaPlanner will select from the available teachers.
+     * Only relevant if active=true.
      */
     @PlanningVariable(
             valueRangeProviderRefs = "teacherRange",
@@ -87,19 +103,16 @@ public class PlannedInternship {
     @JoinColumn(name = "assigned_teacher_id")
     private Teacher assignedTeacher;
 
-    /**
-     * The school where this internship will take place.
-     * OptaPlanner will select from the available schools.
-     */
-    @PlanningVariable(
-            valueRangeProviderRefs = "schoolRange",
-            nullable = true
-    )
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "assigned_school_id")
-    private School assignedSchool;
 
     // Helper methods
+        /**
+         * Get the school for this internship from the assigned teacher.
+         * Teachers belong to exactly one school, so school is derived from teacher.
+         */
+        public School getSchool() {
+            return assignedTeacher != null ? assignedTeacher.getSchool() : null;
+        }
+    
     
     public boolean isFull() {
         return currentAssignments >= maxCapacity;
@@ -107,6 +120,10 @@ public class PlannedInternship {
     
     public boolean hasCapacity() {
         return currentAssignments < maxCapacity;
+    }
+    
+    public boolean isActive() {
+        return active != null && active;
     }
     
     public int getRemainingCapacity() {
