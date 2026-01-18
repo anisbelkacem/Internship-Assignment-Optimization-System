@@ -14,6 +14,7 @@ public record TeacherDto(
         String schoolZone,
         String email,
         boolean isPartTime,
+        boolean active,
         List<TeacherPlConfigDto> plConfigs
 ) {
 }

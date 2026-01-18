@@ -106,7 +106,8 @@ const fetchInitialData = async () => {
     ]);
     
     setAvailableYears(yearsData);
-    setTeachers(teachersData);
+    // Filter to show only active teachers in pl-config
+    setTeachers(teachersData.filter(t => t.active !== false));
     setSchools(schoolsData);
     setStudents(studentsData);
     

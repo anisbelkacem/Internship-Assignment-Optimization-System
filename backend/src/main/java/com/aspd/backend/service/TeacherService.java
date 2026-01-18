@@ -102,6 +102,24 @@ public class TeacherService {
         teacherRepository.deleteById(id);
     }
 
+    // Deactivate a PL
+    public TeacherDto deactivate(Long id) {
+        Teacher teacher = teacherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Teacher (PL) not found with id " + id));
+        teacher.setActive(false);
+        teacher = teacherRepository.save(teacher);
+        return toDto(teacher);
+    }
+
+    // Activate a PL
+    public TeacherDto activate(Long id) {
+        Teacher teacher = teacherRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Teacher (PL) not found with id " + id));
+        teacher.setActive(true);
+        teacher = teacherRepository.save(teacher);
+        return toDto(teacher);
+    }
+
     // ----- Helpers -----
 
     private void validateRequest(TeacherRequest request, Long currentId) {
@@ -169,6 +187,7 @@ public class TeacherService {
                 schoolZone,
                 teacher.getEmail(),
                 teacher.isPartTime(),
+                teacher.isActive(),
                 configDtos
         );
     }
