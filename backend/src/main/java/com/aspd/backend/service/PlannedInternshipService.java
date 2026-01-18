@@ -5,6 +5,7 @@ import com.aspd.backend.model.School;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
+import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,8 @@ public class PlannedInternshipService {
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
+    private final InternshipAssignmentService internshipAssignmentService;
+    private final StudentInternshipDemandRepository studentInternshipDemandRepository;
 
     /**
      * Get all planned internships for a specific school year.
@@ -42,15 +45,14 @@ public class PlannedInternshipService {
     }
 
     /**
-     * Update a planned internship (e.g., change assigned teacher or school).
+     * Update a planned internship (e.g., change assigned teacher or school).        
      */
     @Transactional
-    public PlannedInternship update(Long id, Long teacherId, Long schoolId) {
+    public PlannedInternship update(Long id, Long teacherId, Long schoolId) {        
         log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
-        
-        PlannedInternship internship = plannedInternshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
 
+        PlannedInternship internship = plannedInternshipRepository.findById(id)      
+                .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));                                                                           
         // Update teacher if provided
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
@@ -83,11 +85,30 @@ public class PlannedInternshipService {
 
     /**
      * Delete all planned internships for a specific school year.
+     * Deletes in cascade order to avoid foreign key constraint violations:
+     * - student_internship_demands (references planned_internships)
+     * - internship_assignments (references planned_internships)
+     * - planned_internships
      */
     @Transactional
     public void deleteBySchoolYear(String schoolYear) {
-        log.info("Deleting all planned internships for year: {}", schoolYear);
+        log.info("Deleting all planned internships and related data for year: {}", schoolYear);
+
+        // Delete all student internship demands (they reference planned internships)
+        try {
+            studentInternshipDemandRepository.deleteBySchoolYear(schoolYear);
+            log.info("Deleted all student internship demands for year: {}", schoolYear);
+        } catch (Exception e) {
+            log.warn("Error deleting student internship demands for year {}: {}", schoolYear, e.getMessage());
+        }
+
+        // Delete all internship assignments (they reference planned internships)
+        int deletedAssignments = internshipAssignmentService.deleteBySchoolYear(schoolYear);
+        log.info("Deleted {} internship assignments for year: {}", deletedAssignments, schoolYear);
+
+        // Now safe to delete planned internships
         List<PlannedInternship> internships = plannedInternshipRepository.findBySchoolYear(schoolYear);
         plannedInternshipRepository.deleteAll(internships);
+        log.info("Deleted {} planned internships for year: {}", internships.size(), schoolYear);
     }
 }
