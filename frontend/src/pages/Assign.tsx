@@ -775,7 +775,7 @@ const handleConfirmNewYear = () => {
                             groups[key].push(assignment);
                             return groups;
                           }, {})
-                        ).map(([internshipKey, assignments]: [string, any]) => (
+                        ).map(([_, assignments]: [string, any]) => (
                           assignments.map((assignment: any, idx: number) => (
                             <tr key={assignment.id}>
                               {idx === 0 && (
