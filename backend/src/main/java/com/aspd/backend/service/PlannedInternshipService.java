@@ -52,7 +52,8 @@ public class PlannedInternshipService {
         log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
 
         PlannedInternship internship = plannedInternshipRepository.findById(id)      
-                .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));                                                                           
+                .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
+        
         // Update teacher if provided
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
@@ -94,7 +95,7 @@ public class PlannedInternshipService {
     public void deleteBySchoolYear(String schoolYear) {
         log.info("Deleting all planned internships and related data for year: {}", schoolYear);
 
-        // Delete all student internship demands (they reference planned internships)
+        //Delete all student internship demands (they reference planned internships)
         try {
             studentInternshipDemandRepository.deleteBySchoolYear(schoolYear);
             log.info("Deleted all student internship demands for year: {}", schoolYear);
@@ -102,11 +103,11 @@ public class PlannedInternshipService {
             log.warn("Error deleting student internship demands for year {}: {}", schoolYear, e.getMessage());
         }
 
-        // Delete all internship assignments (they reference planned internships)
+        //Delete all internship assignments (they reference planned internships)
         int deletedAssignments = internshipAssignmentService.deleteBySchoolYear(schoolYear);
         log.info("Deleted {} internship assignments for year: {}", deletedAssignments, schoolYear);
 
-        // Now safe to delete planned internships
+        //Now safe to delete planned internships
         List<PlannedInternship> internships = plannedInternshipRepository.findBySchoolYear(schoolYear);
         plannedInternshipRepository.deleteAll(internships);
         log.info("Deleted {} planned internships for year: {}", internships.size(), schoolYear);

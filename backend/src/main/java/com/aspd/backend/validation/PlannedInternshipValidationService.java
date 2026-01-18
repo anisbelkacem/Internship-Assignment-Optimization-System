@@ -2,7 +2,6 @@ package com.aspd.backend.validation;
 
 import com.aspd.backend.model.*;
 import com.aspd.backend.repository.PlannedInternshipRepository;
-import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,6 @@ public class PlannedInternshipValidationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
-    private final SchoolRepository schoolRepository;
 
     public ValidationResult validatePlannedInternshipUpdate(Long internshipId, Long teacherId, Long schoolId) {
 
@@ -33,9 +31,12 @@ public class PlannedInternshipValidationService {
         } else {
             newTeacher = null;
         }
-        if (schoolId != null) {
-            newSchool = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new IllegalArgumentException("School not found: " + schoolId));
+        // School is derived from teacher. If a schoolId is provided, ensure it matches the teacher's school when teacherId is present.
+        if (teacherId != null) {
+            newSchool = newTeacher != null ? newTeacher.getSchool() : null;
+            if (schoolId != null && newSchool != null && !newSchool.getId().equals(schoolId)) {
+                throw new IllegalArgumentException("Provided schoolId does not match teacher's school");
+            }
         }
 
         // Build a simulated copy with the new selections
@@ -48,7 +49,6 @@ public class PlannedInternshipValidationService {
                 .maxCapacity(internship.getMaxCapacity())
                 .currentAssignments(internship.getCurrentAssignments())
                 .assignedTeacher(newTeacher)
-                .assignedSchool(newSchool)
                 .build();
 
         List<ValidationViolation> hard = new ArrayList<>();
@@ -112,9 +112,9 @@ public class PlannedInternshipValidationService {
         // --------------------------------------------------------------------
         // HARD (same as internshipsMustBeInAcceptableZones)
         // --------------------------------------------------------------------
-        if (newSchool != null) {
-            String zone = newSchool.getZone();
-            boolean oepnv = Boolean.TRUE.equals(newSchool.getOepnv());
+        if (newTeacher != null && newTeacher.getSchool() != null) {
+            String zone = newTeacher.getSchool().getZone();
+            boolean oepnv = Boolean.TRUE.equals(newTeacher.getSchool().getOepnv());
             PraktikumType type = internship.getPraktikumType();
 
             boolean violates;
@@ -129,7 +129,7 @@ public class PlannedInternshipValidationService {
             if (violates) {
                 hard.add(v("ZONE_VIOLATION", ViolationSeverity.HARD,
                         "Zonen-Verstoß: Diese Schule ist für den ausgewählten Praktikumstyp nicht zulässig.",
-                        List.of("schoolId")));
+                        List.of("teacherId")));
             }
         }
 

@@ -57,13 +57,18 @@ public class Phase1Controller {
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping("/optimize")
     public ResponseEntity<TeacherAssignmentResult> optimize(
-            @RequestParam(name = "schoolYear") String schoolYear) {
-        log.info("Received Phase 1 optimization request for year: {}", schoolYear);
+            @RequestParam(name = "schoolYear") String schoolYear,
+            @RequestParam(name = "budget") Integer budget) {
+        log.info("Received Phase 1 optimization request for year: {} with budget: {}", schoolYear, budget);
 
-        // Load data
+        // Load data (filter for active teachers and schools only)
         List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
-        List<Teacher> teachers = teacherRepository.findAllWithConfigs();
-        List<School> schools = schoolRepository.findAll();
+        List<Teacher> teachers = teacherRepository.findAllWithConfigs().stream()
+                .filter(Teacher::isActive)
+                .collect(Collectors.toList());
+        List<School> schools = schoolRepository.findAll().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getActive()))
+                .collect(Collectors.toList());
 
         if (studentConfigs.isEmpty()) {
             log.error("NO STUDENT CONFIGS FOUND FOR YEAR: {}", schoolYear);
@@ -79,7 +84,7 @@ public class Phase1Controller {
 
         // Run Phase 1 optimization
         InternshipSolution phase1Solution = phase1OptimizationService.optimize(
-                teachers, schools, studentConfigs, schoolYear, 70);
+                teachers, schools, studentConfigs, schoolYear, budget);
 
         // Save the planned internships to the database so Phase 2 can use them
         List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(
@@ -121,12 +126,12 @@ public class Phase1Controller {
                 .teacherName(internship.getAssignedTeacher() != null ?
                         internship.getAssignedTeacher().getFirstName() + " " +
                                 internship.getAssignedTeacher().getLastName() : null)
-                .schoolId(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getId() : null)
-                .schoolName(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getName() : null)
-                .schoolZone(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getZone() : null)
+                .schoolId(internship.getSchool() != null ?
+                        internship.getSchool().getId() : null)
+                .schoolName(internship.getSchool() != null ?
+                        internship.getSchool().getName() : null)
+                .schoolZone(internship.getSchool() != null ?
+                        internship.getSchool().getZone() : null)
                 .build();
     }
 }

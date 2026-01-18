@@ -62,8 +62,8 @@ public class PlannedInternshipController {
     public ResponseEntity<PlannedInternshipDto> update(
             @PathVariable Long id,
             @RequestBody UpdatePlannedInternshipRequest request) {
-        log.info("PUT /api/planned-internships/{} with teacher={}, school={}", 
-                id, request.teacherId, request.schoolId);
+        log.info("PUT /api/planned-internships/{} with teacher={} (school derived from teacher)", 
+                id, request.teacherId);
         
         try {
             PlannedInternship updated = plannedInternshipService.update(
@@ -110,12 +110,12 @@ public class PlannedInternshipController {
                 .teacherName(internship.getAssignedTeacher() != null ?
                         internship.getAssignedTeacher().getFirstName() + " " +
                                 internship.getAssignedTeacher().getLastName() : null)
-                .schoolId(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getId() : null)
-                .schoolName(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getName() : null)
-                .schoolZone(internship.getAssignedSchool() != null ?
-                        internship.getAssignedSchool().getZone() : null)
+                .schoolId(internship.getSchool() != null ?
+                        internship.getSchool().getId() : null)
+                .schoolName(internship.getSchool() != null ?
+                        internship.getSchool().getName() : null)
+                .schoolZone(internship.getSchool() != null ?
+                        internship.getSchool().getZone() : null)
                 .build();
     }
 
