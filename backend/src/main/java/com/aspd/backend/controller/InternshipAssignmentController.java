@@ -124,13 +124,8 @@ public class InternshipAssignmentController {
     @DeleteMapping
     public ResponseEntity<Void> deleteAssignmentsBySchoolYear(
             @RequestParam String schoolYear) {
-        
-        int deletedCount = assignmentService.deleteBySchoolYear(schoolYear);
-        
-        if (deletedCount > 0) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+
+        assignmentService.deleteBySchoolYear(schoolYear);
+        return ResponseEntity.noContent().build();
     }
 }
