@@ -1,14 +1,9 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.PlannedInternship;
-import com.aspd.backend.model.School;
 import com.aspd.backend.model.Teacher;
 import com.aspd.backend.repository.PlannedInternshipRepository;
-import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
-import com.aspd.backend.validation.AssignmentValidationException;
-import com.aspd.backend.validation.PlannedInternshipValidationService;
-import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,9 +22,6 @@ public class PlannedInternshipService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
-    private final SchoolRepository schoolRepository;
-    private final PlannedInternshipValidationService validationService;
-
 
     /**
      * Get all planned internships for a specific school year.
@@ -51,15 +43,10 @@ public class PlannedInternshipService {
      */
     @Transactional
     public PlannedInternship update(Long id, Long teacherId, Long schoolId) {
-        log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
+        log.info("Updating planned internship {} with teacher {} (school derived from teacher; school param ignored)", id, teacherId);
         
         PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
-
-        ValidationResult validation = validationService.validatePlannedInternshipUpdate(id, teacherId, schoolId);
-        if (!validation.isHardValid()) {
-            throw new AssignmentValidationException(validation);
-        }
 
         // Update teacher if provided
         if (teacherId != null) {
@@ -70,14 +57,7 @@ public class PlannedInternshipService {
             internship.setAssignedTeacher(null);
         }
 
-        // Update school if provided
-        if (schoolId != null) {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new RuntimeException("School not found: " + schoolId));
-            internship.setAssignedSchool(school);
-        } else {
-            internship.setAssignedSchool(null);
-        }
+        // School is derived from the assigned teacher; ignore schoolId
 
         return plannedInternshipRepository.save(internship);
     }

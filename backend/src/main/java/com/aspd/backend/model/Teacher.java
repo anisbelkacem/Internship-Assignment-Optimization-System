@@ -39,6 +39,9 @@ public class Teacher {
     @Column(name = "is_part_time", nullable = false)
     private boolean isPartTime = false; // Indicates if teacher is part-time (<50% workload)
 
+    @Column(name = "active", nullable = false)
+    private boolean active = true; // Indicates if teacher/PL is active
+
     @OneToMany(
             mappedBy = "teacher",
             orphanRemoval = true
@@ -107,6 +110,14 @@ public class Teacher {
 
     public void setPartTime(boolean partTime) {
         isPartTime = partTime;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public void addPlConfig(TeacherPlConfig cfg) {

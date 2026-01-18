@@ -9,10 +9,11 @@
     <entityClass>com.aspd.backend.model.PlannedInternship</entityClass>
 
     <scoreDirectorFactory>
-        <constraintProviderClass>com.aspd.backend.solver.InternshipConstraintProvider</constraintProviderClass>
+        <easyScoreCalculatorClass>com.aspd.backend.solver.InternshipEasyScoreCalculator</easyScoreCalculatorClass>
     </scoreDirectorFactory>
 
     <termination>
-        <secondsSpentLimit>70</secondsSpentLimit>
+        <secondsSpentLimit>120</secondsSpentLimit>
+        <bestScoreLimit>0hard/*soft</bestScoreLimit>
     </termination>
 </solver>

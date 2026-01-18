@@ -16,7 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,10 +30,11 @@ import java.util.Optional;
 public class InternshipAssignmentService {
 
     private final InternshipAssignmentRepository assignmentRepository;
+    private final AuditLogService auditLogService;
+    private final UserService userService;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
     private final InternshipAssignmentValidationService validationService;
-
 
     /**
      * Get all assignments for a specific school year.
@@ -66,6 +69,9 @@ public class InternshipAssignmentService {
         
         return assignmentRepository.findById(id)
                 .map(existing -> {
+                    // Capture previous values for audit log
+                    Map<String, Object> previousValues = captureAssignmentState(existing);
+                    
                     if (updatedAssignment.getStartDate() != null) {
                         existing.setStartDate(updatedAssignment.getStartDate());
                     }
@@ -96,7 +102,21 @@ public class InternshipAssignmentService {
                     if (updatedAssignment.getSchoolYear() != null) {
                         existing.setSchoolYear(updatedAssignment.getSchoolYear());
                     }
-                    return assignmentRepository.save(existing);
+                    
+                    InternshipAssignment saved = assignmentRepository.save(existing);
+                    
+                    // Log the change
+                    Map<String, Object> newValues = captureAssignmentState(saved);
+                    auditLogService.log(
+                        "InternshipAssignment",
+                        id,
+                        "UPDATE",
+                        "Internship assignment updated",
+                        previousValues,
+                        newValues
+                    );
+                    
+                    return saved;
                 });
     }
 
@@ -109,8 +129,21 @@ public class InternshipAssignmentService {
         
         return assignmentRepository.findById(id)
                 .map(assignment -> {
+                    AssignmentStatus oldStatus = assignment.getStatus();
                     assignment.setStatus(status);
-                    return assignmentRepository.save(assignment);
+                    InternshipAssignment saved = assignmentRepository.save(assignment);
+                    
+                    // Log the change
+                    auditLogService.log(
+                        "InternshipAssignment",
+                        id,
+                        "UPDATE",
+                        "Assignment status changed from " + oldStatus + " to " + status,
+                        Map.of("status", oldStatus.name()),
+                        Map.of("status", status.name())
+                    );
+                    
+                    return saved;
                 });
     }
 
@@ -125,7 +158,24 @@ public class InternshipAssignmentService {
             return false;
         }
         
-        assignmentRepository.deleteById(id);
+        // Capture assignment details before deletion
+        InternshipAssignment assignment = assignmentRepository.findById(id).orElse(null);
+        if (assignment != null) {
+            Map<String, Object> deletedValues = captureAssignmentState(assignment);
+            
+            assignmentRepository.deleteById(id);
+            
+            // Log the deletion
+            auditLogService.log(
+                "InternshipAssignment",
+                id,
+                "DELETE",
+                "Internship assignment deleted",
+                deletedValues,
+                null
+            );
+        }
+        
         return true;
     }
 
@@ -148,6 +198,31 @@ public class InternshipAssignmentService {
         return assignments.size();
     }
 
+    /**
+     * Capture the current state of an assignment for audit logging
+     */
+    private Map<String, Object> captureAssignmentState(InternshipAssignment assignment) {
+        Map<String, Object> state = new HashMap<>();
+        state.put("id", assignment.getId());
+        state.put("status", assignment.getStatus().name());
+        state.put("startDate", assignment.getStartDate());
+        state.put("endDate", assignment.getEndDate());
+        state.put("praktikumType", assignment.getPraktikumType().name());
+        if (assignment.getTeacher() != null) {
+            state.put("teacherId", assignment.getTeacher().getTeacherId());
+            state.put("teacherName", assignment.getTeacher().getFirstName() + " " + assignment.getTeacher().getLastName());
+        }
+        if (assignment.getSchool() != null) {
+            state.put("schoolId", assignment.getSchool().getId());
+            state.put("schoolName", assignment.getSchool().getName());
+        }
+        if (assignment.getCourse() != null) {
+            state.put("courseId", assignment.getCourse().getId());
+            state.put("courseName", assignment.getCourse().getName());
+        }
+        state.put("schoolYear", assignment.getSchoolYear());
+        return state;
+    }
 
     @Transactional
     public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req) {
@@ -174,5 +249,5 @@ public class InternshipAssignmentService {
             return assignmentRepository.save(existing);
         });
     }
-
 }
+

@@ -10,5 +10,9 @@ public interface TeacherPlConfigRepository extends JpaRepository<TeacherPlConfig
 
     List<TeacherPlConfig> findByTeacher_TeacherId(Long teacherId);
 
+    List<TeacherPlConfig> findByTeacher_TeacherIdAndActiveTrue(Long teacherId);
+    
+    List<TeacherPlConfig> findByTeacher_TeacherIdAndTeacher_ActiveTrue(Long teacherId);
+
     Optional<TeacherPlConfig> findByTeacher_TeacherIdAndSchoolYear(Long teacherId, String schoolYear);
 }

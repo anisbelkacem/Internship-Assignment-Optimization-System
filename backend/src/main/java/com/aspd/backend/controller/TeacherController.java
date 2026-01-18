@@ -64,6 +64,20 @@ public class TeacherController {
         return ResponseEntity.noContent().build();
     }
 
+    // Activate a PL
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{id}/activate")
+    public TeacherDto activate(@PathVariable Long id) {
+        return teacherService.activate(id);
+    }
+
+    // Deactivate a PL
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{id}/deactivate")
+    public TeacherDto deactivate(@PathVariable Long id) {
+        return teacherService.deactivate(id);
+    }
+
     // Excel IMPORT / EXPORT endpoints
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

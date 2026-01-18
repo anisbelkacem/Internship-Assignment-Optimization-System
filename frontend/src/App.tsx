@@ -12,6 +12,7 @@ import Assign from "./pages/Assign";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Courses from "./pages/Courses";
+import AuditLogs from "./pages/AuditLogs";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
             <Route path="courses" element={<Courses />} />
+            <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
           
           {/* Catch all */}

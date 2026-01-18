@@ -40,6 +40,13 @@ public class TeacherPlConfigService {
                 .toList();
     }
 
+    public List<TeacherPlConfigDto> getActiveForTeacher(Long teacherId) {
+        return plConfigRepository.findByTeacher_TeacherIdAndTeacher_ActiveTrue(teacherId).stream()
+                .filter(config -> config.isActive())
+                .map(this::toDto)
+                .toList();
+    }
+
     public TeacherPlConfigDto create(Long teacherId, TeacherPlConfigRequest request) {
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new IllegalArgumentException("Teacher not found: " + teacherId));
@@ -68,6 +75,20 @@ public class TeacherPlConfigService {
 
     public void delete(Long configId) {
         plConfigRepository.deleteById(configId);
+    }
+
+    public void deactivate(Long configId) {
+        TeacherPlConfig cfg = plConfigRepository.findById(configId)
+                .orElseThrow(() -> new IllegalArgumentException("PL config not found: " + configId));
+        cfg.setActive(false);
+        plConfigRepository.save(cfg);
+    }
+
+    public void activate(Long configId) {
+        TeacherPlConfig cfg = plConfigRepository.findById(configId)
+                .orElseThrow(() -> new IllegalArgumentException("PL config not found: " + configId));
+        cfg.setActive(true);
+        plConfigRepository.save(cfg);
     }
 
     private void applyRequest(TeacherPlConfig cfg, TeacherPlConfigRequest request) {
