@@ -82,6 +82,9 @@ public class Phase1OptimizationService {
                 .filter(PlannedInternship::isActive)
                 .toList();
         
+        // Populate schools from assigned teachers (post-optimization step)
+        activeInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+        
         // Save only active internships to database
         List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(activeInternships);
         
@@ -127,9 +130,6 @@ public class Phase1OptimizationService {
         
         // Solve
         InternshipSolution solution = solver.solve(unsolvedProblem);
-
-        // Log final score diagnostics
-        scoreCalculator.logFinalScoreDiagnostics(solution);
 
         // Post-solve diagnostic: verify minimum-activation constraint status
         logMinimumActivationStatus(solution.getPlannedInternships());

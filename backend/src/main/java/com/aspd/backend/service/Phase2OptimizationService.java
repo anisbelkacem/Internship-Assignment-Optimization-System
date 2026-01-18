@@ -99,6 +99,7 @@ public class Phase2OptimizationService {
 
     /**
      * PHASE 2: Assign students to planned internships.
+     * Uses a single unified solver leveraging Phase 1 guarantees.
      */
     private StudentAssignmentSolution runPhase2(
             List<PlannedInternship> plannedInternships,
@@ -106,114 +107,24 @@ public class Phase2OptimizationService {
             String schoolYear,
             Integer timeBudget) {
         
-        // Separate demands by type
-        List<StudentInternshipDemand> pdpDemands = filterPdpDemands(studentDemands);
-        List<StudentInternshipDemand> zspSfpDemands = filterZspSfpDemands(studentDemands);
-        
-        // Filter internships by type
-        List<PlannedInternship> pdpInternships = filterPdpInternships(plannedInternships);
-        List<PlannedInternship> zspSfpInternships = filterZspSfpInternships(plannedInternships);
-        
         // Create solver factory
         SolverFactory<StudentAssignmentSolution> solverFactory = 
                 SolverFactory.createFromXmlResource("studentAssignmentSolverConfig.xml");
         
-        // Solve PDP and ZSP/SFP separately
-        StudentAssignmentSolution pdpSolution = solvePdpAssignments(
-                solverFactory, pdpInternships, pdpDemands, schoolYear, timeBudget);
-        
-        StudentAssignmentSolution zspSfpSolution = solveZspSfpAssignments(
-                solverFactory, zspSfpInternships, zspSfpDemands, schoolYear, timeBudget);
-        
-        // Merge and return results
-        return mergeSolutions(plannedInternships, pdpSolution, zspSfpSolution, schoolYear, timeBudget);
-    }
-
-    private List<StudentInternshipDemand> filterPdpDemands(List<StudentInternshipDemand> studentDemands) {
-        return studentDemands.stream()
-                .filter(d -> d.getPraktikumType() == PraktikumType.PDP_I || 
-                            d.getPraktikumType() == PraktikumType.PDP_II)
-                .collect(Collectors.toList());
-    }
-
-    private List<StudentInternshipDemand> filterZspSfpDemands(List<StudentInternshipDemand> studentDemands) {
-        return studentDemands.stream()
-                .filter(d -> d.getPraktikumType() == PraktikumType.ZSP || 
-                            d.getPraktikumType() == PraktikumType.SFP)
-                .collect(Collectors.toList());
-    }
-
-    private List<PlannedInternship> filterPdpInternships(List<PlannedInternship> plannedInternships) {
-        return plannedInternships.stream()
-                .filter(i -> i.getPraktikumType() == PraktikumType.PDP_I || 
-                            i.getPraktikumType() == PraktikumType.PDP_II)
-                .collect(Collectors.toList());
-    }
-
-    private List<PlannedInternship> filterZspSfpInternships(List<PlannedInternship> plannedInternships) {
-        return plannedInternships.stream()
-                .filter(i -> i.getPraktikumType() == PraktikumType.ZSP || 
-                            i.getPraktikumType() == PraktikumType.SFP)
-                .collect(Collectors.toList());
-    }
-
-    private StudentAssignmentSolution solvePdpAssignments(
-            SolverFactory<StudentAssignmentSolution> solverFactory,
-            List<PlannedInternship> pdpInternships,
-            List<StudentInternshipDemand> pdpDemands,
-            String schoolYear,
-            Integer timeBudget) {
-        
-        return solveAssignments(solverFactory, pdpInternships, pdpDemands, schoolYear, timeBudget, "PDP");
-    }
-
-    private StudentAssignmentSolution solveZspSfpAssignments(
-            SolverFactory<StudentAssignmentSolution> solverFactory,
-            List<PlannedInternship> zspSfpInternships,
-            List<StudentInternshipDemand> zspSfpDemands,
-            String schoolYear,
-            Integer timeBudget) {
-        
-        return solveAssignments(solverFactory, zspSfpInternships, zspSfpDemands, schoolYear, timeBudget, "ZSP/SFP");
-    }
-
-    private StudentAssignmentSolution solveAssignments(
-            SolverFactory<StudentAssignmentSolution> solverFactory,
-            List<PlannedInternship> internships,
-            List<StudentInternshipDemand> demands,
-            String schoolYear,
-            Integer timeBudget,
-            String assignmentType) {
-        
         Solver<StudentAssignmentSolution> solver = solverFactory.buildSolver();
         
-        StudentAssignmentSolution problem = createSolution(internships, demands, schoolYear, timeBudget);
+        // Create unified solution with all demands and internships
+        StudentAssignmentSolution problem = createSolution(
+                plannedInternships, studentDemands, schoolYear, timeBudget);
+        
         StudentAssignmentSolution solution = solver.solve(problem);
         
-        log.info("{} assignments: {}/{}", 
-                assignmentType,
-                solution.getStudentDemands().stream().filter(d -> d.getAssignedInternship() != null).count(),
-                demands.size());
+        long assignedCount = solution.getStudentDemands().stream()
+                .filter(d -> d.getAssignedInternship() != null)
+                .count();
         
-        return solution;
-    }
-
-    private StudentAssignmentSolution mergeSolutions(
-            List<PlannedInternship> plannedInternships,
-            StudentAssignmentSolution pdpSolution,
-            StudentAssignmentSolution zspSfpSolution,
-            String schoolYear,
-            Integer timeBudget) {
-        
-        List<StudentInternshipDemand> allAssignedDemands = new ArrayList<>();
-        allAssignedDemands.addAll(pdpSolution.getStudentDemands());
-        allAssignedDemands.addAll(zspSfpSolution.getStudentDemands());
-        
-        StudentAssignmentSolution solution = createSolution(plannedInternships, allAssignedDemands, schoolYear, timeBudget);
-        solution.setScore(HardSoftScore.of(
-                pdpSolution.getScore().hardScore() + zspSfpSolution.getScore().hardScore(),
-                pdpSolution.getScore().softScore() + zspSfpSolution.getScore().softScore()
-        ));
+        log.info("Student assignments: {}/{}", assignedCount, studentDemands.size());
+        log.info("Score: {}", solution.getScore());
         
         return solution;
     }

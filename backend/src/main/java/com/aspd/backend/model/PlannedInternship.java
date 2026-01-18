@@ -121,14 +121,37 @@ public class PlannedInternship {
     @JoinColumn(name = "assigned_teacher_id")
     private Teacher assignedTeacher;
 
+    /**
+     * The school that will host this internship.
+     * NOT a planning variable - kept null during optimization.
+     * Populated after optimization based on assignedTeacher's school.
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assigned_school_id")
+    private School assignedSchool;
+
 
     // Helper methods
         /**
-         * Get the school for this internship from the assigned teacher.
-         * Teachers belong to exactly one school, so school is derived from teacher.
+         * Get the school for this internship.
+         * First checks assignedSchool (populated after optimization).
+         * Falls back to teacher's school if assignedSchool is null.
          */
         public School getSchool() {
+            if (assignedSchool != null) {
+                return assignedSchool;
+            }
             return assignedTeacher != null ? assignedTeacher.getSchool() : null;
+        }
+
+        /**
+         * Populate assignedSchool from the assigned teacher.
+         * Call this after optimization completes to set schools based on teacher assignments.
+         */
+        public void populateSchoolFromTeacher() {
+            if (assignedTeacher != null) {
+                this.assignedSchool = assignedTeacher.getSchool();
+            }
         }
     
     
