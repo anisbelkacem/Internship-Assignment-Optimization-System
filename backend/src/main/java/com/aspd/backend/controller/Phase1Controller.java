@@ -60,10 +60,14 @@ public class Phase1Controller {
             @RequestParam(name = "budget") Integer budget) {
         log.info("Received Phase 1 optimization request for year: {} with budget: {}", schoolYear, budget);
 
-        // Load data
+        // Load data (filter for active teachers and schools only)
         List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
-        List<Teacher> teachers = teacherRepository.findAllWithConfigs();
-        List<School> schools = schoolRepository.findAll();
+        List<Teacher> teachers = teacherRepository.findAllWithConfigs().stream()
+                .filter(Teacher::isActive)
+                .collect(Collectors.toList());
+        List<School> schools = schoolRepository.findAll().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getActive()))
+                .collect(Collectors.toList());
 
         if (studentConfigs.isEmpty()) {
             log.error("NO STUDENT CONFIGS FOUND FOR YEAR: {}", schoolYear);

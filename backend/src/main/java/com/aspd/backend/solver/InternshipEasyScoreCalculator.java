@@ -281,8 +281,15 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         int hardScore = 0;
 
         for (PlannedInternship i : internships) {
-            if (i.isActive() && i.getSchool() != null && i.getSchool().getType() != i.getSchoolType()) {
-                hardScore -= 100; // School type doesn't match requirement
+            if (i.isActive() && i.getSchool() != null) {
+                // Penalize if school is inactive
+                if (!Boolean.TRUE.equals(i.getSchool().getActive())) {
+                    hardScore -= 100; // Cannot assign inactive school
+                }
+                // Check type match
+                else if (i.getSchool().getType() != i.getSchoolType()) {
+                    hardScore -= 100; // School type doesn't match requirement
+                }
             }
         }
 
@@ -295,6 +302,10 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         for (PlannedInternship i : internships) {
             if (i.isActive() && i.getAssignedTeacher() == null) {
                 hardScore -= 100; // Active internship without assigned teacher
+            }
+            // Penalize if assigned teacher is inactive
+            if (i.isActive() && i.getAssignedTeacher() != null && !i.getAssignedTeacher().isActive()) {
+                hardScore -= 100; // Cannot assign inactive teacher
             }
         }
 
