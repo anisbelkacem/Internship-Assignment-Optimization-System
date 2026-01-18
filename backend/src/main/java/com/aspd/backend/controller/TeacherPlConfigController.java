@@ -24,6 +24,12 @@ public class TeacherPlConfigController {
         return plConfigService.getForTeacher(teacherId);
     }
 
+    @PreAuthorize("hasAnyAuthority('VIEW')")
+    @GetMapping("/active")
+    public List<TeacherPlConfigDto> getActiveForTeacher(@PathVariable Long teacherId) {
+        return plConfigService.getActiveForTeacher(teacherId);
+    }
+
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping
     public TeacherPlConfigDto create(@PathVariable Long teacherId,
@@ -44,5 +50,19 @@ public class TeacherPlConfigController {
     public void delete(@PathVariable Long teacherId,
                        @PathVariable Long configId) {
         plConfigService.delete(configId);
+    }
+
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{configId}/deactivate")
+    public void deactivate(@PathVariable Long teacherId,
+                           @PathVariable Long configId) {
+        plConfigService.deactivate(configId);
+    }
+
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PutMapping("/{configId}/activate")
+    public void activate(@PathVariable Long teacherId,
+                         @PathVariable Long configId) {
+        plConfigService.activate(configId);
     }
 }

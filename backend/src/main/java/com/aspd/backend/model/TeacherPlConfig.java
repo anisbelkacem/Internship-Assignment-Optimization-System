@@ -61,4 +61,7 @@ public class TeacherPlConfig {
 
     @Column(name = "max_praktika_per_year")
     private Integer maxPraktikaPerYear;
+
+    @Column(nullable = false)
+    private boolean active = true;
 }
