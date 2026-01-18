@@ -3,6 +3,7 @@ package com.aspd.backend.service;
 import com.aspd.backend.model.*;
 import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
+import com.aspd.backend.solver.InternshipEasyScoreCalculator;
 import com.aspd.backend.solver.InternshipSolution;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.solver.Solver;
@@ -29,6 +30,7 @@ public class Phase1OptimizationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final CourseRepository courseRepository;
+    private final InternshipEasyScoreCalculator scoreCalculator;
 
     /**
      * Run Phase 1: Teacher and School assignment.
@@ -123,12 +125,11 @@ public class Phase1OptimizationService {
         unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
         unsolvedProblem.setZspCourseDistribution(zspDistribution);
         
-        // Pre-calculate minimum activation requirements (avoids groupBy caching issues)
-        List<InternshipTypeRequirement> typeRequirements = buildTypeRequirements(plannedInternships);
-        unsolvedProblem.setTypeRequirements(typeRequirements);
-        
         // Solve
         InternshipSolution solution = solver.solve(unsolvedProblem);
+
+        // Log final score diagnostics
+        scoreCalculator.logFinalScoreDiagnostics(solution);
 
         // Post-solve diagnostic: verify minimum-activation constraint status
         logMinimumActivationStatus(solution.getPlannedInternships());
@@ -324,49 +325,4 @@ public class Phase1OptimizationService {
         
         log.info("====================================================\n");
     }
-    /**
-     * Build type requirements from internship slots.
-     * Pre-calculates totals to avoid groupBy caching issues in constraint streams.
-     */
-    private List<InternshipTypeRequirement> buildTypeRequirements(List<PlannedInternship> internships) {
-        Map<String, InternshipTypeRequirement> requirements = new HashMap<>();
-        
-        for (PlannedInternship internship : internships) {
-            PraktikumType type = internship.getPraktikumType();
-            SchoolType schoolType = internship.getSchoolType();
-            Course course = internship.getCourse();
-            
-            String key;
-            InternshipTypeRequirement req;
-            
-            if (type == PraktikumType.SFP && course != null) {
-                key = type + "/" + schoolType + "/" + course.getName();
-                req = requirements.getOrDefault(key, InternshipTypeRequirement.builder()
-                    .type(type)
-                    .schoolType(schoolType)
-                    .course(course)
-                    .totalSlots(0)
-                    .build());
-            } else {
-                key = type + "/" + schoolType;
-                req = requirements.getOrDefault(key, InternshipTypeRequirement.builder()
-                    .type(type)
-                    .schoolType(schoolType)
-                    .course(null)
-                    .totalSlots(0)
-                    .build());
-            }
-            
-            // Increment total
-            req.setTotalSlots(req.getTotalSlots() + 1);
-            
-            // Calculate required active
-            int divisor = type == PraktikumType.PDP_I || type == PraktikumType.PDP_II ? 2 : 4;
-            int required = (int) Math.ceil(req.getTotalSlots() / (double) divisor);
-            req.setRequiredActive(required);
-            
-            requirements.put(key, req);
-        }
-        
-        return new ArrayList<>(requirements.values());
-    }}
+}

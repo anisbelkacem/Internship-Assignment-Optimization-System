@@ -221,7 +221,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setAssigningPhase1(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase1(selectedYear);
+      const result = await internshipAssignmentService.optimizePhase1(selectedYear, 28);
       setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
       setTimeout(() => setSuccess(null), 5000);
       

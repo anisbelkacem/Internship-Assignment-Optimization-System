@@ -73,7 +73,4 @@ public class InternshipSolution {
     
     @ProblemFactProperty
     private ZspCourseDistribution zspCourseDistribution; // Weighted ZSP course preferences
-    
-    @ProblemFactCollectionProperty
-    private List<InternshipTypeRequirement> typeRequirements; // Pre-calculated minimum activation requirements
 }
