@@ -230,7 +230,7 @@ public class Phase2OptimizationService {
                 .plannedInternship(internship)
                 .teacher(internship.getAssignedTeacher())
                 .school(internship.getSchool())
-                .praktikumType(demand.getPraktikumType())
+                .praktikumType(internship.getPraktikumType())
                 .course(internship.getCourse())
                 .schoolYear(schoolYear)
                 .status(AssignmentStatus.PROPOSED)

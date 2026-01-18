@@ -39,13 +39,12 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
             }
             
             PlannedInternship internship = demand.getAssignedInternship();
-            PraktikumType type = demand.getPraktikumType();
             
             // Check hard constraints (very few, mostly delegated to Phase 1)
-            hardScore += checkHardConstraints(demand, internship, type);
+            hardScore += checkHardConstraints(demand, internship);
             
             // Check soft constraints for optimization
-            softScore += checkSoftConstraints(demand, internship, type);
+            softScore += checkSoftConstraints(demand, internship);
         }
         
         // Hard constraint: Capacity must not be exceeded
@@ -69,15 +68,21 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
     }
 
     /**
-     * Minimal hard constraints - Phase 1 guarantees most of these already.
-     * Only check SFP course matching as a safety validation.
+     * Hard constraints - Phase 2 specific validations.
+     * Must validate type matching between demand and internship.
      */
-    private int checkHardConstraints(StudentInternshipDemand demand, PlannedInternship internship, PraktikumType type) {
+    private int checkHardConstraints(StudentInternshipDemand demand, PlannedInternship internship) {
         int penalty = 0;
         
-        // Only remaining hard constraint: SFP courses must match
+        // Critical constraint: Student demand type must match internship type
+        // (Demand is what student wants, internship is what's available)
+        if (!demand.getPraktikumType().equals(internship.getPraktikumType())) {
+            penalty -= 100;
+        }
+        
+        // Additional constraint: SFP courses must match
         // (Phase 1 guarantees this, but we validate as safety check)
-        if (type == PraktikumType.SFP && internship.getCourse() != null) {
+        if (internship.getPraktikumType() == PraktikumType.SFP && internship.getCourse() != null) {
             Course internshipCourse = internship.getCourse();
             StudentConfig config = demand.getStudentConfig();
             if (!internshipCourse.equals(config.getMainCourse())) {
@@ -94,16 +99,18 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
      * - Capacity balance (soft)
      * - Distance preference for PDP (soft)
      */
-    private int checkSoftConstraints(StudentInternshipDemand demand, PlannedInternship internship, PraktikumType type) {
+    private int checkSoftConstraints(StudentInternshipDemand demand, PlannedInternship internship) {
         int reward = 0;
         
+        PraktikumType internshipType = internship.getPraktikumType();
+        
         // For ZSP, reward matching student course preferences with internship course
-        if (type == PraktikumType.ZSP && internship.getCourse() != null) {
+        if (internshipType == PraktikumType.ZSP && internship.getCourse() != null) {
             reward += evaluateZspCourseMatch(demand, internship.getCourse());
         }
         
         // For PDP, prefer closer schools (zone-based distance penalty)
-        if ((type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) && internship.getSchool() != null) {
+        if ((internshipType == PraktikumType.PDP_I || internshipType == PraktikumType.PDP_II) && internship.getSchool() != null) {
             reward += evaluateDistancePreference(demand, internship);
         }
         

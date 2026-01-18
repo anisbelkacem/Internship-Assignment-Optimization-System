@@ -64,6 +64,7 @@ export default function InternshipAssignments() {
 
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [timeBudget, setTimeBudget] = useState<number>(210);
 
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
@@ -221,7 +222,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setAssigningPhase1(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase1(selectedYear, 28);
+      const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
       setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
       setTimeout(() => setSuccess(null), 5000);
       
@@ -571,11 +572,45 @@ const handleConfirmNewYear = () => {
               <div className="schools-header-content">
                 <h1 style={{fontSize: '20px'}}>Lehrerzuweisungen</h1>
               </div>
-              <div className="header-actions">
+              <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#475569'}}>Zeitbudget</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={timeBudget}
+                    onChange={(e) => setTimeBudget(parseInt(e.target.value) || 210)}
+                    style={{
+                      width: '100px',
+                      padding: '8px 14px',
+                      fontSize: '0.95rem',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f8fafc',
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                      color: '#000000',
+                      textAlign: 'center'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.backgroundColor = '#ffffff';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e2e8f0';
+                      e.target.style.backgroundColor = '#f8fafc';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                    }}
+                  />
+                </div>
                 <button 
                   className="btn-primary"
                   onClick={handlePhase1Assignment}
                   disabled={!selectedYear || assigningPhase1}
+                  style={{marginTop: '20px'}}
                 >
                   {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
                 </button>
@@ -716,11 +751,8 @@ const handleConfirmNewYear = () => {
                   <table className="schools-table">
                     <thead>
                       <tr>
+                        <th style={{minWidth: '300px'}}>Praktikum</th>
                         <th>Schülername</th>
-                        <th>Betreuer</th>
-                        <th>Praktikumtyp</th>
-                        <th>Kurs</th>
-                        <th>Schule</th>
                         <th>Status</th>
                         <th>Aktionen</th>
                       </tr>
@@ -728,51 +760,75 @@ const handleConfirmNewYear = () => {
                     <tbody>
                       {studentAssignments.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="table-empty">
+                          <td colSpan={4} className="table-empty">
                             No student assignments generated
                           </td>
                         </tr>
                       ) : (
-                        studentAssignments.map((assignment) => (
-                          <tr key={assignment.id}>
-                            <td>
-                              <span style={{fontWeight: '500'}}>
-                                {assignment.studentName}
-                              </span>
-                            </td>
-                            <td>{assignment.teacherName ?? '—'}</td>
-                            <td>{assignment.praktikumType}</td>
-                            <td>{assignment.course ?? '—'}</td>
-                            <td>{assignment.schoolName ?? '—'}</td>
-                            <td>
-                              <span className={`status-badge ${
-                                assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
-                                assignment.status === 'PROPOSED' ? 'status-proposed' : 
-                                'status-other'
-                              }`}>
-                                {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
-                                 assignment.status === 'PROPOSED' ? 'Vorgeschlagen' : 
-                                 assignment.status}
-                              </span>
-                            </td>
-                            <td>
-                              <button 
-                                className="action-btn edit-btn"
-                                onClick={() => handleEditAssignment(assignment)}
-                                title="Bearbeiten"
-                              >
-                                ✏️
-                              </button>
-                              <button 
-                                className="action-btn validate-btn"
-                                onClick={() => handleValidateAssignment(assignment.id)}
-                                title="Bestätigen"
-                                style={{marginLeft: '8px'}}
-                              >
-                                ✓
-                              </button>
-                            </td>
-                          </tr>
+                        // Group assignments by internship (teacher + school + course + type)
+                        Object.entries(
+                          studentAssignments.reduce((groups: any, assignment) => {
+                            const key = `${assignment.teacherName ?? 'Unassigned'} | ${assignment.schoolName ?? 'No School'} | ${assignment.course ?? 'No Course'} | ${assignment.praktikumType}`;
+                            if (!groups[key]) {
+                              groups[key] = [];
+                            }
+                            groups[key].push(assignment);
+                            return groups;
+                          }, {})
+                        ).map(([internshipKey, assignments]: [string, any]) => (
+                          assignments.map((assignment: any, idx: number) => (
+                            <tr key={assignment.id}>
+                              {idx === 0 && (
+                                <td rowSpan={assignments.length} style={{
+                                  backgroundColor: '#f8fafc',
+                                  fontWeight: '500',
+                                  borderLeft: '4px solid #3b82f6',
+                                  minWidth: '300px',
+                                  padding: '20px'
+                                }}>
+                                  <div style={{fontSize: '1.05em', lineHeight: '1.8'}}>
+                                    <div style={{fontWeight: '700', color: '#1e293b', fontSize: '1.1em'}}>{assignment.teacherName ?? 'Unassigned'}</div>
+                                    <div style={{fontSize: '1em', color: '#475569', marginTop: '8px'}}>{assignment.schoolName ?? 'No School'}</div>
+                                    <div style={{fontSize: '1em', color: '#475569'}}>{assignment.course ?? '—'}</div>
+                                    <div style={{fontSize: '1em', color: '#64748b', marginTop: '12px', fontWeight: '600'}}>{assignment.praktikumType}</div>
+                                  </div>
+                                </td>
+                              )}
+                              <td>
+                                <span style={{fontWeight: '500'}}>
+                                  {assignment.studentName}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`status-badge ${
+                                  assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
+                                  assignment.status === 'PROPOSED' ? 'status-proposed' : 
+                                  'status-other'
+                                }`}>
+                                  {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
+                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' : 
+                                   assignment.status}
+                                </span>
+                              </td>
+                              <td>
+                                <button 
+                                  className="action-btn edit-btn"
+                                  onClick={() => handleEditAssignment(assignment)}
+                                  title="Bearbeiten"
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  className="action-btn validate-btn"
+                                  onClick={() => handleValidateAssignment(assignment.id)}
+                                  title="Bestätigen"
+                                  style={{marginLeft: '8px'}}
+                                >
+                                  ✓
+                                </button>
+                              </td>
+                            </tr>
+                          ))
                         ))
                       )}
                     </tbody>
