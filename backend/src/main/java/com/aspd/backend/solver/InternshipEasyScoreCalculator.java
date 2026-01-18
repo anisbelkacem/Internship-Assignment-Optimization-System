@@ -29,6 +29,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         hardScore += calculateMinimumActivationConstraints(internships);
         hardScore += calculateTeacherWorkloadConstraint(internships);
         hardScore += calculateTeacherDiversityConstraint(internships);
+        hardScore += calculateTeacherMaxPraktikaConstraint(internships);
         hardScore += calculateTeacherPraktikumTypeConstraint(internships);
         hardScore += calculateTeacherCourseMatchConstraint(internships);
         hardScore += calculateCoursePinningConstraint(internships);
@@ -136,6 +137,41 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                     .count();
                 if (uniqueTypes != count) {
                     hardScore -= 20; // Penalize if not all different
+                }
+            }
+        }
+
+        return hardScore;
+    }
+
+    private int calculateTeacherMaxPraktikaConstraint(List<PlannedInternship> internships) {
+        int hardScore = 0;
+
+        // Group by teacher (all internships in this run are for the same school year)
+        Map<Teacher, List<PlannedInternship>> byTeacher = internships.stream()
+            .filter(i -> i.isActive() && i.getAssignedTeacher() != null)
+            .collect(Collectors.groupingBy(PlannedInternship::getAssignedTeacher));
+
+        // Check each teacher's workload
+        for (Map.Entry<Teacher, List<PlannedInternship>> entry : byTeacher.entrySet()) {
+            Teacher teacher = entry.getKey();
+            List<PlannedInternship> assignments = entry.getValue();
+            
+            if (assignments.isEmpty()) continue;
+            
+            String schoolYear = assignments.get(0).getSchoolYear();
+            
+            TeacherPlConfig config = teacher.getPlConfigs().stream()
+                .filter(c -> c.getSchoolYear().equals(schoolYear))
+                .findFirst()
+                .orElse(null);
+
+            if (config != null && config.getMaxPraktikaPerYear() != null) {
+                int maxAllowed = config.getMaxPraktikaPerYear();
+                int actualCount = assignments.size();
+                
+                if (actualCount > maxAllowed) {
+                    hardScore -= (actualCount - maxAllowed) * 100; // Heavy penalty per excess
                 }
             }
         }
