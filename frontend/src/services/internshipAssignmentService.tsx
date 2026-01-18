@@ -49,9 +49,9 @@ class InternshipAssignmentService {
    * @param schoolYear - Academic year in format "YYYY/YYYY" (e.g., "2024/2025")
    * @returns TeacherAssignmentResult with optimization score and assignments
    */
-  async optimizePhase1(schoolYear: string): Promise<TeacherAssignmentResult> {
+  async optimizePhase1(schoolYear: string, budget: number): Promise<TeacherAssignmentResult> {
     return apiService.post<TeacherAssignmentResult>(
-      `/api/internships/phase1/optimize?schoolYear=${encodeURIComponent(schoolYear)}`,
+      `/api/internships/phase1/optimize?schoolYear=${encodeURIComponent(schoolYear)}&budget=${budget}`,
       {}
     );
   }
