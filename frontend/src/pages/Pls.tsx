@@ -67,6 +67,7 @@ useEffect(() => {
         plService.getAllPls(),
         apiService.get<SchoolOption[]>("/api/schools/active"),
       ]);
+      // Show ALL PLs (both active and inactive) in the Pls dashboard
       setPls(plsData);
       setSchools(
         schoolsData.map((s) => ({
@@ -229,6 +230,21 @@ const teacherPayload = {
     } catch (err) {
       console.error(err);
       showError("Fehler beim Löschen des PLs.");
+    }
+  }
+
+  async function handleToggleActive(pl: TeacherDto) {
+    try {
+      if (pl.active) {
+        await plService.deactivatePl(pl.teacherId);
+      } else {
+        await plService.activatePl(pl.teacherId);
+      }
+      await loadData();
+      showSuccess(pl.active ? "PL wurde deaktiviert." : "PL wurde aktiviert.");
+    } catch (err) {
+      console.error(err);
+      showError("Fehler beim Ändern des PL-Status.");
     }
   }
 
@@ -423,6 +439,25 @@ const teacherPayload = {
                             title="Bearbeiten"
                           >
                             ✏️
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn"
+                            onClick={() => handleToggleActive(pl)}
+                            title={pl.active ? "Deaktivieren" : "Aktivieren"}
+                            style={{
+                              backgroundColor: pl.active ? '#f59e0b' : '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 10px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {pl.active ? '⏸️' : '▶️'}
                           </button>
                           <button
                             type="button"

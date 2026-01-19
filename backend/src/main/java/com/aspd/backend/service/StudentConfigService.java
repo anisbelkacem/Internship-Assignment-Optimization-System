@@ -12,7 +12,9 @@ import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -20,8 +22,8 @@ public class StudentConfigService {
 
     private final StudentConfigRepository configRepository;
     private final StudentRepository studentRepository;
+    private final AuditLogService auditLogService;
     private final StudentConfigValidationService validationService;
-
 
     public StudentConfigDto createConfig(StudentConfigDto dto) {
         ValidationResult vr = validationService.validate(dto);
@@ -39,8 +41,20 @@ public class StudentConfigService {
                 dto.isSfp()
         );
 
-        configRepository.save(config);
-        return toDto(config);
+        StudentConfig saved = configRepository.save(config);
+        
+        // Log the creation
+        Map<String, Object> newValues = captureConfigState(saved);
+        auditLogService.log(
+            "StudentConfig",
+            saved.getId(),
+            "CREATE",
+            "Student config created for student " + student.getMatriculationNbr(),
+            null,
+            newValues
+        );
+        
+        return toDto(saved);
     }
 
 
@@ -80,6 +94,9 @@ public class StudentConfigService {
         StudentConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("StudentConfig", id));
 
+        // Capture previous state
+        Map<String, Object> previousValues = captureConfigState(config);
+
         config.setYear(dto.getYear());
         config.setMainCourse(dto.getMainCourse());
         config.setPrefCourse1(dto.getPrefCourse1());
@@ -90,16 +107,38 @@ public class StudentConfigService {
         config.setZsp(dto.isZsp());
         config.setSfp(dto.isSfp());
 
-        configRepository.save(config);
+        StudentConfig saved = configRepository.save(config);
+        
+        // Log the update
+        Map<String, Object> newValues = captureConfigState(saved);
+        auditLogService.log(
+            "StudentConfig",
+            id,
+            "UPDATE",
+            "Student config updated",
+            previousValues,
+            newValues
+        );
 
-        return toDto(config);
+        return toDto(saved);
     }
 
     public void deleteConfig(Long id) {
-        if (!configRepository.existsById(id)) {
-            throw new NotFoundException("StudentConfig", id);
-        }
+        StudentConfig config = configRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("StudentConfig", id));
+        
+        Map<String, Object> deletedValues = captureConfigState(config);
         configRepository.deleteById(id);
+        
+        // Log the deletion
+        auditLogService.log(
+            "StudentConfig",
+            id,
+            "DELETE",
+            "Student config deleted",
+            deletedValues,
+            null
+        );
     }
     public List<String> getAllYears() {
         return configRepository.findDistinctYears();
@@ -120,5 +159,21 @@ public class StudentConfigService {
                 config.isZsp(),
                 config.isSfp()
         );
+    }
+
+    private Map<String, Object> captureConfigState(StudentConfig config) {
+        Map<String, Object> state = new HashMap<>();
+        state.put("id", config.getId());
+        state.put("studentId", config.getStudent().getMatriculationNbr());
+        state.put("year", config.getYear());
+        state.put("mainCourse", config.getMainCourse());
+        state.put("prefCourse1", config.getPrefCourse1());
+        state.put("prefCourse2", config.getPrefCourse2());
+        state.put("prefCourse3", config.getPrefCourse3());
+        state.put("pdpI", config.isPdpI());
+        state.put("pdpII", config.isPdpII());
+        state.put("zsp", config.isZsp());
+        state.put("sfp", config.isSfp());
+        return state;
     }
 }

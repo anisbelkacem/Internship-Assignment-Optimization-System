@@ -41,6 +41,7 @@ export interface TeacherPlConfigDto {
   totalHoursCredit: number;
   subjectSpecializations: Course[];
   internshipPreferences: PraktikumType[];
+  active?: boolean;
 }
 
 export type TeacherDto = {
@@ -53,6 +54,7 @@ export type TeacherDto = {
   schoolName: string | null;
   schoolZone: string | null;
   isPartTime: boolean;
+  active?: boolean;
   plConfigs: TeacherPlConfigDto[];
 };
 
@@ -106,6 +108,13 @@ class PlService {
     return apiService.delete<void>(`${this.base}/${id}`);
   }
 
+  async activatePl(id: number): Promise<TeacherDto> {
+    return apiService.put<TeacherDto>(`${this.base}/${id}/activate`, {});
+  }
+
+  async deactivatePl(id: number): Promise<TeacherDto> {
+    return apiService.put<TeacherDto>(`${this.base}/${id}/deactivate`, {});
+  }
 
   async getConfigsForTeacher(teacherId: number): Promise<TeacherPlConfigDto[]> {
     return apiService.get<TeacherPlConfigDto[]>(
@@ -137,6 +146,20 @@ class PlService {
   async deleteConfig(teacherId: number, configId: number): Promise<void> {
     return apiService.delete<void>(
       `${this.base}/${teacherId}/pl-configs/${configId}`
+    );
+  }
+
+  async deactivateConfig(teacherId: number, configId: number): Promise<void> {
+    return apiService.put<void>(
+      `${this.base}/${teacherId}/pl-configs/${configId}/deactivate`,
+      {}
+    );
+  }
+
+  async activateConfig(teacherId: number, configId: number): Promise<void> {
+    return apiService.put<void>(
+      `${this.base}/${teacherId}/pl-configs/${configId}/activate`,
+      {}
     );
   }
 

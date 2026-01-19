@@ -97,6 +97,7 @@ export default function InternshipAssignments() {
     praktikumPreference: '',
   });
   const [plConfigSearchTerm, setPlConfigSearchTerm] = useState('');
+  const [timeBudget, setTimeBudget] = useState<number>(210);
 
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
@@ -138,7 +139,8 @@ const fetchInitialData = async () => {
     ]);
     
     setAvailableYears(yearsData);
-    setTeachers(teachersData);
+    // Filter to show only active teachers in pl-config
+    setTeachers(teachersData.filter(t => t.active !== false));
     setSchools(schoolsData);
     setStudents(studentsData);
     
@@ -254,7 +256,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setAssigningPhase1(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase1(selectedYear);
+      const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
       setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
       setTimeout(() => setSuccess(null), 5000);
       
@@ -933,11 +935,47 @@ const handleConfirmNewYear = () => {
               <div className="schools-header-content">
                 <h1 style={{fontSize: '20px'}}>Lehrerzuweisungen</h1>
               </div>
-              <div className="header-actions">
+              <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#475569'}}>Zeitbudget</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={timeBudget}
+                    onChange={(e) => setTimeBudget(parseInt(e.target.value) || 210)}
+                    style={{
+                      width: '100px',
+                      padding: '8px 14px',
+                      fontSize: '0.95rem',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f8fafc',
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                      color: '#000000',
+                      textAlign: 'center'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.backgroundColor = '#ffffff';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#e2e8f0';
+                      e.target.style.backgroundColor = '#f8fafc';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                    }}
+                  />
+                </div>
                 <button 
                   className="btn-primary"
                   onClick={handlePhase1Assignment}
                   disabled={!selectedYear || assigningPhase1}
+                  style={{marginTop: '20px'}}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
                 </button>
@@ -1066,6 +1104,8 @@ const handleConfirmNewYear = () => {
                   className="btn-primary"
                   onClick={handleAssignPhase2}
                   disabled={assigningPhase2 || !phase1Result}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {assigningPhase2 ? "Läuft..." : "Zuweisen"}
                 </button>
@@ -1105,11 +1145,8 @@ const handleConfirmNewYear = () => {
                   <table className="schools-table">
                     <thead>
                       <tr>
+                        <th style={{minWidth: '300px'}}>Praktikum</th>
                         <th>Schülername</th>
-                        <th>Betreuer</th>
-                        <th>Praktikumtyp</th>
-                        <th>Kurs</th>
-                        <th>Schule</th>
                         <th>Status</th>
                         <th>Aktionen</th>
                       </tr>
@@ -1117,55 +1154,114 @@ const handleConfirmNewYear = () => {
                     <tbody>
                       {filteredStudentAssignments.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="table-empty">
+                          <td colSpan={4} className="table-empty">
                             {studentSearchTerm || Object.values(studentFilters).some(v => v) ? 
                               'Keine Zuweisungen entsprechen den Filterkriterien' : 
                               'No student assignments generated'}
                           </td>
                         </tr>
                       ) : (
-                        filteredStudentAssignments.map((assignment) => (
-                          <tr key={assignment.id}>
-                            <td>
-                              <span style={{fontWeight: '500'}}>
-                                {assignment.studentName}
-                              </span>
-                            </td>
-                            <td>{assignment.teacherName ?? '—'}</td>
-                            <td>{assignment.praktikumType}</td>
-                            <td>{assignment.course ?? '—'}</td>
-                            <td>{assignment.schoolName ?? '—'}</td>
-                            <td>
-                              <span className={`status-badge ${
-                                assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
-                                editedAssignmentIds.has(assignment.id) ? 'status-edited' :
-                                assignment.status === 'PROPOSED' ? 'status-proposed' :
-                                'status-other'
-                              }`}>
-                                {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
-                                 editedAssignmentIds.has(assignment.id) ? 'Bearbeitet' :
-                                 assignment.status === 'PROPOSED' ? 'Vorgeschlagen' :
-                                 assignment.status}
-                              </span>
-                            </td>
-                            <td>
-                              <button 
-                                className="action-btn edit-btn"
-                                onClick={() => handleEditAssignment(assignment)}
-                                title="Bearbeiten"
-                              >
-                                ✏️
-                              </button>
-                              <button 
-                                className="action-btn validate-btn"
-                                onClick={() => handleValidateAssignment(assignment.id)}
-                                title="Bestätigen"
-                                style={{marginLeft: '8px'}}
-                              >
-                                ✓
-                              </button>
-                            </td>
-                          </tr>
+                        // Group filtered assignments by internship (teacher + school + course + type)
+                        Object.entries(
+                          filteredStudentAssignments.reduce((groups: any, assignment) => {
+                            const key = `${assignment.teacherName ?? 'Unassigned'} | ${assignment.schoolName ?? 'No School'} | ${assignment.course ?? 'No Course'} | ${assignment.praktikumType}`;
+                            if (!groups[key]) {
+                              groups[key] = [];
+                            }
+                            groups[key].push(assignment);
+                            return groups;
+                          }, {})
+                        ).map(([_, assignments]: [string, any]) => (
+                          assignments.map((assignment: any, idx: number) => (
+                            <tr key={assignment.id}>
+                              {idx === 0 && (
+                                <td rowSpan={assignments.length} style={{
+                                  background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                                  fontWeight: '500',
+                                  minWidth: '320px',
+                                  padding: '24px',
+                                  position: 'relative'
+                                }}>
+                                  <div style={{fontSize: '1.05em', lineHeight: '1.9'}}>
+                                    <div style={{
+                                      fontWeight: '700', 
+                                      color: '#1e293b', 
+                                      fontSize: '1.15em',
+                                      marginBottom: '8px'
+                                    }}>
+                                      {assignment.teacherName ?? 'Unassigned'}
+                                    </div>
+                                    <div style={{marginBottom: '12px'}}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '3px 10px',
+                                        background: 'transparent',
+                                        border: '1.5px solid #3b82f6',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75em',
+                                        fontWeight: '600',
+                                        color: '#3b82f6',
+                                        letterSpacing: '0.3px'
+                                      }}>
+                                        {assignment.praktikumType}
+                                      </span>
+                                    </div>
+                                    <div style={{
+                                      fontSize: '0.95em', 
+                                      color: '#64748b', 
+                                      paddingLeft: '16px',
+                                      borderLeft: '2px solid #e2e8f0',
+                                      marginLeft: '4px'
+                                    }}>
+                                      <div style={{marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                        <span style={{color: '#94a3b8', fontSize: '0.9em'}}>🏫</span>
+                                        <span style={{color: '#475569'}}>{assignment.schoolName ?? 'No School'}</span>
+                                      </div>
+                                      <div style={{marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                        <span style={{color: '#94a3b8', fontSize: '0.9em'}}>📚</span>
+                                        <span style={{color: '#475569'}}>{assignment.course ?? '—'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              )}
+                              <td>
+                                <span style={{fontWeight: '500'}}>
+                                  {assignment.studentName}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`status-badge ${
+                                  assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
+                                  editedAssignmentIds.has(assignment.id) ? 'status-edited' :
+                                  assignment.status === 'PROPOSED' ? 'status-proposed' :
+                                  'status-other'
+                                }`}>
+                                  {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
+                                   editedAssignmentIds.has(assignment.id) ? 'Bearbeitet' :
+                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' :
+                                   assignment.status}
+                                </span>
+                              </td>
+                              <td>
+                                <button 
+                                  className="action-btn edit-btn"
+                                  onClick={() => handleEditAssignment(assignment)}
+                                  title="Bearbeiten"
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  className="action-btn validate-btn"
+                                  onClick={() => handleValidateAssignment(assignment.id)}
+                                  title="Bestätigen"
+                                  style={{marginLeft: '8px'}}
+                                >
+                                  ✓
+                                </button>
+                              </td>
+                            </tr>
+                          ))
                         ))
                       )}
                     </tbody>
