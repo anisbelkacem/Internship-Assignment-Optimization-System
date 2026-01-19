@@ -20,4 +20,6 @@ public class SchoolResponse {
     private Boolean oepnv;
     private SchoolType type;
     private Boolean active;
+    private Double longitude;
+    private Double latitude;
 }

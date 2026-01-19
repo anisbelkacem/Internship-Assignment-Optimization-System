@@ -7,6 +7,7 @@ import com.aspd.backend.dto.SchoolRequest;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.SchoolType;
 import com.aspd.backend.repository.SchoolRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -25,11 +26,14 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class SchoolService {
     private final SchoolRepository repository;
+    private final GeoapifyService geoapifyService;
 
-    public SchoolService(SchoolRepository repository) {
+    public SchoolService(SchoolRepository repository, GeoapifyService geoapifyService) {
         this.repository = repository;
+        this.geoapifyService = geoapifyService;
     }
 
     public List<School> list() {
@@ -48,6 +52,7 @@ public class SchoolService {
     public School create(SchoolRequest req) {
         School s = new School();
         apply(s, req);
+        geocodeSchool(s);
         return repository.save(s);
     }
 
@@ -55,6 +60,7 @@ public class SchoolService {
     public School update(Long id, SchoolRequest req) {
         School s = get(id);
         apply(s, req);
+        geocodeSchool(s);
         return repository.save(s);
     }
 
@@ -71,6 +77,22 @@ public class SchoolService {
         s.setOepnv(req.getOepnv());
         s.setType(req.getType());
         s.setActive(req.getActive());
+    }
+
+    /**
+     * Geocode school's address using Geoapify API
+     */
+    private void geocodeSchool(School school) {
+        if (school.getAddress() != null && !school.getAddress().isEmpty()) {
+            var coords = geoapifyService.getCoordinatesByAddressString(school.getAddress());
+            if (coords.isPresent()) {
+                school.setLongitude(coords.get().getLongitude());
+                school.setLatitude(coords.get().getLatitude());
+                log.info("Geocoded school {} at address {}", school.getName(), school.getAddress());
+            } else {
+                log.warn("Failed to geocode school {} at address {}", school.getName(), school.getAddress());
+            }
+        }
     }
 
     @Transactional
@@ -135,6 +157,10 @@ public class SchoolService {
 
     private void saveImportedSchools(List<School> toSave, SchoolImportResult result) {
         if (!toSave.isEmpty()) {
+            // Geocode all schools before saving
+            for (School school : toSave) {
+                geocodeSchool(school);
+            }
             repository.saveAll(toSave);
             result.setImportedCount(toSave.size());
         }

@@ -13,6 +13,8 @@ export interface School {
   oepnv: boolean;
   type: SchoolType;
   active: boolean;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface SchoolCreate {

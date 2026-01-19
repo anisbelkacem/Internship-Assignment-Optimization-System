@@ -90,6 +90,8 @@ public class SchoolController {
         r.setOepnv(s.getOepnv());
         r.setType(s.getType());
         r.setActive(s.getActive());
+        r.setLongitude(s.getLongitude());
+        r.setLatitude(s.getLatitude());
         return r;
     }
 }
