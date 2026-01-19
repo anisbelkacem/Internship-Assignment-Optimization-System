@@ -5,6 +5,8 @@ import type { School, SchoolCreate } from '../services/schoolService';
 import SearchFilter, { type FilterConfig } from '../components/SearchFilter';
 import '../styles/Schools.css';
 
+// Define valid zones
+const VALID_ZONES = ['1', '2', '3'] as const;
 
 type SchoolFormData = SchoolCreate;
 
@@ -703,16 +705,21 @@ export default function Schools() {
                   <label className="form-label required" htmlFor="zone">
                     Zone
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="zone"
                     name="zone"
-                    className="form-input"
+                    className="form-select"
                     value={formData.zone}
                     onChange={handleInputChange}
                     required
-                    placeholder="z.B. Zone 1, Zone 2, Zone 3"
-                  />
+                  >
+                    <option value="">Zone auswählen...</option>
+                    {VALID_ZONES.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
