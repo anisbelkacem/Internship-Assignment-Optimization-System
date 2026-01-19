@@ -85,6 +85,17 @@ export default function InternshipAssignments() {
 
   useEffect(() => {
     fetchInitialData();
+    
+    // Add window focus listener to refresh years when returning to page
+    const handleFocus = () => {
+      refreshAvailableYears();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -118,6 +129,31 @@ const fetchInitialData = async () => {
     setError(err instanceof Error ? err.message : "Failed to load data");
   } finally {
     setLoading(false);
+  }
+};
+
+// Refresh available years from database
+const refreshAvailableYears = async (yearToKeep?: string) => {
+  try {
+    const yearsData = await studentConfigService.getAllYears();
+    setAvailableYears(yearsData);
+    
+    // If a specific year should be kept, ensure it's selected
+    if (yearToKeep && yearsData.includes(yearToKeep)) {
+      setSelectedYear(yearToKeep);
+      return;
+    }
+    
+    // Otherwise, if current selected year is no longer available, select first available
+    if (selectedYear && !yearsData.includes(selectedYear)) {
+      if (yearsData.length > 0) {
+        setSelectedYear(yearsData[0]);
+      } else {
+        setSelectedYear('');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to refresh years:', err);
   }
 };
 
@@ -166,6 +202,13 @@ const fetchInitialData = async () => {
       await studentConfigService.deleteConfig(deletingStudentConfigId);
       setSuccess("Student configuration deleted successfully!");
       fetchStudentConfigsByYear();
+      
+      // Refresh years list in case the last config for a year was deleted
+      // Small delay to ensure database transaction completes
+      setTimeout(async () => {
+        await refreshAvailableYears();
+      }, 150);
+      
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete configuration");
@@ -482,7 +525,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
   };
 
   // New Year Handler
-  const handleCreateNewYear = () => {
+  const handleCreateNewYear = async () => {
+    // Refresh the years list to show any configs added manually
+    await refreshAvailableYears();
     setShowNewYearModal(true);
   };
 
@@ -1225,12 +1270,16 @@ if (studentConfigsForYear.length === 0) {
               year={selectedYear}
               onClose={handleCloseStudentConfigModal}
               onSave={async () => {
-                const wasEditing = !!editingStudentConfig?.id;
+                const wasEditing = !!editingStudentConfig;
+                const yearBeingSaved = selectedYear; // Preserve the year being saved
                 handleCloseStudentConfigModal();
                 
-                // Refresh years list and configs
-                const yearsData = await studentConfigService.getAllYears();
-                setAvailableYears(yearsData);
+                // Small delay to ensure database transaction completes
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Refresh years list ensuring the saved year stays selected
+                await refreshAvailableYears(yearBeingSaved);
+                
                 await fetchStudentConfigsByYear();
                 
                 setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
