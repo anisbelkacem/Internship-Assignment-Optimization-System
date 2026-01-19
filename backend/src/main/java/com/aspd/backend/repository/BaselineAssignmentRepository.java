@@ -61,6 +61,6 @@ public interface BaselineAssignmentRepository extends JpaRepository<BaselineAssi
      * Find baselines by teacher for a given year/semester.
      * Useful to see which teacher's assignments are in the baseline.
      */
-    List<BaselineAssignment> findByTeacherIdAndSchoolYearAndSemester(
+    List<BaselineAssignment> findByTeacherTeacherIdAndSchoolYearAndSemester(
             Long teacherId, String schoolYear, String semester);
 }
