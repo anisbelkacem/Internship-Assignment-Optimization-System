@@ -1,6 +1,7 @@
 package com.aspd.backend.model;
 
 import org.optaplanner.core.api.domain.entity.PlanningEntity;
+import org.optaplanner.core.api.domain.entity.PlanningPin;
 import org.optaplanner.core.api.domain.variable.PlanningVariable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -63,6 +64,18 @@ public class StudentInternshipDemand {
 
     @Column(name = "school_year", nullable = false)
     private String schoolYear;
+
+    // RE-OPTIMIZATION SUPPORT
+    
+    /**
+     * Whether this assignment should be pinned (not changed) during re-optimization.
+     * When true, OptaPlanner will not modify the assignedInternship for this demand.
+     * Used to preserve valid assignments from baseline when re-optimizing for semester changes.
+     */
+    @PlanningPin
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean pinned = false;
 
     // OUTPUT: What OptaPlanner assigns
     

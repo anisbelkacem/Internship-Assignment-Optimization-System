@@ -1,12 +1,14 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.AssignmentStatus;
+import com.aspd.backend.model.BaselineAssignment;
 import com.aspd.backend.model.Course;
 import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.PraktikumType;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.model.StudentInternshipDemand;
+import com.aspd.backend.repository.BaselineAssignmentRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.solver.StudentAssignmentSolution;
@@ -19,7 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +36,7 @@ public class Phase2OptimizationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
+    private final BaselineAssignmentRepository baselineAssignmentRepository;
 
     /**
      * Optimize Phase 2: Student assignment.
@@ -47,8 +52,29 @@ public class Phase2OptimizationService {
             List<StudentConfig> studentConfigs,
             String schoolYear,
             Integer timeBudget) {
+        return optimize(studentConfigs, schoolYear, timeBudget, null);
+    }
+
+    /**
+     * Optimize Phase 2 with optional baseline preservation.
+     * 
+     * @param studentConfigs Student configurations
+     * @param schoolYear Academic year
+     * @param timeBudget Total hours budget
+     * @param semester Semester for baseline lookup (null = no baseline)
+     * @return Phase 2 solution with optimized student assignments
+     */
+    @Transactional
+    public StudentAssignmentSolution optimize(
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget,
+            String semester) {
         
         log.info("\n========== PHASE 2: Student Assignment ==========");
+        if (semester != null) {
+            log.info("Re-optimization mode: using baseline from semester={}", semester);
+        }
         
         // Load and validate planned internships from Phase 1
         List<PlannedInternship> plannedInternships = loadAndValidatePlannedInternships(schoolYear);
@@ -59,6 +85,11 @@ public class Phase2OptimizationService {
         // Create student demands
         List<StudentInternshipDemand> studentDemands = createStudentDemandsFromConfigs(
                 studentConfigs, schoolYear);
+        
+        // Apply baseline if semester is specified
+        if (semester != null) {
+            applyBaselineToDemandsInternships(studentDemands, plannedInternships, schoolYear, semester);
+        }
         
         // Run Phase 2
         StudentAssignmentSolution phase2Result = runPhase2(
@@ -236,4 +267,76 @@ public class Phase2OptimizationService {
                 .status(AssignmentStatus.PROPOSED)
                 .build();
     }
+
+    /**
+     * Applies baseline assignments to student demands and internships for re-optimization.
+     * This pre-populates the solution with existing valid assignments and pins them
+     * so OptaPlanner preserves them unless necessary to change.
+     */
+    private void applyBaselineToDemandsInternships(
+            List<StudentInternshipDemand> demands,
+            List<PlannedInternship> internships,
+            String schoolYear,
+            String semester) {
+        
+        // Get baseline for this year and semester
+        List<BaselineAssignment> baselines = baselineAssignmentRepository
+                .findBySchoolYearAndSemester(schoolYear, semester);
+        
+        if (baselines.isEmpty()) {
+            log.warn("No baseline found for year={}, semester={}. Running fresh optimization.", 
+                schoolYear, semester);
+            return;
+        }
+        
+        log.info("Found {} baseline assignments to apply", baselines.size());
+        
+        // Create maps for quick lookup
+        Map<Long, StudentInternshipDemand> demandMap = demands.stream()
+                .collect(Collectors.toMap(
+                    d -> d.getStudentConfig().getId(),
+                    d -> d,
+                    (existing, replacement) -> existing // Keep first if duplicates
+                ));
+        
+        Map<Long, PlannedInternship> internshipMap = internships.stream()
+                .collect(Collectors.toMap(PlannedInternship::getId, i -> i));
+        
+        int appliedCount = 0;
+        int pinnedCount = 0;
+        
+        // Apply baseline assignments
+        for (BaselineAssignment baseline : baselines) {
+            StudentConfig studentConfig = baseline.getStudentDemand().getStudentConfig();
+            Long plannedInternshipId = baseline.getPlannedInternship().getId();
+            
+            // Find matching demand in current demands
+            StudentInternshipDemand demand = demandMap.get(studentConfig.getId());
+            if (demand == null) {
+                log.debug("No matching demand for student config {}", studentConfig.getId());
+                continue;
+            }
+            
+            // Find matching internship in current internships
+            PlannedInternship internship = internshipMap.get(plannedInternshipId);
+            if (internship == null) {
+                log.debug("Baseline internship {} no longer exists", plannedInternshipId);
+                continue;
+            }
+            
+            // Apply baseline: pre-assign internship to demand
+            demand.setAssignedInternship(internship);
+            appliedCount++;
+            
+            // Pin if marked as pinned in baseline
+            if (baseline.isPinned()) {
+                demand.setPinned(true);
+                pinnedCount++;
+            }
+        }
+        
+        log.info("Applied {} baseline assignments ({} pinned)", appliedCount, pinnedCount);
+        log.info("OptaPlanner will preserve pinned assignments and try to keep others");
+    }
 }
+
