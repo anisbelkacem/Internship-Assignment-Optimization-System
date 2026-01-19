@@ -4,7 +4,8 @@ import plService, {
   type TeacherDto,
 } from "../services/plService";
 import "../styles/Pls/Pls.css";
-import "../styles/Schools.css"; 
+import "../styles/Schools.css";
+import SearchFilter, { type FilterConfig } from "../components/SearchFilter";
 import courseService, { type Course } from "../services/courseService";
 import PlFormModal, {
   type PlFormValues,
@@ -48,6 +49,11 @@ useEffect(() => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({
+    school: '',
+    subject: '',
+    employmentType: '',
+  });
 
   useEffect(() => {
     void loadData();
@@ -244,12 +250,74 @@ const teacherPayload = {
 
   const hasPls = useMemo(() => pls.length > 0, [pls]);
 
+  // Get unique schools from PLs
+  const uniqueSchools = useMemo(() => {
+    const schoolSet = new Set(
+      pls.map(pl => pl.schoolName).filter((name): name is string => !!name)
+    );
+    return Array.from(schoolSet).sort();
+  }, [pls]);
+
+  // Get unique subjects from PLs
+  const uniqueSubjects = useMemo(() => {
+    const subjectSet = new Set(
+      pls.map(pl => pl.mainSubject.name).filter((name): name is string => !!name)
+    );
+    return Array.from(subjectSet).sort();
+  }, [pls]);
+
+  // Build filter configurations
+  const filterConfigs: FilterConfig[] = useMemo(() => [
+    {
+      field: 'school',
+      label: 'Schule',
+      options: uniqueSchools.map(school => ({
+        label: school,
+        value: school,
+        field: 'school'
+      }))
+    },
+    {
+      field: 'subject',
+      label: 'Hauptfach',
+      options: uniqueSubjects.map(subject => ({
+        label: subject.charAt(0).toUpperCase() + subject.slice(1),
+        value: subject,
+        field: 'subject'
+      }))
+    },
+    {
+      field: 'employmentType',
+      label: 'Beschäftigungsart',
+      options: [
+        { label: 'Vollzeit', value: 'false', field: 'employmentType' },
+        { label: 'Teilzeit', value: 'true', field: 'employmentType' }
+      ]
+    }
+  ], [uniqueSchools, uniqueSubjects]);
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ school: '', subject: '', employmentType: '' });
+  };
+
   const filteredPls = useMemo(() => {
     return pls.filter(pl => {
       const fullName = `${pl.firstName} ${pl.lastName}`.toLowerCase();
-      return fullName.includes(searchTerm.toLowerCase());
+      const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                           pl.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSchool = !filters.school || pl.schoolName === filters.school;
+      const matchesSubject = !filters.subject || pl.mainSubject.name === filters.subject;
+      const matchesEmploymentType = !filters.employmentType ||
+                                   (filters.employmentType === 'true' && pl.isPartTime) ||
+                                   (filters.employmentType === 'false' && !pl.isPartTime);
+      
+      return matchesSearch && matchesSchool && matchesSubject && matchesEmploymentType;
     });
-  }, [pls, searchTerm]);
+  }, [pls, searchTerm, filters]);
 
   return (
     <section className="section-container pls-section">
@@ -278,36 +346,15 @@ const teacherPayload = {
       {error && <div className="inline-alert error">{error}</div>}
       {success && <div className="inline-alert success">{success}</div>}
 
-      <div style={{marginBottom: '20px'}}>
-        <input
-          type="text"
-          placeholder="🔍 PLs suchen..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            fontSize: '14px',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            outline: 'none',
-            transition: 'all 0.2s ease',
-            backgroundColor: '#f8fafc',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-            color: '#000000'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#3b82f6';
-            e.target.style.backgroundColor = '#ffffff';
-            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = '#e2e8f0';
-            e.target.style.backgroundColor = '#f8fafc';
-            e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-          }}
-        />
-      </div>
+      <SearchFilter
+        searchPlaceholder="Suche nach Name oder E-Mail..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={filterConfigs}
+        activeFilters={filters}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+      />
 
       <div className="table-card">
         <div className="table-card-header">

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import schoolService, { SchoolType } from '../services/schoolService';
 import type { School, SchoolCreate } from '../services/schoolService';
+import SearchFilter, { type FilterConfig } from '../components/SearchFilter';
 import '../styles/Schools.css';
 
 
@@ -27,6 +28,12 @@ export default function Schools() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [previewSchools, setPreviewSchools] = useState<PreviewSchool[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({
+    zone: '',
+    type: '',
+    oepnv: '',
+  });
   const [formData, setFormData] = useState<SchoolFormData>({
     name: '',
     address: '',
@@ -431,6 +438,70 @@ export default function Schools() {
     setImportResult(null);
   };
 
+  // Filter schools based on search and filters
+  const filteredSchools = useMemo(() => {
+    return schools.filter(school => {
+      const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          school.address.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesZone = !filters.zone || school.zone === filters.zone;
+      const matchesType = !filters.type || school.type === filters.type;
+      const matchesOepnv = !filters.oepnv || 
+                           (filters.oepnv === 'true' && school.oepnv) ||
+                           (filters.oepnv === 'false' && !school.oepnv);
+      
+      return matchesSearch && matchesZone && matchesType && matchesOepnv;
+    });
+  }, [schools, searchTerm, filters]);
+
+  // Get unique zones from schools
+  const zones = useMemo(() => {
+    const zoneSet = new Set(schools.map(s => s.zone).filter(Boolean));
+    return Array.from(zoneSet).sort();
+  }, [schools]);
+
+  // Get school types
+  const schoolTypes = useMemo(() => {
+    return Object.values(SchoolType);
+  }, []);
+
+  // Build filter configurations
+  const filterConfigs: FilterConfig[] = useMemo(() => [
+    {
+      field: 'zone',
+      label: 'Zone',
+      options: zones.map(zone => ({
+        label: zone,
+        value: zone,
+        field: 'zone'
+      }))
+    },
+    {
+      field: 'type',
+      label: 'Schultyp',
+      options: schoolTypes.map(type => ({
+        label: type,
+        value: type,
+        field: 'type'
+      }))
+    },
+    {
+      field: 'oepnv',
+      label: 'ÖPNV',
+      options: [
+        { label: 'Ja', value: 'true', field: 'oepnv' },
+        { label: 'Nein', value: 'false', field: 'oepnv' }
+      ]
+    }
+  ], [zones, schoolTypes]);
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ zone: '', type: '', oepnv: '' });
+  };
+
   if (loading) {
     return (
       <div className="schools-container">
@@ -471,6 +542,16 @@ export default function Schools() {
         </div>
       )}
 
+      <SearchFilter
+        searchPlaceholder="Suche nach Schulnamen oder Adresse..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={filterConfigs}
+        activeFilters={filters}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+      />
+
       {schools.length === 0 ? (
         <div className="empty-state">
           <h3>Keine Schulen gefunden</h3>
@@ -492,7 +573,16 @@ export default function Schools() {
                 </tr>
               </thead>
               <tbody>
-                {schools.map((school) => (
+                {filteredSchools.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="empty-state">
+                      {searchTerm || Object.values(filters).some(v => v) ? 
+                        'Keine Schulen entsprechen den Filterkriterien' : 
+                        'Keine Schulen vorhanden'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSchools.map((school) => (
                   <tr key={school.id}>
                     <td className="school-name">{school.name}</td>
                     <td>{school.address}</td>
@@ -539,7 +629,8 @@ export default function Schools() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
