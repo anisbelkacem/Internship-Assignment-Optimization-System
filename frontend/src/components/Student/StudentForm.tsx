@@ -312,10 +312,10 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
 
             <div className="student-form-actions">
                 <button className="btn btn-primary" onClick={handleSubmit}>
-                    {student ? "Update" : "Create"}
+                    {student ? "Aktualisieren" : "Hinzufügen"}
                 </button>
                 <button className="btn btn-secondary" onClick={onClose}>
-                    Cancel
+                    Abbrechen
                 </button>
             </div>
         </div>

@@ -711,7 +711,7 @@ export default function Schools() {
                     value={formData.zone}
                     onChange={handleInputChange}
                     required
-                    placeholder="z.B. Nord, Süd, Ost, West"
+                    placeholder="z.B. Zone 1, Zone 2, Zone 3"
                   />
                 </div>
 
@@ -732,7 +732,7 @@ export default function Schools() {
                   </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '24px' }}>
                   <div className="form-checkbox-group">
                     <input
                       type="checkbox"
@@ -748,7 +748,7 @@ export default function Schools() {
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '16px' }}>
                   <div className="form-checkbox-group">
                     <input
                       type="checkbox"
@@ -769,7 +769,12 @@ export default function Schools() {
                 <button type="button" className="btn-cancel" onClick={handleCloseModal}>
                   Abbrechen
                 </button>
-                <button type="submit" className="btn-primary">
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   {editingSchool ? 'Aktualisieren' : 'Hinzufügen'}
                 </button>
               </div>

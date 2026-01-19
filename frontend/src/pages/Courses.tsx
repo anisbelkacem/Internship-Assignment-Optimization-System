@@ -143,7 +143,12 @@ const handleDelete = async (id: number) => {
         <div className="table-card-header">
           <div className="table-card-title" aria-hidden="true"></div>
           <div className="table-card-actions">
-            <button className="btn-primary" onClick={() => handleOpenModal()}>
+            <button 
+              className="btn-primary" 
+              onClick={() => handleOpenModal()}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               Neuer Kurs
             </button>
           </div>
@@ -276,26 +281,27 @@ const handleDelete = async (id: number) => {
 
             {/* Aktiv / Inaktiv */}
             <div className="form-group">
-                <label className="form-checkbox">
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                     type="checkbox"
                     checked={formData.active}
-                    onChange={(e) =>
-                    setFormData({ ...formData, active: e.target.checked })
-                    }
+                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                 />
-                <span style={{ marginLeft: '0.5rem' }}>
-                    Kurs ist aktiv
-                </span>
+                <span style={{ marginLeft: '0.5rem' }}>Kurs ist aktiv</span>
                 </label>
             </div>
 
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={handleCloseModal}>
-                Abbrechen
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSubmit}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                {editingCourse ? 'Aktualisieren' : 'Hinzufügen'}
               </button>
-              <button className="btn-primary" onClick={handleSubmit}>
-                {editingCourse ? 'Aktualisieren' : 'Erstellen'}
+              <button className="btn btn-secondary" onClick={handleCloseModal}>
+                Abbrechen
               </button>
             </div>
           </div>
