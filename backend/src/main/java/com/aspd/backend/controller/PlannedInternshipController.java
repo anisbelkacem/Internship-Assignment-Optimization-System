@@ -6,6 +6,7 @@ import com.aspd.backend.service.PlannedInternshipService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class PlannedInternshipController {
     /**
      * Get all planned internships for a specific school year.
      */
+    @PreAuthorize("hasAnyAuthority('VIEW')")
     @GetMapping
     public ResponseEntity<List<PlannedInternshipDto>> getBySchoolYear(
             @RequestParam(name = "schoolYear") String schoolYear) {
@@ -41,6 +43,7 @@ public class PlannedInternshipController {
     /**
      * Get a specific planned internship by ID.
      */
+    @PreAuthorize("hasAnyAuthority('VIEW')")
     @GetMapping("/{id}")
     public ResponseEntity<PlannedInternshipDto> getById(@PathVariable Long id) {
         log.info("GET /api/planned-internships/{}", id);
@@ -54,6 +57,7 @@ public class PlannedInternshipController {
     /**
      * Update a planned internship (change assigned teacher or school).
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public ResponseEntity<PlannedInternshipDto> update(
             @PathVariable Long id,
@@ -74,6 +78,7 @@ public class PlannedInternshipController {
     /**
      * Delete a planned internship by ID.
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("DELETE /api/planned-internships/{}", id);
@@ -84,6 +89,7 @@ public class PlannedInternshipController {
     /**
      * Delete all planned internships for a specific school year.
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping
     public ResponseEntity<Void> deleteBySchoolYear(
             @RequestParam(name = "schoolYear") String schoolYear) {

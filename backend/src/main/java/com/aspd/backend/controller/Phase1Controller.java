@@ -13,6 +13,7 @@ import com.aspd.backend.repository.TeacherRepository;
 import com.aspd.backend.service.Phase1OptimizationService;
 import com.aspd.backend.solver.InternshipSolution;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,7 +54,7 @@ public class Phase1Controller {
      * Phase 1: Optimize teacher and school assignments to internships.
      * This creates planned internships and assigns teachers/schools to them.
      */
-    // @PreAuthorize("hasAuthority('MANAGE_USERS')")  // Temporarily disabled for testing
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping("/optimize")
     public ResponseEntity<TeacherAssignmentResult> optimize(
             @RequestParam(name = "schoolYear") String schoolYear,

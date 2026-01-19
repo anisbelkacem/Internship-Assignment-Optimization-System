@@ -1,6 +1,7 @@
 package com.aspd.backend.common.exception;
 
 import com.aspd.backend.validation.AssignmentValidationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -70,6 +71,15 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("error", "I/O error while reading Excel file: " + ex.getMessage());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "Cannot delete record because it is referenced by other records. Please delete dependent records first.");
+        String details = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        body.put("details", details);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(AssignmentValidationException.class)

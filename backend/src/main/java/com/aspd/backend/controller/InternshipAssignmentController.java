@@ -8,6 +8,7 @@ import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.service.InternshipAssignmentService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -42,6 +43,7 @@ public class InternshipAssignmentController {
     /**
      * Get all internship assignments, optionally filtered by school year.
      */
+    @PreAuthorize("hasAnyAuthority('VIEW')")
     @GetMapping
     public ResponseEntity<List<AssignmentDto>> getAllAssignments(
             @RequestParam(required = false) String schoolYear) {
@@ -63,6 +65,7 @@ public class InternshipAssignmentController {
     /**
      * Get a single internship assignment by ID.
      */
+    @PreAuthorize("hasAnyAuthority('VIEW')")
     @GetMapping("/{id}")
     public ResponseEntity<AssignmentDto> getAssignmentById(@PathVariable Long id) {
         return assignmentService.getById(id)
@@ -74,6 +77,7 @@ public class InternshipAssignmentController {
     /**
      * Update an internship assignment.
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
     public ResponseEntity<AssignmentDto> updateAssignment(
             @PathVariable Long id,
@@ -88,6 +92,7 @@ public class InternshipAssignmentController {
     /**
      * Partially update an internship assignment (e.g., change status only).
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @PatchMapping("/{id}/status")
     public ResponseEntity<AssignmentDto> updateAssignmentStatus(
             @PathVariable Long id,
@@ -102,6 +107,7 @@ public class InternshipAssignmentController {
     /**
      * Delete an internship assignment by ID.
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAssignment(@PathVariable Long id) {
         if (assignmentService.delete(id)) {
@@ -114,16 +120,12 @@ public class InternshipAssignmentController {
     /**
      * Delete all assignments for a specific school year.
      */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping
     public ResponseEntity<Void> deleteAssignmentsBySchoolYear(
             @RequestParam String schoolYear) {
-        
-        int deletedCount = assignmentService.deleteBySchoolYear(schoolYear);
-        
-        if (deletedCount > 0) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+
+        assignmentService.deleteBySchoolYear(schoolYear);
+        return ResponseEntity.noContent().build();
     }
 }
