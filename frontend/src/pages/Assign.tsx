@@ -908,6 +908,8 @@ const handleConfirmNewYear = () => {
             className="btn btn-primary"
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             New Year
           </button>
@@ -937,7 +939,7 @@ const handleConfirmNewYear = () => {
               </div>
               <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#475569'}}>Zeitbudget</label>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Zeitbudget</label>
                   <input
                     type="number"
                     min="1"
@@ -946,26 +948,22 @@ const handleConfirmNewYear = () => {
                     onChange={(e) => setTimeBudget(parseInt(e.target.value) || 210)}
                     style={{
                       width: '100px',
-                      padding: '8px 14px',
-                      fontSize: '0.95rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
                       outline: 'none',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: '#f8fafc',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      color: '#000000',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
                       textAlign: 'center'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#3b82f6';
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.backgroundColor = '#f8fafc';
-                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.outline = 'none';
                     }}
                   />
                 </div>
