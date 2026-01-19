@@ -160,6 +160,8 @@ const StudentList: React.FC = () => {
                             setSelectedStudent(null);
                             setShowForm(true);
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         Add Student
                     </button>

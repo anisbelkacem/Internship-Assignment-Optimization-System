@@ -522,9 +522,14 @@ export default function Schools() {
         </div>
         <div className="header-actions">
           <button className="btn-import" onClick={() => setShowImportModal(true)}>
-             Excel importieren
+            Importieren
           </button>
-          <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
+          <button 
+            className="btn-primary btn-add-school" 
+            onClick={() => handleOpenModal()}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
             Schule hinzufügen
           </button>
         </div>
@@ -800,7 +805,7 @@ export default function Schools() {
                     </p>
                   )}
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (true/false), Type (GS/MS)
+                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (wahr/falsch), Typ (GS/MS)
                   </p>
                 </div>
 

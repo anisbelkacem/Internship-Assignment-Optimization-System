@@ -331,12 +331,14 @@ const teacherPayload = {
             className="btn btn-ghost"
             onClick={handleOpenImportModal}
           >
-            PLs importieren
+            Importieren
           </button>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => handleOpenFormModal()}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             PL hinzufügen
           </button>
