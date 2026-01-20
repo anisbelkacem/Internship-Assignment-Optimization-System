@@ -272,6 +272,8 @@ public class Phase2OptimizationService {
      * Applies baseline assignments to student demands and internships for re-optimization.
      * This pre-populates the solution with existing valid assignments and pins them
      * so OptaPlanner preserves them unless necessary to change.
+     * 
+     * For summer re-optimization: loads winter baseline from same year
      */
     private void applyBaselineToDemandsInternships(
             List<StudentInternshipDemand> demands,
@@ -279,17 +281,20 @@ public class Phase2OptimizationService {
             String schoolYear,
             String semester) {
         
-        // Get baseline for this year and semester
+        // When optimizing summer, load winter baseline from same year
+        String baselineSemester = "summer".equalsIgnoreCase(semester) ? "winter" : semester;
+        
+        // Get baseline from previous semester
         List<BaselineAssignment> baselines = baselineAssignmentRepository
-                .findBySchoolYearAndSemester(schoolYear, semester);
+                .findBySchoolYearAndSemester(schoolYear, baselineSemester);
         
         if (baselines.isEmpty()) {
             log.warn("No baseline found for year={}, semester={}. Running fresh optimization.", 
-                schoolYear, semester);
+                schoolYear, baselineSemester);
             return;
         }
         
-        log.info("Found {} baseline assignments to apply", baselines.size());
+        log.info("Found {} baseline assignments from semester={}", baselines.size(), baselineSemester);
         
         // Create maps for quick lookup
         Map<Long, StudentInternshipDemand> demandMap = demands.stream()
@@ -324,6 +329,9 @@ public class Phase2OptimizationService {
                 continue;
             }
             
+            // Store baseline for score calculator to reward preservation
+            demand.setBaselineInternship(internship);
+            
             // Apply baseline: pre-assign internship to demand
             demand.setAssignedInternship(internship);
             appliedCount++;
@@ -336,7 +344,6 @@ public class Phase2OptimizationService {
         }
         
         log.info("Applied {} baseline assignments ({} pinned)", appliedCount, pinnedCount);
-        log.info("OptaPlanner will preserve pinned assignments and try to keep others");
+        log.info("OptaPlanner will preserve pinned assignments and prefer keeping others via soft constraint");
     }
-}
 

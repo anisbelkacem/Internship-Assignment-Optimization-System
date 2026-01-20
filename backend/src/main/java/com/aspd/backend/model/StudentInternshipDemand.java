@@ -77,6 +77,15 @@ public class StudentInternshipDemand {
     @Builder.Default
     private boolean pinned = false;
 
+    /**
+     * The baseline internship assignment from a previous optimization.
+     * Used during re-optimization to prefer preserving existing assignments.
+     * This is NOT persisted in the database - it's set transiently during re-optimization
+     * by loading data from BaselineAssignment records.
+     */
+    @jakarta.persistence.Transient
+    private PlannedInternship baselineInternship;
+
     // OUTPUT: What OptaPlanner assigns
     
     /**

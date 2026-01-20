@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * 
  * Phase 2 focus:
  * - Hard: Capacity constraints, all students assigned, SFP course match
- * - Soft: ZSP course preferences, capacity balance, distance for PDP
+ * - Soft: ZSP course preferences, capacity balance, distance for PDP, baseline preservation
  */
 public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator<StudentAssignmentSolution, HardSoftScore> {
 
@@ -98,6 +98,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
      * - ZSP course preferences (soft)
      * - Capacity balance (soft)
      * - Distance preference for PDP (soft)
+     * - Baseline preservation (soft)
      */
     private int checkSoftConstraints(StudentInternshipDemand demand, PlannedInternship internship) {
         int reward = 0;
@@ -113,6 +114,9 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         if ((internshipType == PraktikumType.PDP_I || internshipType == PraktikumType.PDP_II) && internship.getSchool() != null) {
             reward += evaluateDistancePreference(demand, internship);
         }
+        
+        // Baseline preservation: reward keeping existing assignments
+        reward += evaluateBaselinePreservation(demand, internship);
         
         return reward;
     }
@@ -162,6 +166,35 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
             return -5;
         }
         
+        return 0;
+    }
+
+    /**
+     * Evaluates baseline preservation during re-optimization.
+     * When a demand has a baseline assignment (from previous semester):
+     * - Rewards keeping the same internship (+50)
+     * - No penalty for changes (allows flexibility when needed)
+     * 
+     * This creates a soft preference to maintain existing assignments
+     * while still allowing changes when better solutions exist or when
+     * constraints require it. Works in conjunction with @PlanningPin
+     * which hard-locks critical assignments.
+     * 
+     * @param demand The student demand being evaluated
+     * @param internship The internship being assigned
+     * @return +50 if assignment matches baseline, 0 otherwise
+     */
+    private int evaluateBaselinePreservation(StudentInternshipDemand demand, PlannedInternship internship) {
+        // Check if this demand has a baseline assignment stored
+        PlannedInternship baselineInternship = demand.getBaselineInternship();
+        
+        if (baselineInternship != null && baselineInternship.equals(internship)) {
+            // Reward preserving the baseline assignment
+            return 50;
+        }
+        
+        // No penalty for changing - just no reward
+        // This allows OptaPlanner flexibility when better assignments exist
         return 0;
     }
 }
