@@ -346,4 +346,4 @@ public class Phase2OptimizationService {
         log.info("Applied {} baseline assignments ({} pinned)", appliedCount, pinnedCount);
         log.info("OptaPlanner will preserve pinned assignments and prefer keeping others via soft constraint");
     }
-
+}
