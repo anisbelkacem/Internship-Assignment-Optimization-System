@@ -5,6 +5,8 @@ import type { School, SchoolCreate } from '../services/schoolService';
 import SearchFilter, { type FilterConfig } from '../components/SearchFilter';
 import '../styles/Schools.css';
 
+// Define valid zones
+const VALID_ZONES = ['1', '2', '3'] as const;
 
 type SchoolFormData = SchoolCreate;
 
@@ -522,9 +524,14 @@ export default function Schools() {
         </div>
         <div className="header-actions">
           <button className="btn-import" onClick={() => setShowImportModal(true)}>
-             Excel importieren
+            Importieren
           </button>
-          <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
+          <button 
+            className="btn-primary btn-add-school" 
+            onClick={() => handleOpenModal()}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
             Schule hinzufügen
           </button>
         </div>
@@ -698,16 +705,21 @@ export default function Schools() {
                   <label className="form-label required" htmlFor="zone">
                     Zone
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="zone"
                     name="zone"
-                    className="form-input"
+                    className="form-select"
                     value={formData.zone}
                     onChange={handleInputChange}
                     required
-                    placeholder="z.B. Nord, Süd, Ost, West"
-                  />
+                  >
+                    <option value="">Zone auswählen...</option>
+                    {VALID_ZONES.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -727,7 +739,7 @@ export default function Schools() {
                   </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '24px' }}>
                   <div className="form-checkbox-group">
                     <input
                       type="checkbox"
@@ -743,7 +755,7 @@ export default function Schools() {
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '16px' }}>
                   <div className="form-checkbox-group">
                     <input
                       type="checkbox"
@@ -761,11 +773,16 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
-                  Abbrechen
-                </button>
-                <button type="submit" className="btn-primary">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   {editingSchool ? 'Aktualisieren' : 'Hinzufügen'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
+                  Abbrechen
                 </button>
               </div>
             </form>
@@ -800,7 +817,7 @@ export default function Schools() {
                     </p>
                   )}
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (true/false), Type (GS/MS)
+                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (wahr/falsch), Typ (GS/MS)
                   </p>
                 </div>
 
