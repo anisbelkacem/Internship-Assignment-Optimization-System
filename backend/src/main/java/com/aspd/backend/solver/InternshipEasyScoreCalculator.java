@@ -1,6 +1,7 @@
 package com.aspd.backend.solver;
 
 import com.aspd.backend.model.*;
+import com.aspd.backend.dto.CoordinatesDto;
 import lombok.extern.slf4j.Slf4j;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.score.calculator.EasyScoreCalculator;
@@ -42,8 +43,131 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         softScore += calculateTeacher2InternshipsPreference(internships);
         softScore += calculateDiversityPreference(internships);
         softScore += calculateZspCourseDistributionPreference(solution, internships);
+        softScore += calculatePdpDistancePreference(solution, internships);
 
         return HardSoftScore.of(hardScore, softScore);
+    }
+
+    /**
+     * Soft constraint: minimize bidirectional + centroid distance for PDP assignments.
+     * 
+     * Two mechanisms:
+     * 1. Bidirectional matching (local): each student finds closest teacher, each teacher finds closest student.
+     *    Ensures no isolated students/teachers.
+     * 2. Centroid distance (global): teachers' average position vs. student demand centroid.
+     *    Ensures teachers cluster toward center of student demand.
+     */
+    private int calculatePdpDistancePreference(InternshipSolution solution, List<PlannedInternship> internships) {
+        // Get student coords by type
+        List<CoordinatesDto> gsCoords = Optional.ofNullable(solution.getPdpGsStudentCoords()).orElse(Collections.emptyList());
+        List<CoordinatesDto> msCoords = Optional.ofNullable(solution.getPdpMsStudentCoords()).orElse(Collections.emptyList());
+
+        if (gsCoords.isEmpty() && msCoords.isEmpty()) {
+            return 0;
+        }
+
+        // Build teacher coords per type from active PDP assignments
+        Map<SchoolType, List<CoordinatesDto>> teacherCoordsByType = new HashMap<>();
+        for (PlannedInternship i : internships) {
+            if (!i.isActive() || i.getAssignedTeacher() == null) {
+                continue;
+            }
+            if (i.getPraktikumType() != PraktikumType.PDP_I && i.getPraktikumType() != PraktikumType.PDP_II) {
+                continue;
+            }
+            Teacher t = i.getAssignedTeacher();
+            School s = t.getSchool();
+            if (s == null || s.getLatitude() == null || s.getLongitude() == null) {
+                continue;
+            }
+            SchoolType type = i.getSchoolType();
+            teacherCoordsByType.computeIfAbsent(type, k -> new ArrayList<>())
+                .add(new CoordinatesDto(s.getLongitude(), s.getLatitude()));
+        }
+
+        double totalDistance = 0.0;
+
+        // ===== PART 1: BIDIRECTIONAL MATCHING =====
+        
+        // 1a. For each student, find closest teacher (per type)
+        for (SchoolType type : SchoolType.values()) {
+            List<CoordinatesDto> studentCoords = (type == SchoolType.GS) ? gsCoords : msCoords;
+            List<CoordinatesDto> teacherCoords = teacherCoordsByType.getOrDefault(type, Collections.emptyList());
+
+            if (studentCoords.isEmpty() || teacherCoords.isEmpty()) {
+                continue;
+            }
+
+            for (CoordinatesDto sCoord : studentCoords) {
+                Double minDist = Double.MAX_VALUE;
+                for (CoordinatesDto tCoord : teacherCoords) {
+                    Double d = sCoord.distanceTo(tCoord);
+                    if (d != null && d < minDist) {
+                        minDist = d;
+                    }
+                }
+                if (minDist != Double.MAX_VALUE) {
+                    totalDistance += minDist;
+                }
+            }
+        }
+
+        // 1b. For each teacher, find closest student (per type)
+        for (SchoolType type : SchoolType.values()) {
+            List<CoordinatesDto> studentCoords = (type == SchoolType.GS) ? gsCoords : msCoords;
+            List<CoordinatesDto> teacherCoords = teacherCoordsByType.getOrDefault(type, Collections.emptyList());
+
+            if (studentCoords.isEmpty() || teacherCoords.isEmpty()) {
+                continue;
+            }
+
+            for (CoordinatesDto tCoord : teacherCoords) {
+                Double minDist = Double.MAX_VALUE;
+                for (CoordinatesDto sCoord : studentCoords) {
+                    Double d = tCoord.distanceTo(sCoord);
+                    if (d != null && d < minDist) {
+                        minDist = d;
+                    }
+                }
+                if (minDist != Double.MAX_VALUE) {
+                    totalDistance += minDist;
+                }
+            }
+        }
+
+        // ===== PART 2: CENTROID DISTANCE =====
+        // Each teacher's distance to the centroid of students (per type)
+        // Ensures geographic spread toward student demand center
+        
+        for (SchoolType type : SchoolType.values()) {
+            List<CoordinatesDto> studentCoords = (type == SchoolType.GS) ? gsCoords : msCoords;
+            List<CoordinatesDto> teacherCoords = teacherCoordsByType.getOrDefault(type, Collections.emptyList());
+
+            if (studentCoords.isEmpty() || teacherCoords.isEmpty()) {
+                continue;
+            }
+
+            // Compute student centroid
+            double sumLat = 0.0, sumLon = 0.0;
+            for (CoordinatesDto coord : studentCoords) {
+                sumLat += coord.getLatitude();
+                sumLon += coord.getLongitude();
+            }
+            double centroidLat = sumLat / studentCoords.size();
+            double centroidLon = sumLon / studentCoords.size();
+            CoordinatesDto centroid = new CoordinatesDto(centroidLon, centroidLat);
+
+            // Sum distance from each teacher to centroid
+            for (CoordinatesDto tCoord : teacherCoords) {
+                Double d = tCoord.distanceTo(centroid);
+                if (d != null) {
+                    totalDistance += d;
+                }
+            }
+        }
+
+        // Soft penalty: negative of total kilometers
+        return (int) Math.round(-totalDistance);
     }
 
     private int calculateBudgetConstraint(InternshipSolution solution, List<PlannedInternship> internships) {
