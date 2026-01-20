@@ -773,16 +773,16 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
-                  Abbrechen
-                </button>
                 <button 
                   type="submit" 
-                  className="btn-primary"
+                  className="btn btn-primary"
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {editingSchool ? 'Aktualisieren' : 'Hinzufügen'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
+                  Abbrechen
                 </button>
               </div>
             </form>

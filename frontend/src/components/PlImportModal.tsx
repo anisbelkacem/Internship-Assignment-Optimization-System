@@ -85,7 +85,7 @@ const PlImportModal: React.FC<PlImportModalProps> = ({
               </p>
             )}
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-              Die Excel-Datei sollte folgende Spalten enthalten: Vorname, Nachname, E-Mail, Hauptfach, Schul-ID
+              Die Excel-Datei sollte folgende Spalten enthalten: Vorname, Nachname, E-Mail, Hauptfach, Schulname
             </p>
           </div>
 
