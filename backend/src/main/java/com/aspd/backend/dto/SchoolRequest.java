@@ -1,5 +1,6 @@
 package com.aspd.backend.dto;
 
+import com.aspd.backend.model.OepnvStatus;
 import com.aspd.backend.model.SchoolType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,7 +26,7 @@ public class SchoolRequest {
     private String zone;
 
     @NotNull
-    private Boolean oepnv;
+    private OepnvStatus oepnv;
 
     @NotNull
     private SchoolType type; // GS or MS

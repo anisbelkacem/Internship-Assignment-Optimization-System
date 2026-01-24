@@ -72,7 +72,7 @@ public class InternshipAssignmentValidationService {
                     .orElseThrow(() -> new IllegalArgumentException("School not found: " + schoolId));
 
             String zone = school.getZone();
-            boolean oepnv = Boolean.TRUE.equals(school.getOepnv());
+            boolean oepnv = hasOepnv(school.getOepnv());
 
             boolean violates;
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
@@ -102,5 +102,9 @@ public class InternshipAssignmentValidationService {
                 .message(message)
                 .fields(fields)
                 .build();
+    }
+
+    private boolean hasOepnv(OepnvStatus status) {
+        return status != null && status.isAvailable();
     }
 }
