@@ -7,6 +7,9 @@ import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.repository.TeacherRepository;
+import com.aspd.backend.validation.AssignmentValidationException;
+import com.aspd.backend.validation.PlannedInternshipValidationService;
+import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ public class PlannedInternshipService {
     private final SchoolRepository schoolRepository;
     private final InternshipAssignmentService internshipAssignmentService;
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
+    private final PlannedInternshipValidationService plannedInternshipValidationService;
+
 
     /**
      * Get all planned internships for a specific school year.
@@ -50,6 +55,14 @@ public class PlannedInternshipService {
     @Transactional
     public PlannedInternship update(Long id, Long teacherId, Long schoolId) {        
         log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
+        // Server-side guard: never allow persisting an update that violates HARD constraints
+        ValidationResult vr = plannedInternshipValidationService
+                .validatePlannedInternshipUpdate(id, teacherId, schoolId);
+
+        if (!vr.isHardValid()) {
+            throw new AssignmentValidationException(vr);
+        }
+
 
         PlannedInternship internship = plannedInternshipRepository.findById(id)      
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));

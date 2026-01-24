@@ -72,12 +72,6 @@ public class InternshipAssignmentService {
                     // Capture previous values for audit log
                     Map<String, Object> previousValues = captureAssignmentState(existing);
                     
-                    if (updatedAssignment.getStartDate() != null) {
-                        existing.setStartDate(updatedAssignment.getStartDate());
-                    }
-                    if (updatedAssignment.getEndDate() != null) {
-                        existing.setEndDate(updatedAssignment.getEndDate());
-                    }
                     if (updatedAssignment.getStatus() != null) {
                         existing.setStatus(updatedAssignment.getStatus());
                     }
@@ -205,8 +199,6 @@ public class InternshipAssignmentService {
         Map<String, Object> state = new HashMap<>();
         state.put("id", assignment.getId());
         state.put("status", assignment.getStatus().name());
-        state.put("startDate", assignment.getStartDate());
-        state.put("endDate", assignment.getEndDate());
         state.put("praktikumType", assignment.getPraktikumType().name());
         if (assignment.getTeacher() != null) {
             state.put("teacherId", assignment.getTeacher().getTeacherId());

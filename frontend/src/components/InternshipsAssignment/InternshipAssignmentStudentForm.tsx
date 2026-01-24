@@ -4,6 +4,8 @@ import StudentConfigService from "../../services/studentConfigService";
 import courseService, { type Course } from "../../services/courseService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
 import type { StudentConfigDto } from "../../services/studentConfigService";
+import studentService, { type Student } from "../../services/studentService";
+
 
 interface Props {
   config?: StudentConfigDto;
@@ -45,6 +47,25 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
 
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 const [validating, setValidating] = useState(false);
+const [students, setStudents] = useState<Student[]>([]);
+const [loadingStudents, setLoadingStudents] = useState(true);
+
+useEffect(() => {
+  const loadStudents = async () => {
+    try {
+      setLoadingStudents(true);
+      const allStudents = await studentService.getAllStudent();
+      allStudents.sort((a, b) => a.matriculationNbr - b.matriculationNbr);
+      setStudents(allStudents);
+    } catch (error) {
+      console.error("Error loading students:", error);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+  loadStudents();
+}, []);
+
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -199,14 +220,25 @@ const handleSubmit = async () => {
         {/* Left Side: Student Info & Checkboxes */}
         <div className="student-config-left-section">
           <div className="student-config-field">
-            <label>Student ID</label>
-            <input
-              className="student-config-input"
-              type="number"
-              value={form.studentId}
-              onChange={e => handleChange("studentId", Number(e.target.value))}
-            />
-          </div>
+  <label>Schüler (ID + Name)</label>
+  <select
+    className="student-config-input"
+    value={form.studentId ? String(form.studentId) : ""}
+    onChange={e => handleChange("studentId", Number(e.target.value))}
+    disabled={loadingStudents}
+  >
+    <option value="">
+      {loadingStudents ? "Schüler werden geladen..." : "Schüler auswählen"}
+    </option>
+
+    {students.map(s => (
+      <option key={s.matriculationNbr} value={s.matriculationNbr}>
+        {s.matriculationNbr} — {s.firstName} {s.lastName}
+      </option>
+    ))}
+  </select>
+</div>
+
 
           <div className="student-config-field">
             <label>Year</label>
@@ -290,15 +322,15 @@ const handleSubmit = async () => {
       </div>
 
       <div className="student-config-form-actions">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
         <button 
-          className="student-config-btn" 
+          className="btn-primary-filled" 
           onClick={handleSubmit}
           disabled={loadingCourses || courses.length === 0 || validating || (validation ? !validation.hardValid : false)}
         >
           {config ? "Update" : "Create"}
-        </button>
-        <button className="student-config-btn student-config-btn-cancel" onClick={onClose}>
-          Cancel
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 package com.aspd.backend.dto;
 
+import com.aspd.backend.model.OepnvStatus;
 import com.aspd.backend.model.SchoolType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +18,7 @@ public class SchoolResponse {
     private String name;
     private String address;
     private String zone;
-    private Boolean oepnv;
+    private OepnvStatus oepnv;
     private SchoolType type;
     private Boolean active;
     private Double longitude;

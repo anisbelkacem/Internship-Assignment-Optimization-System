@@ -118,6 +118,17 @@ export default function InternshipAssignments() {
 
   useEffect(() => {
     fetchInitialData();
+    
+    // Add window focus listener to refresh years when returning to page
+    const handleFocus = () => {
+      refreshAvailableYears();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -151,6 +162,31 @@ const fetchInitialData = async () => {
     setError(err instanceof Error ? err.message : "Failed to load data");
   } finally {
     setLoading(false);
+  }
+};
+
+// Refresh available years from database
+const refreshAvailableYears = async (yearToKeep?: string) => {
+  try {
+    const yearsData = await studentConfigService.getAllYears();
+    setAvailableYears(yearsData);
+    
+    // If a specific year should be kept, ensure it's selected
+    if (yearToKeep && yearsData.includes(yearToKeep)) {
+      setSelectedYear(yearToKeep);
+      return;
+    }
+    
+    // Otherwise, if current selected year is no longer available, select first available
+    if (selectedYear && !yearsData.includes(selectedYear)) {
+      if (yearsData.length > 0) {
+        setSelectedYear(yearsData[0]);
+      } else {
+        setSelectedYear('');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to refresh years:', err);
   }
 };
 
@@ -199,6 +235,13 @@ const fetchInitialData = async () => {
       await studentConfigService.deleteConfig(deletingStudentConfigId);
       setSuccess("Student configuration deleted successfully!");
       fetchStudentConfigsByYear();
+      
+      // Refresh years list in case the last config for a year was deleted
+      // Small delay to ensure database transaction completes
+      setTimeout(async () => {
+        await refreshAvailableYears();
+      }, 150);
+      
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete configuration");
@@ -540,7 +583,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
   };
 
   // New Year Handler
-  const handleCreateNewYear = () => {
+  const handleCreateNewYear = async () => {
+    // Refresh the years list to show any configs added manually
+    await refreshAvailableYears();
     setShowNewYearModal(true);
   };
 
@@ -905,7 +950,7 @@ const handleConfirmNewYear = () => {
             ))}
           </select>
           <button 
-            className="btn btn-primary"
+            className="btn-primary-filled"
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
@@ -937,7 +982,7 @@ const handleConfirmNewYear = () => {
               </div>
               <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#475569'}}>Zeitbudget</label>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Zeitbudget</label>
                   <input
                     type="number"
                     min="1"
@@ -946,26 +991,22 @@ const handleConfirmNewYear = () => {
                     onChange={(e) => setTimeBudget(parseInt(e.target.value) || 210)}
                     style={{
                       width: '100px',
-                      padding: '8px 14px',
-                      fontSize: '0.95rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
                       outline: 'none',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: '#f8fafc',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      color: '#000000',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
                       textAlign: 'center'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#3b82f6';
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.backgroundColor = '#f8fafc';
-                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.outline = 'none';
                     }}
                   />
                 </div>
@@ -1565,7 +1606,7 @@ const handleConfirmNewYear = () => {
             </div>
             <div className="modal-actions">
               <button
-                className="btn-secondary"
+                className="btn btn-ghost"
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
@@ -1574,7 +1615,7 @@ const handleConfirmNewYear = () => {
                 Cancel
               </button>
               <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleConfirmNewYear}
               >
                 Create Year
@@ -1617,12 +1658,16 @@ const handleConfirmNewYear = () => {
               year={selectedYear}
               onClose={handleCloseStudentConfigModal}
               onSave={async () => {
-                const wasEditing = !!editingStudentConfig?.id;
+                const wasEditing = !!editingStudentConfig;
+                const yearBeingSaved = selectedYear; // Preserve the year being saved
                 handleCloseStudentConfigModal();
                 
-                // Refresh years list and configs
-                const yearsData = await studentConfigService.getAllYears();
-                setAvailableYears(yearsData);
+                // Small delay to ensure database transaction completes
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Refresh years list ensuring the saved year stays selected
+                await refreshAvailableYears(yearBeingSaved);
+                
                 await fetchStudentConfigsByYear();
                 
                 setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
@@ -1790,18 +1835,18 @@ const handleConfirmNewYear = () => {
             </div>
             <div className="modal-footer">
               <button
-                className="btn-cancel"
-                onClick={handleCloseEditAssignmentModal}
-              >
-                Abbrechen
-              </button>
-              <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleSaveEditAssignment}
                 disabled={validationResult && validationResult.hardValid === false}
 
               >
                 Speichern
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={handleCloseEditAssignmentModal}
+              >
+                Abbrechen
               </button>
             </div>
           </div>

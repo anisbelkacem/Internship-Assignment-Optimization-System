@@ -10,7 +10,7 @@ export interface School {
   name: string;
   address: string;
   zone: string;
-  oepnv: boolean;
+  oepnv: string; 
   type: SchoolType;
   active: boolean;
   longitude?: number;
@@ -21,7 +21,7 @@ export interface SchoolCreate {
   name: string;
   address: string;
   zone: string;
-  oepnv: boolean;
+  oepnv: string; 
   type: SchoolType;
   active: boolean;
 }

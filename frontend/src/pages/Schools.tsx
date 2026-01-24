@@ -5,6 +5,8 @@ import type { School, SchoolCreate } from '../services/schoolService';
 import SearchFilter, { type FilterConfig } from '../components/SearchFilter';
 import '../styles/Schools.css';
 
+// Define valid zones
+const VALID_ZONES = ['1', '2', '3'] as const;
 
 type SchoolFormData = SchoolCreate;
 
@@ -12,6 +14,26 @@ interface PreviewSchool extends SchoolCreate {
   rowNumber: number;
   isValid: boolean;
   errors: string[];
+}
+
+// Default empty form data
+const DEFAULT_FORM_DATA: SchoolFormData = {
+  name: '',
+  address: '',
+  zone: '',
+  oepnv: 'FOUR_A',
+  type: SchoolType.GS,
+  active: true,
+};
+
+// Helper function to convert OEPNV enum name to display label
+function getOepnvLabel(oepnvValue: string | undefined): string {
+  const labels: { [key: string]: string } = {
+    'FOUR_A': '4a',
+    'FOUR_B': '4b',
+    'NA': 'N/A'
+  };
+  return labels[oepnvValue || 'NA'] || 'N/A';
 }
 
 export default function Schools() {
@@ -34,14 +56,7 @@ export default function Schools() {
     type: '',
     oepnv: '',
   });
-  const [formData, setFormData] = useState<SchoolFormData>({
-    name: '',
-    address: '',
-    zone: '',
-    oepnv: false,
-    type: SchoolType.GS,
-    active: true,
-  });
+  const [formData, setFormData] = useState<SchoolFormData>(DEFAULT_FORM_DATA);
 
   useEffect(() => {
     fetchSchools();
@@ -77,7 +92,7 @@ export default function Schools() {
         name: '',
         address: '',
         zone: '',
-        oepnv: false,
+        oepnv: 'FOUR_A',
         type: SchoolType.GS,
         active: true,
       });
@@ -88,14 +103,7 @@ export default function Schools() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingSchool(null);
-    setFormData({
-      name: '',
-      address: '',
-      zone: '',
-      oepnv: false,
-      type: SchoolType.GS,
-      active: true,
-    });
+    setFormData(DEFAULT_FORM_DATA);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -223,13 +231,15 @@ export default function Schools() {
             if (!zone) errors.push('Zone fehlt');
             
             // Parse ÖPNV
-            let oepnv = false;
-            if (['true', 'yes', 'ja', '1'].includes(oepnvRaw)) {
-              oepnv = true;
-            } else if (['false', 'no', 'nein', '0', ''].includes(oepnvRaw)) {
-              oepnv = false;
+            let oepnv = '';
+            if (oepnvRaw === '4a') {
+              oepnv = 'FOUR_A';
+            } else if (oepnvRaw === '4b') {
+              oepnv = 'FOUR_B';
+            } else if (oepnvRaw === 'n/a' || oepnvRaw === 'na' || oepnvRaw === '') {
+              oepnv = 'NA';
             } else {
-              errors.push('ÖPNV ungültig');
+              errors.push('ÖPNV ungültig. Erlaubte Werte: 4a, 4b, N/A, oder leer');
             }
             
             // Parse Type
@@ -445,9 +455,7 @@ export default function Schools() {
                           school.address.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesZone = !filters.zone || school.zone === filters.zone;
       const matchesType = !filters.type || school.type === filters.type;
-      const matchesOepnv = !filters.oepnv || 
-                           (filters.oepnv === 'true' && school.oepnv) ||
-                           (filters.oepnv === 'false' && !school.oepnv);
+      const matchesOepnv = !filters.oepnv || school.oepnv === filters.oepnv;
       
       return matchesSearch && matchesZone && matchesType && matchesOepnv;
     });
@@ -488,8 +496,9 @@ export default function Schools() {
       field: 'oepnv',
       label: 'ÖPNV',
       options: [
-        { label: 'Ja', value: 'true', field: 'oepnv' },
-        { label: 'Nein', value: 'false', field: 'oepnv' }
+        { label: '4a', value: 'FOUR_A', field: 'oepnv' },
+        { label: '4b', value: 'FOUR_B', field: 'oepnv' },
+        { label: 'N/A', value: 'NA', field: 'oepnv' }
       ]
     }
   ], [zones, schoolTypes]);
@@ -522,9 +531,12 @@ export default function Schools() {
         </div>
         <div className="header-actions">
           <button className="btn-import" onClick={() => setShowImportModal(true)}>
-             Excel importieren
+            Importieren
           </button>
-          <button className="btn-primary btn-add-school" onClick={() => handleOpenModal()}>
+          <button 
+            className="btn-primary-filled btn-add-school" 
+            onClick={() => handleOpenModal()}
+          >
             Schule hinzufügen
           </button>
         </div>
@@ -589,7 +601,7 @@ export default function Schools() {
                     <td>{school.zone}</td>
                     <td>
                       <span className={school.oepnv ? 'badge badge-oepnv' : 'badge badge-no-oepnv'}>
-                        {school.oepnv ? 'Ja' : 'Nein'}
+                        {getOepnvLabel(school.oepnv)}
                       </span>
                     </td>
                     <td>
@@ -647,7 +659,7 @@ export default function Schools() {
                 Mittelschule: {schools.filter(s => s.type === SchoolType.MS).length}
               </div>
               <div className="stat-item">
-                ÖPNV: {schools.filter(s => s.oepnv).length}
+                ÖPNV (4a/4b): {schools.filter(s => s.oepnv && (s.oepnv === 'FOUR_A' || s.oepnv === 'FOUR_B')).length}
               </div>
             </div>
           </div>
@@ -698,16 +710,21 @@ export default function Schools() {
                   <label className="form-label required" htmlFor="zone">
                     Zone
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="zone"
                     name="zone"
-                    className="form-input"
+                    className="form-select"
                     value={formData.zone}
                     onChange={handleInputChange}
                     required
-                    placeholder="z.B. Nord, Süd, Ost, West"
-                  />
+                  >
+                    <option value="">Zone auswählen...</option>
+                    {VALID_ZONES.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -728,22 +745,24 @@ export default function Schools() {
                 </div>
 
                 <div className="form-group">
-                  <div className="form-checkbox-group">
-                    <input
-                      type="checkbox"
-                      id="oepnv"
-                      name="oepnv"
-                      className="form-checkbox"
-                      checked={formData.oepnv}
-                      onChange={handleInputChange}
-                    />
-                    <label className="form-label" htmlFor="oepnv" style={{ marginBottom: 0 }}>
-                      ÖPNV-Anbindung vorhanden
-                    </label>
-                  </div>
+                  <label className="form-label" htmlFor="oepnv">
+                    ÖPNV-Anbindung
+                  </label>
+                  <select
+                    id="oepnv"
+                    name="oepnv"
+                    className="form-select"
+                    value={formData.oepnv}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="FOUR_A">4a</option>
+                    <option value="FOUR_B">4b</option>
+                    <option value="NA">N/A</option>
+                  </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '16px' }}>
                   <div className="form-checkbox-group">
                     <input
                       type="checkbox"
@@ -761,10 +780,13 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
+                <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>
                   Abbrechen
                 </button>
-                <button type="submit" className="btn-primary">
+                <button 
+                  type="submit" 
+                  className="btn-primary-filled"
+                >
                   {editingSchool ? 'Aktualisieren' : 'Hinzufügen'}
                 </button>
               </div>
@@ -800,7 +822,7 @@ export default function Schools() {
                     </p>
                   )}
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (true/false), Type (GS/MS)
+                    Die Excel-Datei sollte folgende Spalten enthalten: Name, Adresse, Zone, ÖPNV (4a/4b/N/A/leer), Typ (GS/MS)
                   </p>
                 </div>
 
@@ -812,11 +834,11 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={handleCloseImportModal}>
-                  Abbrechen
-                </button>
                 <button type="submit" className="btn-primary" disabled={!selectedFile}>
                   Importieren
+                </button>
+                <button type="button" className="btn-cancel" onClick={handleCloseImportModal}>
+                  Abbrechen
                 </button>
               </div>
             </form>
@@ -892,12 +914,16 @@ export default function Schools() {
                           />
                         </td>
                         <td>
-                          <input
-                            type="checkbox"
-                            checked={school.oepnv}
-                            onChange={(e) => handlePreviewInputChange(index, 'oepnv', e.target.checked)}
-                            style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer' }}
-                          />
+                          <select
+                            className="form-select-small"
+                            value={school.oepnv || 'FOUR_A'}
+                            onChange={(e) => handlePreviewInputChange(index, 'oepnv', e.target.value)}
+                            required
+                          >
+                            <option value="FOUR_A">4a</option>
+                            <option value="FOUR_B">4b</option>
+                            <option value="NA">N/A</option>
+                          </select>
                         </td>
                         <td>
                           <select
@@ -959,11 +985,11 @@ export default function Schools() {
               </p>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={handleCancelDelete}>
-                Abbrechen
-              </button>
               <button type="button" className="btn-danger" onClick={handleConfirmDelete}>
                 Löschen
+              </button>
+              <button type="button" className="btn-cancel" onClick={handleCancelDelete}>
+                Abbrechen
               </button>
             </div>
           </div>

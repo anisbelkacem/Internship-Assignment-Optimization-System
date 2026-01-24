@@ -2,7 +2,6 @@ package com.aspd.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDate;
 
 @Entity
 @Table(name = "completed_internships")
@@ -36,23 +35,15 @@ public class CompletedInternships {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @Column(nullable = false)
-    private LocalDate startDate;
-
-    @Column(nullable = false)
-    private LocalDate endDate;
-
     private String description;
 
     public CompletedInternships(Student student, Teacher teacher, School school, PraktikumType type,
-                                Course course, LocalDate startDate, LocalDate endDate) {
+                                Course course) {
         this.student = student;
         this.teacher = teacher;
         this.school = school;
         this.type = type;
         this.course = course;
-        this.startDate = startDate;
-        this.endDate = endDate;
     }
 
 }

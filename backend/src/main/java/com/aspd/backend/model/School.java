@@ -31,9 +31,10 @@ public class School {
     @NotBlank
     private String zone;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "oepnv", nullable = false)
     @NotNull
-    private Boolean oepnv; // ÖPNV accessibility
+    private OepnvStatus oepnv = OepnvStatus.FOUR_A;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -56,8 +57,8 @@ public class School {
     public void setAddress(String address) { this.address = address; }
     public String getZone() { return zone; }
     public void setZone(String zone) { this.zone = zone; }
-    public Boolean getOepnv() { return oepnv; }
-    public void setOepnv(Boolean oepnv) { this.oepnv = oepnv; }
+    public OepnvStatus getOepnv() { return oepnv; }
+    public void setOepnv(OepnvStatus oepnv) { this.oepnv = oepnv; }
     public SchoolType getType() { return type; }
     public void setType(SchoolType type) { this.type = type; }
     public Boolean getActive() { return active; }

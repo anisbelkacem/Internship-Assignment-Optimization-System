@@ -147,7 +147,7 @@ export default function Settings() {
           <p className="settings-subtitle">Verwalten Sie alle Benutzer im System.</p>
         </div>
         <div className="section-header-actions">
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+          <button className="btn-primary-filled" onClick={() => handleOpenModal()}>
             Nutzer anlegen
           </button>
         </div>
@@ -301,7 +301,7 @@ export default function Settings() {
               <button className="btn btn-ghost" onClick={handleCloseModal}>
                 Abbrechen
               </button>
-              <button className="btn btn-primary" onClick={handleSubmit}>
+              <button className="btn-primary-filled" onClick={handleSubmit}>
                 {editingUser ? 'Aktualisieren' : 'Erstellen'}
               </button>
             </div>

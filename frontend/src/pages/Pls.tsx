@@ -331,11 +331,11 @@ const teacherPayload = {
             className="btn btn-ghost"
             onClick={handleOpenImportModal}
           >
-            PLs importieren
+            Importieren
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn-primary-filled"
             onClick={() => handleOpenFormModal()}
           >
             PL hinzufügen
@@ -406,25 +406,27 @@ const teacherPayload = {
                       <td>
                         {pl.isPartTime ? (
                           <span style={{
-                            padding: "4px 12px",
+                            padding: "6px 16px",
                             backgroundColor: "#fef3c7",
                             color: "#92400e",
-                            borderRadius: "4px",
+                            borderRadius: "20px",
                             fontSize: "0.75rem",
-                            fontWeight: "bold",
-                            display: "inline-block"
+                            fontWeight: "600",
+                            display: "inline-block",
+                            whiteSpace: "nowrap"
                           }}>
                             Teilzeit
                           </span>
                         ) : (
                           <span style={{
-                            padding: "4px 12px",
+                            padding: "6px 16px",
                             backgroundColor: "#e0f2fe",
                             color: "#075985",
-                            borderRadius: "4px",
+                            borderRadius: "20px",
                             fontSize: "0.75rem",
-                            fontWeight: "bold",
-                            display: "inline-block"
+                            fontWeight: "600",
+                            display: "inline-block",
+                            whiteSpace: "nowrap"
                           }}>
                             Vollzeit
                           </span>

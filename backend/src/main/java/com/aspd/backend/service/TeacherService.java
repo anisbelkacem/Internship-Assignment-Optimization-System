@@ -158,8 +158,7 @@ public class TeacherService {
                         cfg.getId(),
                         cfg.getSchoolYear(),
                         cfg.getMaxPraktikaPerYear(),
-                        cfg.getTotalHoursCredit(),
-                        cfg.getAvailabilityStatus(),
+                    cfg.getTotalHoursCredit(),
                         cfg.getSubjectSpecializations(),
                         cfg.getInternshipPreferences()
                 ))

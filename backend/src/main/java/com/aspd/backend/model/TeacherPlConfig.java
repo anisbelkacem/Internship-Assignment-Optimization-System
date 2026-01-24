@@ -33,12 +33,8 @@ public class TeacherPlConfig {
     @Column(name = "school_year", nullable = false, length = 16)
     private String schoolYear;
 
-    @Column(name = "total_hours_credit")
-    private Integer totalHoursCredit;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "availability_status")
-    private AvailabilityStatus availabilityStatus;
+        @Column(name = "total_hours_credit")
+        private Integer totalHoursCredit;
 
     // Subjects per config (per year)
     @ManyToMany(fetch = FetchType.EAGER)

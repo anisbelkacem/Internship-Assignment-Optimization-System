@@ -175,8 +175,8 @@ html, body, #root {
   }
   .btn-primary {
     background: transparent;
-    color: #547792;
-    border: 1px solid #547792;
+    color: #3d5a6d;
+    border: 1px solid #3d5a6d;
     width: 128px; 
     height: 40px;
     border-radius: 8px;
@@ -188,6 +188,52 @@ html, body, #root {
     font-size: 15px; 
     cursor: pointer;
     margin-left: 0;
+  }
+
+  .btn-primary-filled {
+    background: #3d5a6d;
+    color: #ffffff;
+    border: 1px solid #3d5a6d;
+    width: 128px; 
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px; 
+    font-weight: 700;
+    font-size: 15px; 
+    cursor: pointer;
+    margin-left: 0;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary-filled:hover:not(:disabled) {
+    background: #2a3f52;
+    border-color: #2a3f52;
+  }
+
+  .btn-secondary-filled {
+    background: #4b7ba7;
+    color: #ffffff;
+    border: 1px solid #4b7ba7;
+    width: 128px; 
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px; 
+    font-weight: 700;
+    font-size: 15px; 
+    cursor: pointer;
+    margin-left: 0;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary-filled:hover:not(:disabled) {
+    background: #3a5f82;
+    border-color: #3a5f82;
   }
   
   .avatar {
