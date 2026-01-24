@@ -1,11 +1,9 @@
 import type { FC } from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import StudentForm from "./Student/StudentForm";
 import type { Student } from "../services/studentService";
 
 const RightPanel: FC = () => {
-  const navigate = useNavigate();
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -17,27 +15,6 @@ const RightPanel: FC = () => {
 
   return (
   <div className="right-panel">
-    {/* Quick Actions Panel */}
-    <div className="section-container">
-      <div className="section-header">
-        <h2>⚡ Schnellaktionen</h2>
-      </div>
-      <div className="quick-actions-list">
-        <button className="quick-action-btn" onClick={() => navigate('/assignments')}>
-          <span className="card-icon">➕</span>
-          <span className="action-text">Neue Zuweisung starten</span>
-        </button>
-        <button className="quick-action-btn" onClick={() => setShowStudentModal(true)}>
-          <span className="card-icon">👥</span>
-          <span className="action-text">Studierenden hinzufügen</span>
-        </button>
-        <button className="quick-action-btn" onClick={() => setShowReportModal(true)}>
-          <span className="card-icon">📄</span>
-          <span className="action-text">Bericht erstellen</span>
-        </button>
-      </div>
-    </div>
-
     {/* Map Section */}
     <div className="section-container">
       <div className="section-header">
