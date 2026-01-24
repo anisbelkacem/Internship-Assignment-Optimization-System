@@ -44,18 +44,26 @@ class StudentConfigService {
         return apiService.get<string[]>('/api/student-configs/years');
     }
 
-    // Create new student config
-    async createConfig(dto: StudentConfigDto, options?: { force?: boolean }) {
+        // Create new student config
+        async createConfig(
+        dto: StudentConfigDto,
+        options?: { force?: boolean }
+        ): Promise<StudentConfigDto> {
         const force = options?.force === true;
         const qs = force ? "?force=true" : "";
-        return apiService.post(`/api/student-configs${qs}`, dto);
-    }
-    // Update existing config
-    async updateConfig(id: number, dto: Partial<StudentConfigDto>, options?: { force?: boolean }) {
+        return apiService.post<StudentConfigDto>(`/api/student-configs${qs}`, dto);
+        }
+
+        // Update existing config
+        async updateConfig(
+        id: number,
+        dto: Partial<StudentConfigDto>,
+        options?: { force?: boolean }
+        ): Promise<StudentConfigDto> {
         const force = options?.force === true;
         const qs = force ? "?force=true" : "";
-        return apiService.put(`/api/student-configs/${id}${qs}`, dto);
-    }
+        return apiService.put<StudentConfigDto>(`/api/student-configs/${id}${qs}`, dto);
+        }
 
 
 

@@ -194,7 +194,7 @@ const handleSubmit = async () => {
     const saved = config?.id
       ? await StudentConfigService.updateConfig(form.id!, payload as any)
       : await StudentConfigService.createConfig(payload as any);
-    onSave(saved);
+    onSave(saved );
   } catch (err) {
     console.error("Config save failed", err);
     alert('Error saving configuration');
