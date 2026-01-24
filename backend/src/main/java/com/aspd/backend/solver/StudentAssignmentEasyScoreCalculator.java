@@ -68,7 +68,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         }
         
         // Hard constraint: Every active internship must have at least 1 student
-        for (PlannedInternship internship : solution.getInternships()) {
+        for (PlannedInternship internship : solution.getAvailableInternships()) {
             if (internship.isActive()) {
                 long assignedCount = assignmentCounts.getOrDefault(internship, 0L);
                 if (assignedCount == 0) {
