@@ -51,9 +51,7 @@ public class CompletedInternshipsService {
                 teacher,
                 school,
                 dto.getType(),
-                dto.getCourse(),
-                dto.getStartDate(),
-                dto.getEndDate()
+            dto.getCourse()
         );
         internship.setDescription(dto.getDescription());
         return completedInternshipsRepository.save(internship);
@@ -107,14 +105,6 @@ public class CompletedInternshipsService {
 
         if (dto.getCourse() != null) {
             internship.setCourse(dto.getCourse());
-        }
-
-        if (dto.getStartDate() != null) {
-            internship.setStartDate(dto.getStartDate());
-        }
-
-        if (dto.getEndDate() != null) {
-            internship.setEndDate(dto.getEndDate());
         }
 
         if (dto.getDescription() != null) {

@@ -16,7 +16,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDate;
 
 /**
  * Represents the final assignment of a student to a planned internship.
@@ -67,10 +66,6 @@ public class InternshipAssignment {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "course_id")
     private Course course; // The subject being taught (for ZSP/SFP)
-
-    // Schedule information
-    private LocalDate startDate;
-    private LocalDate endDate;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
