@@ -30,7 +30,7 @@ export interface SchoolRef {
   name?: string;
   address?: string;
   zone?: string;
-  oepnv?: boolean;
+  oepnv?: string; 
   type?: string;
 }
 
