@@ -4,6 +4,7 @@ import type { TeacherDto } from "../../services/plService";
 import plService from "../../services/plService";
 import schoolService from "../../services/schoolService";
 import type { School } from "../../services/schoolService";
+import internshipAssignmentService from "../../services/internshipAssignmentService";
 
 interface EditPlannedInternshipFormProps {
   internship: PlannedInternshipDto;
@@ -97,36 +98,37 @@ const validate = async (tId: number | null, sId: number | null) => {
   };
 
   const handleSave = async () => {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/planned-internships/${internship.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            teacherId: selectedTeacherId,
-            schoolId: selectedSchoolId,
-          }),
-        }
-      );
+  try {
+    await internshipAssignmentService.updatePlannedInternship(
+      internship.id!,
+      selectedTeacherId,
+      selectedSchoolId
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to update assignment");
-      }
-
-      onSave();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update assignment");
-    } finally {
-      setLoading(false);
+    onSave();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    // If backend returned ValidationResult, show it like the live validation does
+    if (err && typeof err === "object" && "hardValid" in err && "hardViolations" in err) {
+      setValidation(err as ValidationResult);
+      setError(null);
+      return;
     }
-  };
+
+    // fallback
+    const msg =
+      err?.message ||
+      err?.error ||
+      "Failed to update assignment";
+    setError(msg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="modal-form-container">
