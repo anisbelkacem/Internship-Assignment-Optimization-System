@@ -34,7 +34,7 @@ public class School {
     @Enumerated(EnumType.STRING)
     @Column(name = "oepnv", nullable = false)
     @NotNull
-    private OepnvStatus oepnv = OepnvStatus.NONE; // ÖPNV accessibility category
+    private OepnvStatus oepnv = OepnvStatus.FOUR_A;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

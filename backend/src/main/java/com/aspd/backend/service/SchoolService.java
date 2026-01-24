@@ -249,11 +249,11 @@ public class SchoolService {
 
     private OepnvStatus readOepnv(Row row, Integer colIdx) {
         if (colIdx == null) {
-            return null;
+            return OepnvStatus.NA;
         }
         Cell cell = row.getCell(colIdx);
         if (cell == null) {
-            return null;
+            return OepnvStatus.NA;
         }
         String raw;
         if (cell.getCellType() == CellType.STRING) {
@@ -262,24 +262,18 @@ public class SchoolService {
             raw = new DataFormatter().formatCellValue(cell);
         }
         if (isBlank(raw)) {
-            return OepnvStatus.NONE; // empty treated as not available
+            return OepnvStatus.NA;
         }
-        String val = raw.trim().toLowerCase(Locale.ROOT);
+        String val = raw.trim().toUpperCase(Locale.ROOT);
         switch (val) {
-            case "4a":
+            case "4A":
+            case "FOUR_A":
                 return OepnvStatus.FOUR_A;
-            case "4b":
+            case "4B":
+            case "FOUR_B":
                 return OepnvStatus.FOUR_B;
-            case "none":
-            case "n/a":
-            case "na":
-            case "no":
-            case "nein":
-            case "0":
-            case "false":
-                return OepnvStatus.NONE;
             default:
-                throw new InvalidDataException("oepnv", raw, "must be 4a, 4b, or empty/none");
+                return OepnvStatus.NA;
         }
     }
 
