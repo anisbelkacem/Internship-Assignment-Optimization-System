@@ -18,7 +18,7 @@ const emptyAddress: Address = {
     city: "",
     houseNbr: "",
     postalCode: "",
-    country: "",
+    country: "Deutschland",
 };
 
 const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {

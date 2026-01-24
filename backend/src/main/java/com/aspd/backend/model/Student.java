@@ -48,7 +48,9 @@ public class Student {
             @AttributeOverride(name = "city", column = @Column(name = "semester_city")),
             @AttributeOverride(name = "houseNbr", column = @Column(name = "semester_house_nbr")),
             @AttributeOverride(name = "postalCode", column = @Column(name = "semester_postal_code")),
-            @AttributeOverride(name = "country", column = @Column(name = "semester_country"))
+            @AttributeOverride(name = "country", column = @Column(name = "semester_country")),
+            @AttributeOverride(name = "longitude", column = @Column(name = "semester_longitude")),
+            @AttributeOverride(name = "latitude", column = @Column(name = "semester_latitude"))
     })
     private Address addressSemester;
 

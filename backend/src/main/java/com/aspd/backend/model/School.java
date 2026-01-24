@@ -45,6 +45,10 @@ public class School {
     @NotNull
     private Boolean active = true;
 
+    // Geographic coordinates from Geoapify API
+    private Double longitude;
+    private Double latitude;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -59,4 +63,8 @@ public class School {
     public void setType(SchoolType type) { this.type = type; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
 }

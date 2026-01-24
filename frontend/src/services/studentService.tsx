@@ -11,6 +11,8 @@ export interface Address {
   houseNbr?: string;
   postalCode?: string;
   country?: string;
+  longitude?: number;
+  latitude?: number;
 }
 
 export interface Student {
