@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "baseline_assignments", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"student_demand_id", "school_year", "semester"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"student_demand_id", "school_year"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -57,13 +57,10 @@ public class BaselineAssignment {
     private School school;
 
     /**
-     * Which semester this baseline represents (e.g., "winter", "summer")
-     */
-    @Column(nullable = false, length = 20)
-    private String semester;
-
-    /**
-     * School year for this baseline (e.g., "2025", "WiSe2026")
+     * School year with semester notation (e.g., "WiSe2025" for Wintersemester, "SoSe2025" for Sommersemester)
+     * Uses German semester notation where:
+     * - WiSe = Wintersemester (Winter Semester)
+     * - SoSe = Sommersemester (Summer Semester)
      */
     @Column(name = "school_year", nullable = false, length = 50)
     private String schoolYear;

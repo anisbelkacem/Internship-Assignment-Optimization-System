@@ -281,51 +281,82 @@ public class Phase2OptimizationService {
             String schoolYear,
             String semester) {
         
-        // When optimizing summer, load winter baseline from same year
-        String baselineSemester = "summer".equalsIgnoreCase(semester) ? "winter" : semester;
+        // Determine baseline semester to load
+        // For summer (SoSe), load winter (WiSe) baseline from same year
+        // For winter (WiSe), load summer (SoSe) baseline from previous year
+        String baselineYear;
+        if ("summer".equalsIgnoreCase(semester)) {
+            // Loading for summer -> use winter baseline from same calendar year
+            baselineYear = schoolYear.replace("SoSe", "WiSe");
+        } else {
+            // Loading for winter -> use summer baseline from previous calendar year
+            if (schoolYear.startsWith("WiSe")) {
+                String year = schoolYear.substring(4);
+                int yearNum = Integer.parseInt(year);
+                baselineYear = "SoSe" + (yearNum - 1);
+            } else {
+                baselineYear = schoolYear;  // fallback
+            }
+        }
         
         // Get baseline from previous semester
         List<BaselineAssignment> baselines = baselineAssignmentRepository
-                .findBySchoolYearAndSemester(schoolYear, baselineSemester);
+                .findBySchoolYear(baselineYear);
         
         if (baselines.isEmpty()) {
-            log.warn("No baseline found for year={}, semester={}. Running fresh optimization.", 
-                schoolYear, baselineSemester);
+            log.warn("No baseline found for year={}. Running fresh optimization.", baselineYear);
             return;
         }
         
-        log.info("Found {} baseline assignments from semester={}", baselines.size(), baselineSemester);
+        log.info("Found {} baseline assignments from year={}", baselines.size(), baselineYear);
         
-        // Create maps for quick lookup
-        Map<Long, StudentInternshipDemand> demandMap = demands.stream()
-                .collect(Collectors.toMap(
-                    d -> d.getStudentConfig().getId(),
-                    d -> d,
-                    (existing, replacement) -> existing // Keep first if duplicates
-                ));
+        // Create maps for quick lookup by student matriculation number + praktikum type
+        Map<String, StudentInternshipDemand> demandMap = new HashMap<>();
+        for (StudentInternshipDemand demand : demands) {
+            int matricNbr = demand.getStudentConfig().getStudent().getMatriculationNbr();
+            String key = matricNbr + "_" + demand.getPraktikumType();
+            demandMap.put(key, demand);
+        }
         
-        Map<Long, PlannedInternship> internshipMap = internships.stream()
-                .collect(Collectors.toMap(PlannedInternship::getId, i -> i));
+        // Create map for quick lookup by teacher + school + praktikum type + course
+        Map<String, PlannedInternship> internshipMap = new HashMap<>();
+        for (PlannedInternship internship : internships) {
+            if (internship.getAssignedTeacher() != null && internship.getSchool() != null) {
+                String key = internship.getAssignedTeacher().getTeacherId() + "_" + 
+                            internship.getSchool().getId() + "_" +
+                            internship.getPraktikumType() + "_" +
+                            (internship.getCourse() != null ? internship.getCourse().getId() : "NULL");
+                internshipMap.put(key, internship);
+            }
+        }
         
         int appliedCount = 0;
         int pinnedCount = 0;
         
         // Apply baseline assignments
         for (BaselineAssignment baseline : baselines) {
-            StudentConfig studentConfig = baseline.getStudentDemand().getStudentConfig();
-            Long plannedInternshipId = baseline.getPlannedInternship().getId();
+            int matricNbr = baseline.getStudentDemand().getStudentConfig().getStudent().getMatriculationNbr();
+            PraktikumType praktikumType = baseline.getStudentDemand().getPraktikumType();
             
-            // Find matching demand in current demands
-            StudentInternshipDemand demand = demandMap.get(studentConfig.getId());
+            // Find matching demand in current demands (same student + same praktikum type)
+            String demandKey = matricNbr + "_" + praktikumType;
+            StudentInternshipDemand demand = demandMap.get(demandKey);
             if (demand == null) {
-                log.debug("No matching demand for student config {}", studentConfig.getId());
+                log.debug("No matching demand for student {} praktikum {}", matricNbr, praktikumType);
                 continue;
             }
             
-            // Find matching internship in current internships
-            PlannedInternship internship = internshipMap.get(plannedInternshipId);
+            // Find matching internship by teacher-school combination
+            Long teacherId = baseline.getTeacher().getTeacherId();
+            Long schoolId = baseline.getSchool().getId();
+            Course course = baseline.getStudentDemand().getPreferredCourse();
+            
+            String internshipKey = teacherId + "_" + schoolId + "_" + praktikumType + "_" +
+                                  (course != null ? course.getId() : "NULL");
+            PlannedInternship internship = internshipMap.get(internshipKey);
             if (internship == null) {
-                log.debug("Baseline internship {} no longer exists", plannedInternshipId);
+                log.debug("No matching internship for teacher {} school {} praktikum {} course {}", 
+                         teacherId, schoolId, praktikumType, course);
                 continue;
             }
             

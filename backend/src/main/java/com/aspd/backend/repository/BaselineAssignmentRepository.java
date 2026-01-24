@@ -12,39 +12,39 @@ import java.util.Optional;
 public interface BaselineAssignmentRepository extends JpaRepository<BaselineAssignment, Long> {
 
     /**
-     * Find all baseline assignments for a specific school year and semester.
+     * Find all baseline assignments for a specific school year (e.g., "WiSe2025", "SoSe2025").
      */
-    List<BaselineAssignment> findBySchoolYearAndSemester(String schoolYear, String semester);
+    List<BaselineAssignment> findBySchoolYear(String schoolYear);
 
     /**
-     * Find baseline assignment for a specific student demand in a given year/semester.
+     * Find baseline assignment for a specific student demand in a given year.
      */
-    Optional<BaselineAssignment> findByStudentDemandIdAndSchoolYearAndSemester(
-            Long studentDemandId, String schoolYear, String semester);
+    Optional<BaselineAssignment> findByStudentDemandIdAndSchoolYear(
+            Long studentDemandId, String schoolYear);
 
     /**
-     * Check if a baseline exists for the given year and semester.
+     * Check if a baseline exists for the given year.
      */
-    boolean existsBySchoolYearAndSemester(String schoolYear, String semester);
+    boolean existsBySchoolYear(String schoolYear);
 
     /**
-     * Find all pinned baseline assignments for a specific year and semester.
+     * Find all pinned baseline assignments for a specific year.
      * These are assignments that must not change during re-optimization.
      */
-    List<BaselineAssignment> findBySchoolYearAndSemesterAndPinnedTrue(String schoolYear, String semester);
+    List<BaselineAssignment> findBySchoolYearAndPinnedTrue(String schoolYear);
 
     /**
-     * Count how many baselines exist for a given year/semester.
+     * Count how many baselines exist for a given year.
      */
-    long countBySchoolYearAndSemester(String schoolYear, String semester);
+    long countBySchoolYear(String schoolYear);
 
     /**
-     * Delete all baseline assignments for a specific year and semester.
+     * Delete all baseline assignments for a specific year.
      * Used to clear old baselines before creating new ones.
      */
     @Modifying
-    @Query("DELETE FROM BaselineAssignment ba WHERE ba.schoolYear = :schoolYear AND ba.semester = :semester")
-    void deleteBySchoolYearAndSemester(@Param("schoolYear") String schoolYear, @Param("semester") String semester);
+    @Query("DELETE FROM BaselineAssignment ba WHERE ba.schoolYear = :schoolYear")
+    void deleteBySchoolYear(@Param("schoolYear") String schoolYear);
 
     /**
      * Find all distinct school years that have baselines.
@@ -53,14 +53,9 @@ public interface BaselineAssignmentRepository extends JpaRepository<BaselineAssi
     List<String> findDistinctSchoolYears();
 
     /**
-     * Find all baselines for a specific school year (all semesters).
-     */
-    List<BaselineAssignment> findBySchoolYear(String schoolYear);
-
-    /**
-     * Find baselines by teacher for a given year/semester.
+     * Find baselines by teacher for a given year.
      * Useful to see which teacher's assignments are in the baseline.
      */
-    List<BaselineAssignment> findByTeacherTeacherIdAndSchoolYearAndSemester(
-            Long teacherId, String schoolYear, String semester);
+    List<BaselineAssignment> findByTeacherTeacherIdAndSchoolYear(
+            Long teacherId, String schoolYear);
 }

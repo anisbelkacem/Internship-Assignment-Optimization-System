@@ -33,32 +33,30 @@ public class BaselineService {
     private final AuditLogService auditLogService;
 
     /**
-     * Capture a baseline snapshot of current assignments for a given year and semester.
+     * Capture a baseline snapshot of current assignments for a given year.
      * 
-     * @param request Contains year, semester, and options for capturing baseline
+     * @param request Contains year (with semester notation like "WiSe2025") and options for capturing baseline
      * @return List of captured baseline assignments
      * @throws IllegalStateException if baseline already exists and overwrite is false
      */
     @Transactional
     public List<BaselineAssignmentDto> captureBaseline(BaselineCaptureRequest request) {
         String year = request.getSchoolYear();
-        String semester = request.getSemester();
         
-        log.info("Capturing baseline for year={}, semester={}", year, semester);
+        log.info("Capturing baseline for year={}", year);
         
         // Check if baseline already exists
-        boolean exists = baselineRepository.existsBySchoolYearAndSemester(year, semester);
+        boolean exists = baselineRepository.existsBySchoolYear(year);
         if (exists && !request.isOverwriteExisting()) {
             throw new IllegalStateException(
-                String.format("Baseline already exists for year=%s, semester=%s. Set overwriteExisting=true to replace it.", 
-                    year, semester)
+                String.format("Baseline already exists for year=%s. Set overwriteExisting=true to replace it.", year)
             );
         }
         
         // Clear existing baseline if overwriting
         if (exists) {
             log.info("Clearing existing baseline before overwriting");
-            baselineRepository.deleteBySchoolYearAndSemester(year, semester);
+            baselineRepository.deleteBySchoolYear(year);
         }
         
         // Get all student demands for this year that have assignments
@@ -99,7 +97,6 @@ public class BaselineService {
                 .plannedInternship(internship)
                 .teacher(internship.getAssignedTeacher())
                 .school(internship.getAssignedSchool())
-                .semester(semester)
                 .schoolYear(year)
                 .capturedAt(now)
                 .pinned(false) // Default to not pinned, can be updated later
@@ -113,16 +110,14 @@ public class BaselineService {
         // Save all baselines
         List<BaselineAssignment> saved = baselineRepository.saveAll(baselineAssignments);
         
-        log.info("Captured {} baseline assignments for year={}, semester={}", 
-            saved.size(), year, semester);
+        log.info("Captured {} baseline assignments for year={}", saved.size(), year);
         
         // Log the baseline capture event
         auditLogService.log(
             "BaselineAssignment",
             null,
             "CAPTURE",
-            String.format("Captured baseline: %d assignments for year=%s, semester=%s", 
-                saved.size(), year, semester),
+            String.format("Captured baseline: %d assignments for year=%s", saved.size(), year),
             null,
             null
         );
@@ -133,18 +128,16 @@ public class BaselineService {
     }
 
     /**
-     * Get baseline assignments for a specific year and semester.
+     * Get baseline assignments for a specific year.
      * 
-     * @param schoolYear The school year
-     * @param semester The semester
+     * @param schoolYear The school year (e.g., "WiSe2025", "SoSe2025")
      * @return List of baseline assignments
      */
     @Transactional(readOnly = true)
-    public List<BaselineAssignmentDto> getBaseline(String schoolYear, String semester) {
-        log.info("Retrieving baseline for year={}, semester={}", schoolYear, semester);
+    public List<BaselineAssignmentDto> getBaseline(String schoolYear) {
+        log.info("Retrieving baseline for year={}", schoolYear);
         
-        List<BaselineAssignment> baselines = baselineRepository.findBySchoolYearAndSemester(
-            schoolYear, semester);
+        List<BaselineAssignment> baselines = baselineRepository.findBySchoolYear(schoolYear);
         
         return baselines.stream()
             .map(this::toDto)
@@ -152,15 +145,15 @@ public class BaselineService {
     }
 
     /**
-     * Get all pinned baseline assignments for a year and semester.
+     * Get all pinned baseline assignments for a year.
      * These are assignments that must not change during re-optimization.
      */
     @Transactional(readOnly = true)
-    public List<BaselineAssignmentDto> getPinnedBaselines(String schoolYear, String semester) {
-        log.info("Retrieving pinned baselines for year={}, semester={}", schoolYear, semester);
+    public List<BaselineAssignmentDto> getPinnedBaselines(String schoolYear) {
+        log.info("Retrieving pinned baselines for year={}", schoolYear);
         
         List<BaselineAssignment> baselines = baselineRepository
-            .findBySchoolYearAndSemesterAndPinnedTrue(schoolYear, semester);
+            .findBySchoolYearAndPinnedTrue(schoolYear);
         
         return baselines.stream()
             .map(this::toDto)
@@ -168,35 +161,32 @@ public class BaselineService {
     }
 
     /**
-     * Clear baseline for a specific year and semester.
+     * Clear baseline for a specific year.
      * 
      * @param schoolYear The school year
-     * @param semester The semester
      * @return Number of baselines deleted
      */
     @Transactional
-    public long clearBaseline(String schoolYear, String semester) {
-        log.info("Clearing baseline for year={}, semester={}", schoolYear, semester);
+    public long clearBaseline(String schoolYear) {
+        log.info("Clearing baseline for year={}", schoolYear);
         
-        long count = baselineRepository.countBySchoolYearAndSemester(schoolYear, semester);
+        long count = baselineRepository.countBySchoolYear(schoolYear);
         
         if (count == 0) {
-            log.warn("No baseline found for year={}, semester={}", schoolYear, semester);
+            log.warn("No baseline found for year={}", schoolYear);
             return 0;
         }
         
-        baselineRepository.deleteBySchoolYearAndSemester(schoolYear, semester);
+        baselineRepository.deleteBySchoolYear(schoolYear);
         
-        log.info("Deleted {} baseline assignments for year={}, semester={}", 
-            count, schoolYear, semester);
+        log.info("Deleted {} baseline assignments for year={}", count, schoolYear);
         
         // Log the baseline deletion
         auditLogService.log(
             "BaselineAssignment",
             null,
             "DELETE",
-            String.format("Cleared baseline: %d assignments for year=%s, semester=%s", 
-                count, schoolYear, semester),
+            String.format("Cleared baseline: %d assignments for year=%s", count, schoolYear),
             null,
             null
         );
@@ -222,19 +212,19 @@ public class BaselineService {
     }
 
     /**
-     * Check if a baseline exists for the given year and semester.
+     * Check if a baseline exists for the given year.
      */
     @Transactional(readOnly = true)
-    public boolean baselineExists(String schoolYear, String semester) {
-        return baselineRepository.existsBySchoolYearAndSemester(schoolYear, semester);
+    public boolean baselineExists(String schoolYear) {
+        return baselineRepository.existsBySchoolYear(schoolYear);
     }
 
     /**
-     * Get count of baseline assignments for a year and semester.
+     * Get count of baseline assignments for a year.
      */
     @Transactional(readOnly = true)
-    public long getBaselineCount(String schoolYear, String semester) {
-        return baselineRepository.countBySchoolYearAndSemester(schoolYear, semester);
+    public long getBaselineCount(String schoolYear) {
+        return baselineRepository.countBySchoolYear(schoolYear);
     }
 
     /**
@@ -261,7 +251,6 @@ public class BaselineService {
             .teacherName(baseline.getTeacher().getFirstName() + " " + baseline.getTeacher().getLastName())
             .schoolId(baseline.getSchool().getId())
             .schoolName(baseline.getSchool().getName())
-            .semester(baseline.getSemester())
             .schoolYear(baseline.getSchoolYear())
             .capturedAt(baseline.getCapturedAt())
             .pinned(baseline.isPinned())

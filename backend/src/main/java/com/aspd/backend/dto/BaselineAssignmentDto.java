@@ -29,8 +29,7 @@ public class BaselineAssignmentDto {
     private String schoolName;
     
     // Baseline metadata
-    private String semester;
-    private String schoolYear;
+    private String schoolYear;  // e.g., "WiSe2025", "SoSe2025"
     private LocalDateTime capturedAt;
     private boolean pinned;
     private String notes;

@@ -13,14 +13,9 @@ import lombok.*;
 public class BaselineCaptureRequest {
 
     /**
-     * School year to capture baseline for (e.g., "2025").
+     * School year with semester notation (e.g., "WiSe2025", "SoSe2025").
      */
     private String schoolYear;
-
-    /**
-     * Semester to capture baseline for (e.g., "winter", "summer").
-     */
-    private String semester;
 
     /**
      * Whether to overwrite existing baseline if one already exists.
