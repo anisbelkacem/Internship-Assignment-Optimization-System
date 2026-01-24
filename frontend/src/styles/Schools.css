@@ -619,6 +619,11 @@
   color: #d97706;
 }
 
+.status-badge.status-edited {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
 .status-badge.status-other {
   background-color: #f3f4f6;
   color: #6b7280;

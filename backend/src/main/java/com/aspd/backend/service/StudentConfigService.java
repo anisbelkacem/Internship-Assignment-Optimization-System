@@ -6,6 +6,7 @@ import com.aspd.backend.model.Student;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.repository.StudentConfigRepository;
 import com.aspd.backend.repository.StudentRepository;
+import com.aspd.backend.repository.TeacherPlConfigRepository;
 import com.aspd.backend.validation.AssignmentValidationException;
 import com.aspd.backend.validation.StudentConfigValidationService;
 import com.aspd.backend.validation.ValidationResult;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class StudentConfigService {
 
     private final StudentConfigRepository configRepository;
     private final StudentRepository studentRepository;
+    private final TeacherPlConfigRepository teacherPlConfigRepository;
     private final AuditLogService auditLogService;
     private final StudentConfigValidationService validationService;
 
@@ -141,7 +145,15 @@ public class StudentConfigService {
         );
     }
     public List<String> getAllYears() {
-        return configRepository.findDistinctYears();
+        // Get years from both StudentConfig and TeacherPlConfig tables
+        List<String> studentConfigYears = configRepository.findDistinctYears();
+        List<String> teacherConfigYears = teacherPlConfigRepository.findDistinctSchoolYears();
+        
+        // Combine and deduplicate years, then sort
+        return Stream.concat(studentConfigYears.stream(), teacherConfigYears.stream())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     private StudentConfigDto toDto(StudentConfig config) {

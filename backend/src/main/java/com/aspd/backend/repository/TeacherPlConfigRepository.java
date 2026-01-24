@@ -2,6 +2,7 @@ package com.aspd.backend.repository;
 
 import com.aspd.backend.model.TeacherPlConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,4 +16,7 @@ public interface TeacherPlConfigRepository extends JpaRepository<TeacherPlConfig
     List<TeacherPlConfig> findByTeacher_TeacherIdAndTeacher_ActiveTrue(Long teacherId);
 
     Optional<TeacherPlConfig> findByTeacher_TeacherIdAndSchoolYear(Long teacherId, String schoolYear);
+    
+    @Query("SELECT DISTINCT tc.schoolYear FROM TeacherPlConfig tc")
+    List<String> findDistinctSchoolYears();
 }

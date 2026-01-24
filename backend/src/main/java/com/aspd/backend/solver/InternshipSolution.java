@@ -1,6 +1,7 @@
 package com.aspd.backend.solver;
 
 import com.aspd.backend.model.*;
+import com.aspd.backend.dto.CoordinatesDto;
 import org.optaplanner.core.api.domain.solution.PlanningEntityCollectionProperty;
 import org.optaplanner.core.api.domain.solution.PlanningScore;
 import org.optaplanner.core.api.domain.solution.PlanningSolution;
@@ -38,6 +39,16 @@ public class InternshipSolution {
     @ValueRangeProvider(id = "courseRange")
     @ProblemFactCollectionProperty
     private List<Course> availableCourses;
+
+    /**
+     * Precomputed student coordinates for PDP distance soft constraint.
+     * GS and MS are kept separate to match school type.
+     */
+    @ProblemFactCollectionProperty
+    private List<CoordinatesDto> pdpGsStudentCoords;
+
+    @ProblemFactCollectionProperty
+    private List<CoordinatesDto> pdpMsStudentCoords;
 
     // School is derived from the assigned teacher; no explicit school range needed.
     /**

@@ -67,27 +67,26 @@ const PlImportModal: React.FC<PlImportModalProps> = ({
         </div>
 
         <div className="modal-body">
-          <p
-            style={{
-              fontSize: 13,
-              color: "#6f7276",
-              marginBottom: 10,
-            }}
-          >
-            Unterstütztes Format: <code>.xlsx</code>. Gültige Einträge werden
-            gespeichert, Fehler werden unten angezeigt.
-          </p>
-
           <div className="form-group">
-            <label className="form-label" htmlFor="pl-import-file">
-              Datei auswählen
+            <label className="form-label required" htmlFor="pl-import-file">
+              Excel-Datei (.xlsx)
             </label>
             <input
               id="pl-import-file"
               type="file"
+              className="form-input"
               accept=".xlsx"
               onChange={handleFileChange}
+              required
             />
+            {file && (
+              <p style={{ fontSize: '0.875rem', color: '#059669', marginTop: '0.5rem', fontWeight: 500 }}>
+                Ausgewählte Datei: {file.name}
+              </p>
+            )}
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              Die Excel-Datei sollte folgende Spalten enthalten: Vorname, Nachname, E-Mail, Hauptfach, Schulname
+            </p>
           </div>
 
           <div

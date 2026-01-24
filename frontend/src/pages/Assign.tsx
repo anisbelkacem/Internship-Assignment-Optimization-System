@@ -6,11 +6,13 @@ import plService from "../services/plService";
 import studentService from "../services/studentService";
 import schoolService from "../services/schoolService";
 import internshipAssignmentService from "../services/internshipAssignmentService";
+import SearchFilter, { type FilterConfig } from "../components/SearchFilter";
 import StudentConfigForm from "../components/InternshipsAssignment/InternshipAssignmentStudentForm";
 import TeacherConfigForm from "../components/InternshipsAssignment/TeacherConfigForm";
 import EditPlannedInternshipForm from "../components/InternshipsAssignment/EditPlannedInternshipForm";
 import type { StudentConfigDto } from "../services/studentConfigService";
 import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
+import { PraktikumType } from "../services/plService";
 import type { Student } from "../services/studentService";
 import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentResult, AssignmentDto } from "../services/internshipAssignmentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
@@ -53,6 +55,7 @@ export default function InternshipAssignments() {
   const [_phase2Result, setPhase2Result] = useState<StudentAssignmentResult | null>(null);
   const [assigningPhase2, setAssigningPhase2] = useState(false);
   const [studentAssignments, setStudentAssignments] = useState<AssignmentDto[]>([]);
+  const [editedAssignmentIds, setEditedAssignmentIds] = useState<Set<number>>(new Set());
 
   // Edit Planned Internship Modal State
   const [showEditInternshipModal, setShowEditInternshipModal] = useState(false);
@@ -64,6 +67,36 @@ export default function InternshipAssignments() {
 
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [teacherFilters, setTeacherFilters] = useState<Record<string, string>>({
+    praktikumType: '',
+    course: '',
+    school: '',
+    zone: '',
+    schoolType: '',
+    assignmentStatus: '',
+  });
+  const [studentFilters, setStudentFilters] = useState<Record<string, string>>(({
+    praktikumType: '',
+    course: '',
+    teacher: '',
+    school: '',
+    status: '',
+  }));
+  const [studentConfigFilters, setStudentConfigFilters] = useState<Record<string, string>>({
+    year: '',
+    schoolType: '',
+    mainCourse: '',
+    praktikum: '',
+  });
+  const [plConfigFilters, setPlConfigFilters] = useState<Record<string, string>>({
+    teacher: '',
+    mainSubject: '',
+    school: '',
+    schoolZone: '',
+    employmentType: '',
+    praktikumPreference: '',
+  });
+  const [plConfigSearchTerm, setPlConfigSearchTerm] = useState('');
   const [timeBudget, setTimeBudget] = useState<number>(210);
 
   // New Year Modal State
@@ -85,6 +118,17 @@ export default function InternshipAssignments() {
 
   useEffect(() => {
     fetchInitialData();
+    
+    // Add window focus listener to refresh years when returning to page
+    const handleFocus = () => {
+      refreshAvailableYears();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -118,6 +162,31 @@ const fetchInitialData = async () => {
     setError(err instanceof Error ? err.message : "Failed to load data");
   } finally {
     setLoading(false);
+  }
+};
+
+// Refresh available years from database
+const refreshAvailableYears = async (yearToKeep?: string) => {
+  try {
+    const yearsData = await studentConfigService.getAllYears();
+    setAvailableYears(yearsData);
+    
+    // If a specific year should be kept, ensure it's selected
+    if (yearToKeep && yearsData.includes(yearToKeep)) {
+      setSelectedYear(yearToKeep);
+      return;
+    }
+    
+    // Otherwise, if current selected year is no longer available, select first available
+    if (selectedYear && !yearsData.includes(selectedYear)) {
+      if (yearsData.length > 0) {
+        setSelectedYear(yearsData[0]);
+      } else {
+        setSelectedYear('');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to refresh years:', err);
   }
 };
 
@@ -166,6 +235,13 @@ const fetchInitialData = async () => {
       await studentConfigService.deleteConfig(deletingStudentConfigId);
       setSuccess("Student configuration deleted successfully!");
       fetchStudentConfigsByYear();
+      
+      // Refresh years list in case the last config for a year was deleted
+      // Small delay to ensure database transaction completes
+      setTimeout(async () => {
+        await refreshAvailableYears();
+      }, 150);
+      
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete configuration");
@@ -426,16 +502,36 @@ const handleConfirmDeleteTeacherConfig = async () => {
     });
     
     try {
-      const result = await internshipAssignmentService.updateStudentAssignment(
+      // Use PATCH endpoint for status updates (this works reliably)
+      await internshipAssignmentService.updateAssignmentStatus(
         editingAssignment.id,
-        {
-          teacherId: editingAssignment.teacherId || null,
-          schoolId: editingAssignment.schoolId || null,
-          status: editingAssignment.status,
-        }
+        editingAssignment.status
       );
-      console.log('Update result from backend:', result);
-      console.log('Fetching updated assignments...');
+      
+      // If teacher/school changed, also try to update via PUT
+      // (Note: Backend currently doesn't update teacher/school, but status is already updated via PATCH)
+      const originalAssignment = studentAssignments.find(a => a.id === editingAssignment.id);
+      if (originalAssignment && 
+          (originalAssignment.teacherId !== editingAssignment.teacherId || 
+           originalAssignment.schoolId !== editingAssignment.schoolId)) {
+        console.log('Teacher or school changed, attempting full update...');
+        await internshipAssignmentService.updateStudentAssignment(
+          editingAssignment.id,
+          {
+            teacherId: editingAssignment.teacherId || null,
+            schoolId: editingAssignment.schoolId || null,
+            status: editingAssignment.status,
+          }
+        );
+      }
+      
+      console.log('Update successful, fetching updated assignments...');
+      
+      // Mark this assignment as edited
+      const newEditedIds = new Set(editedAssignmentIds);
+      newEditedIds.add(editingAssignment.id);
+      setEditedAssignmentIds(newEditedIds);
+      
       await fetchStudentAssignments();
       console.log('Student assignments refreshed');
       setSuccess("Student assignment updated successfully!");
@@ -468,6 +564,11 @@ const handleConfirmDeleteTeacherConfig = async () => {
     
     console.log('Validating assignment:', assignmentId);
     try {
+      // Remove from edited list when confirmed
+      const newEditedIds = new Set(editedAssignmentIds);
+      newEditedIds.delete(assignmentId);
+      setEditedAssignmentIds(newEditedIds);
+      
       const result = await internshipAssignmentService.updateAssignmentStatus(assignmentId, 'CONFIRMED');
       console.log('Validation result:', result);
       await fetchStudentAssignments();
@@ -482,7 +583,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
   };
 
   // New Year Handler
-  const handleCreateNewYear = () => {
+  const handleCreateNewYear = async () => {
+    // Refresh the years list to show any configs added manually
+    await refreshAvailableYears();
     setShowNewYearModal(true);
   };
 
@@ -510,6 +613,310 @@ const handleConfirmNewYear = () => {
   setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
   setTimeout(() => setSuccess(null), 3000);
 };
+
+  // Teacher assignments filter configuration
+  const filteredTeacherAssignments = phase1Result?.plannedInternships.filter(pi => {
+    const matchesSearch = !teacherSearchTerm || 
+                         (pi.teacherName?.toLowerCase().includes(teacherSearchTerm.toLowerCase()) ?? false) ||
+                         (pi.course?.toLowerCase().includes(teacherSearchTerm.toLowerCase()) ?? false);
+    const matchesPraktikumType = !teacherFilters.praktikumType || pi.praktikumType === teacherFilters.praktikumType;
+    const matchesCourse = !teacherFilters.course || pi.course === teacherFilters.course;
+    const matchesSchool = !teacherFilters.school || pi.schoolName === teacherFilters.school;
+    const matchesZone = !teacherFilters.zone || pi.schoolZone === teacherFilters.zone;
+    const matchesSchoolType = !teacherFilters.schoolType || pi.schoolType === teacherFilters.schoolType;
+    const matchesAssignmentStatus = !teacherFilters.assignmentStatus ||
+                                   (teacherFilters.assignmentStatus === 'assigned' && pi.teacherName) ||
+                                   (teacherFilters.assignmentStatus === 'unassigned' && !pi.teacherName);
+    
+    return matchesSearch && matchesPraktikumType && matchesCourse && matchesSchool && 
+           matchesZone && matchesSchoolType && matchesAssignmentStatus;
+  }) ?? [];
+
+  // Get unique values for teacher filters
+  const uniquePraktikumTypes = [...new Set(phase1Result?.plannedInternships.map(pi => pi.praktikumType).filter(Boolean))].sort();
+  const uniqueCourses = [...new Set(phase1Result?.plannedInternships.map(pi => pi.course).filter((c): c is string => !!c))].sort();
+  const uniqueSchools = [...new Set(phase1Result?.plannedInternships.map(pi => pi.schoolName).filter((s): s is string => !!s))].sort();
+  const uniqueZones = [...new Set(phase1Result?.plannedInternships.map(pi => pi.schoolZone).filter((z): z is string => !!z))].sort();
+  const uniqueSchoolTypes = [...new Set(phase1Result?.plannedInternships.map(pi => pi.schoolType).filter(Boolean))].sort();
+
+  const teacherFilterConfigs: FilterConfig[] = [
+    {
+      field: 'praktikumType',
+      label: 'Praktikumtyp',
+      options: uniquePraktikumTypes.map(type => ({ label: type, value: type, field: 'praktikumType' }))
+    },
+    {
+      field: 'course',
+      label: 'Kurs',
+      options: uniqueCourses.map(course => ({ 
+        label: course.charAt(0).toUpperCase() + course.slice(1), 
+        value: course, 
+        field: 'course' 
+      }))
+    },
+    {
+      field: 'school',
+      label: 'Schule',
+      options: uniqueSchools.map(school => ({ label: school, value: school, field: 'school' }))
+    },
+    {
+      field: 'zone',
+      label: 'Zone',
+      options: uniqueZones.map(zone => ({ label: zone, value: zone, field: 'zone' }))
+    },
+    {
+      field: 'schoolType',
+      label: 'Schultyp',
+      options: uniqueSchoolTypes.map(type => ({ label: type, value: type, field: 'schoolType' }))
+    },
+    {
+      field: 'assignmentStatus',
+      label: 'Zuweisungsstatus',
+      options: [
+        { label: 'Zugewiesen', value: 'assigned', field: 'assignmentStatus' },
+        { label: 'Nicht zugewiesen', value: 'unassigned', field: 'assignmentStatus' }
+      ]
+    }
+  ];
+
+  const handleTeacherFilterChange = (field: string, value: string) => {
+    setTeacherFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearTeacherFilters = () => {
+    setTeacherFilters({
+      praktikumType: '',
+      course: '',
+      school: '',
+      zone: '',
+      schoolType: '',
+      assignmentStatus: '',
+    });
+  };
+
+  // Student assignments filter configuration
+  const filteredStudentAssignments = studentAssignments.filter(assignment => {
+    const matchesSearch = !studentSearchTerm || 
+                         assignment.studentName.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                         (assignment.teacherName?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ?? false) ||
+                         (assignment.course?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ?? false);
+    const matchesPraktikumType = !studentFilters.praktikumType || assignment.praktikumType === studentFilters.praktikumType;
+    const matchesCourse = !studentFilters.course || assignment.course === studentFilters.course;
+    const matchesTeacher = !studentFilters.teacher || assignment.teacherName === studentFilters.teacher;
+    const matchesSchool = !studentFilters.school || assignment.schoolName === studentFilters.school;
+    const matchesStatus = !studentFilters.status || 
+                         (studentFilters.status === 'EDITED' && editedAssignmentIds.has(assignment.id)) ||
+                         assignment.status === studentFilters.status;
+    
+    return matchesSearch && matchesPraktikumType && matchesCourse && matchesTeacher && 
+           matchesSchool && matchesStatus;
+  });
+
+  // Get unique values for student filters
+  const uniqueStudentPraktikumTypes = [...new Set(studentAssignments.map(a => a.praktikumType).filter(Boolean))].sort();
+  const uniqueStudentCourses = [...new Set(studentAssignments.map(a => a.course).filter((c): c is string => !!c))].sort();
+  const uniqueTeachers = [...new Set(studentAssignments.map(a => a.teacherName).filter((t): t is string => !!t))].sort();
+  const uniqueStudentSchools = [...new Set(studentAssignments.map(a => a.schoolName).filter((s): s is string => !!s))].sort();
+
+  const studentFilterConfigs: FilterConfig[] = [
+    {
+      field: 'praktikumType',
+      label: 'Praktikumtyp',
+      options: uniqueStudentPraktikumTypes.map(type => ({ label: type, value: type, field: 'praktikumType' }))
+    },
+    {
+      field: 'course',
+      label: 'Kurs',
+      options: uniqueStudentCourses.map(course => ({ 
+        label: course.charAt(0).toUpperCase() + course.slice(1), 
+        value: course, 
+        field: 'course' 
+      }))
+    },
+    {
+      field: 'teacher',
+      label: 'Betreuer',
+      options: uniqueTeachers.map(teacher => ({ label: teacher, value: teacher, field: 'teacher' }))
+    },
+    {
+      field: 'school',
+      label: 'Schule',
+      options: uniqueStudentSchools.map(school => ({ label: school, value: school, field: 'school' }))
+    },
+    {
+      field: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Vorgeschlagen', value: 'PROPOSED', field: 'status' },
+        { label: 'Bearbeitet', value: 'EDITED', field: 'status' },
+        { label: 'Bestätigt', value: 'CONFIRMED', field: 'status' },
+        { label: 'Abgesagt', value: 'CANCELLED', field: 'status' }
+      ]
+    }
+  ];
+
+  const handleStudentFilterChange = (field: string, value: string) => {
+    setStudentFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearStudentFilters = () => {
+    setStudentFilters({
+      praktikumType: '',
+      course: '',
+      teacher: '',
+      school: '',
+      status: '',
+    });
+  };
+
+  // Student configuration filter configuration
+  const filteredStudentConfigs = studentConfigs.filter(config => {
+    const student = students.find(s => s.matriculationNbr === config.studentId);
+    if (!student) return false;
+    
+    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+    const matchesSearch = !studentSearchTerm || fullName.includes(studentSearchTerm.toLowerCase());
+    const matchesYear = !studentConfigFilters.year || config.year === studentConfigFilters.year;
+    const matchesSchoolType = !studentConfigFilters.schoolType || config.schoolType === studentConfigFilters.schoolType;
+    const matchesMainCourse = !studentConfigFilters.mainCourse || config.mainCourse?.name === studentConfigFilters.mainCourse;
+    const matchesPraktikum = !studentConfigFilters.praktikum ||
+                            (studentConfigFilters.praktikum === 'PDP I' && config.pdpI) ||
+                            (studentConfigFilters.praktikum === 'PDP II' && config.pdpII) ||
+                            (studentConfigFilters.praktikum === 'ZSP' && config.zsp) ||
+                            (studentConfigFilters.praktikum === 'SFP' && config.sfp);
+    
+    return matchesSearch && matchesYear && matchesSchoolType && matchesMainCourse && matchesPraktikum;
+  });
+
+  // Get unique values for student config filters
+  const uniqueConfigYears = [...new Set(studentConfigs.map(c => c.year).filter(Boolean))].sort();
+  const uniqueConfigSchoolTypes = [...new Set(studentConfigs.map(c => c.schoolType).filter(Boolean))].sort();
+  const uniqueConfigMainCourses = [...new Set(studentConfigs.map(c => c.mainCourse?.name).filter((c): c is string => !!c))].sort();
+
+  const studentConfigFilterConfigs: FilterConfig[] = [
+    {
+      field: 'year',
+      label: 'Jahr',
+      options: uniqueConfigYears.map(year => ({ label: year, value: year, field: 'year' }))
+    },
+    {
+      field: 'schoolType',
+      label: 'Schultyp',
+      options: uniqueConfigSchoolTypes.map(type => ({ label: type, value: type, field: 'schoolType' }))
+    },
+    {
+      field: 'mainCourse',
+      label: 'Hauptfach',
+      options: uniqueConfigMainCourses.map(course => ({ 
+        label: course.charAt(0).toUpperCase() + course.slice(1), 
+        value: course, 
+        field: 'mainCourse' 
+      }))
+    },
+    {
+      field: 'praktikum',
+      label: 'Praktikum',
+      options: [
+        { label: 'PDP I', value: 'PDP I', field: 'praktikum' },
+        { label: 'PDP II', value: 'PDP II', field: 'praktikum' },
+        { label: 'ZSP', value: 'ZSP', field: 'praktikum' },
+        { label: 'SFP', value: 'SFP', field: 'praktikum' }
+      ]
+    }
+  ];
+
+  const handleStudentConfigFilterChange = (field: string, value: string) => {
+    setStudentConfigFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearStudentConfigFilters = () => {
+    setStudentConfigFilters({
+      year: '',
+      schoolType: '',
+      mainCourse: '',
+      praktikum: '',
+    });
+  };
+
+  // PL Configuration filter logic
+  const filteredPlConfigTeachers = teachers.filter(teacher => {
+    const fullName = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
+    const matchesSearch = !plConfigSearchTerm || fullName.includes(plConfigSearchTerm.toLowerCase());
+    const matchesTeacher = !plConfigFilters.teacher || fullName.includes(plConfigFilters.teacher.toLowerCase());
+    const matchesMainSubject = !plConfigFilters.mainSubject || teacher.mainSubject.name === plConfigFilters.mainSubject;
+    const matchesSchool = !plConfigFilters.school || teacher.schoolName === plConfigFilters.school;
+    const matchesSchoolZone = !plConfigFilters.schoolZone || teacher.schoolZone === plConfigFilters.schoolZone;
+    const matchesEmploymentType = !plConfigFilters.employmentType || 
+      (plConfigFilters.employmentType === 'Vollzeit' && !teacher.isPartTime) ||
+      (plConfigFilters.employmentType === 'Teilzeit' && teacher.isPartTime);
+    
+    // Check if teacher has configs matching the praktikum preference filter
+    const matchesPraktikumPreference = !plConfigFilters.praktikumPreference || 
+      teacher.plConfigs.some(config => 
+        config.schoolYear === selectedYear && 
+        config.internshipPreferences.includes(plConfigFilters.praktikumPreference as PraktikumType)
+      );
+    
+    return matchesSearch && matchesTeacher && matchesMainSubject && matchesSchool && 
+           matchesSchoolZone && matchesEmploymentType && matchesPraktikumPreference;
+  });
+
+  // Get unique values for PL config filters
+  const uniquePlConfigMainSubjects = [...new Set(teachers.map(t => t.mainSubject.name).filter((name): name is string => !!name))].sort();
+  const uniquePlConfigSchools = [...new Set(teachers.map(t => t.schoolName).filter((name): name is string => !!name))].sort();
+  const uniquePlConfigZones = [...new Set(teachers.map(t => t.schoolZone).filter((zone): zone is string => !!zone))].sort();
+
+  const plConfigFilterConfigs: FilterConfig[] = [
+    {
+      field: 'mainSubject',
+      label: 'Hauptfach',
+      options: uniquePlConfigMainSubjects.map(subject => ({ label: subject, value: subject, field: 'mainSubject' }))
+    },
+    {
+      field: 'school',
+      label: 'Schule',
+      options: uniquePlConfigSchools.map(school => ({ label: school, value: school, field: 'school' }))
+    },
+    {
+      field: 'schoolZone',
+      label: 'Zone',
+      options: uniquePlConfigZones.map(zone => ({ label: zone, value: zone, field: 'schoolZone' }))
+    },
+    {
+      field: 'employmentType',
+      label: 'Beschäftigung',
+      options: [
+        { label: 'Vollzeit', value: 'Vollzeit', field: 'employmentType' },
+        { label: 'Teilzeit', value: 'Teilzeit', field: 'employmentType' }
+      ]
+    },
+    {
+      field: 'praktikumPreference',
+      label: 'Praktikumspräferenz',
+      options: [
+        { label: 'PDP I', value: 'PDP I', field: 'praktikumPreference' },
+        { label: 'PDP II', value: 'PDP II', field: 'praktikumPreference' },
+        { label: 'ZSP', value: 'ZSP', field: 'praktikumPreference' },
+        { label: 'SFP', value: 'SFP', field: 'praktikumPreference' }
+      ]
+    }
+  ];
+
+  const handlePlConfigFilterChange = (field: string, value: string) => {
+    setPlConfigFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearPlConfigFilters = () => {
+    setPlConfigFilters({
+      teacher: '',
+      mainSubject: '',
+      school: '',
+      schoolZone: '',
+      employmentType: '',
+      praktikumPreference: '',
+    });
+    setPlConfigSearchTerm('');
+  };
 
   if (loading) {
     return (
@@ -543,7 +950,7 @@ const handleConfirmNewYear = () => {
             ))}
           </select>
           <button 
-            className="btn btn-primary"
+            className="btn-primary-filled"
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
@@ -575,7 +982,7 @@ const handleConfirmNewYear = () => {
               </div>
               <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#475569'}}>Zeitbudget</label>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Zeitbudget</label>
                   <input
                     type="number"
                     min="1"
@@ -584,26 +991,22 @@ const handleConfirmNewYear = () => {
                     onChange={(e) => setTimeBudget(parseInt(e.target.value) || 210)}
                     style={{
                       width: '100px',
-                      padding: '8px 14px',
-                      fontSize: '0.95rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
                       outline: 'none',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: '#f8fafc',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                      color: '#000000',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
                       textAlign: 'center'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#3b82f6';
-                      e.target.style.backgroundColor = '#ffffff';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                      e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.backgroundColor = '#f8fafc';
-                      e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.outline = 'none';
                     }}
                   />
                 </div>
@@ -612,6 +1015,8 @@ const handleConfirmNewYear = () => {
                   onClick={handlePhase1Assignment}
                   disabled={!selectedYear || assigningPhase1}
                   style={{marginTop: '20px'}}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
                 </button>
@@ -645,6 +1050,19 @@ const handleConfirmNewYear = () => {
                       </div>
                     </div>
                   )}
+
+                  <div style={{marginLeft: '16px'}}>
+                    <SearchFilter
+                      searchPlaceholder="Suche nach Lehrer, Kurs oder Schule..."
+                      searchValue={teacherSearchTerm}
+                      onSearchChange={setTeacherSearchTerm}
+                      filters={teacherFilterConfigs}
+                      activeFilters={teacherFilters}
+                      onFilterChange={handleTeacherFilterChange}
+                      onClearFilters={handleClearTeacherFilters}
+                    />
+                  </div>
+
                   <table className="schools-table">
                     <thead>
                       <tr>
@@ -658,14 +1076,16 @@ const handleConfirmNewYear = () => {
                       </tr>
                     </thead>
                     <tbody>
-                        {phase1Result.plannedInternships.length === 0 ? (
+                        {filteredTeacherAssignments.length === 0 ? (
                           <tr>
                             <td colSpan={7} className="table-empty">
-                              No assignments generated
+                              {teacherSearchTerm || Object.values(teacherFilters).some(v => v) ? 
+                                'Keine Zuweisungen entsprechen den Filterkriterien' : 
+                                'No assignments generated'}
                             </td>
                           </tr>
                         ) : (
-                          phase1Result.plannedInternships.map((pi) => (
+                          filteredTeacherAssignments.map((pi) => (
                             <tr key={pi.id}>
                               <td>
                                 <span style={{
@@ -725,6 +1145,8 @@ const handleConfirmNewYear = () => {
                   className="btn-primary"
                   onClick={handleAssignPhase2}
                   disabled={assigningPhase2 || !phase1Result}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   {assigningPhase2 ? "Läuft..." : "Zuweisen"}
                 </button>
@@ -749,6 +1171,18 @@ const handleConfirmNewYear = () => {
                 </div>
               ) : (
                 <>
+                  <div style={{marginLeft: '16px'}}>
+                    <SearchFilter
+                      searchPlaceholder="Suche nach Schüler, Betreuer oder Schule..."
+                      searchValue={studentSearchTerm}
+                      onSearchChange={setStudentSearchTerm}
+                      filters={studentFilterConfigs}
+                      activeFilters={studentFilters}
+                      onFilterChange={handleStudentFilterChange}
+                      onClearFilters={handleClearStudentFilters}
+                    />
+                  </div>
+
                   <table className="schools-table">
                     <thead>
                       <tr>
@@ -759,16 +1193,18 @@ const handleConfirmNewYear = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {studentAssignments.length === 0 ? (
+                      {filteredStudentAssignments.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="table-empty">
-                            No student assignments generated
+                            {studentSearchTerm || Object.values(studentFilters).some(v => v) ? 
+                              'Keine Zuweisungen entsprechen den Filterkriterien' : 
+                              'No student assignments generated'}
                           </td>
                         </tr>
                       ) : (
-                        // Group assignments by internship (teacher + school + course + type)
+                        // Group filtered assignments by internship (teacher + school + course + type)
                         Object.entries(
-                          studentAssignments.reduce((groups: any, assignment) => {
+                          filteredStudentAssignments.reduce((groups: any, assignment) => {
                             const key = `${assignment.teacherName ?? 'Unassigned'} | ${assignment.schoolName ?? 'No School'} | ${assignment.course ?? 'No Course'} | ${assignment.praktikumType}`;
                             if (!groups[key]) {
                               groups[key] = [];
@@ -781,17 +1217,52 @@ const handleConfirmNewYear = () => {
                             <tr key={assignment.id}>
                               {idx === 0 && (
                                 <td rowSpan={assignments.length} style={{
-                                  backgroundColor: '#f8fafc',
+                                  background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
                                   fontWeight: '500',
-                                  borderLeft: '4px solid #3b82f6',
-                                  minWidth: '300px',
-                                  padding: '20px'
+                                  minWidth: '320px',
+                                  padding: '24px',
+                                  position: 'relative'
                                 }}>
-                                  <div style={{fontSize: '1.05em', lineHeight: '1.8'}}>
-                                    <div style={{fontWeight: '700', color: '#1e293b', fontSize: '1.1em'}}>{assignment.teacherName ?? 'Unassigned'}</div>
-                                    <div style={{fontSize: '1em', color: '#475569', marginTop: '8px'}}>{assignment.schoolName ?? 'No School'}</div>
-                                    <div style={{fontSize: '1em', color: '#475569'}}>{assignment.course ?? '—'}</div>
-                                    <div style={{fontSize: '1em', color: '#64748b', marginTop: '12px', fontWeight: '600'}}>{assignment.praktikumType}</div>
+                                  <div style={{fontSize: '1.05em', lineHeight: '1.9'}}>
+                                    <div style={{
+                                      fontWeight: '700', 
+                                      color: '#1e293b', 
+                                      fontSize: '1.15em',
+                                      marginBottom: '8px'
+                                    }}>
+                                      {assignment.teacherName ?? 'Unassigned'}
+                                    </div>
+                                    <div style={{marginBottom: '12px'}}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '3px 10px',
+                                        background: 'transparent',
+                                        border: '1.5px solid #3b82f6',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75em',
+                                        fontWeight: '600',
+                                        color: '#3b82f6',
+                                        letterSpacing: '0.3px'
+                                      }}>
+                                        {assignment.praktikumType}
+                                      </span>
+                                    </div>
+                                    <div style={{
+                                      fontSize: '0.95em', 
+                                      color: '#64748b', 
+                                      paddingLeft: '16px',
+                                      borderLeft: '2px solid #e2e8f0',
+                                      marginLeft: '4px'
+                                    }}>
+                                      <div style={{marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                        <span style={{color: '#94a3b8', fontSize: '0.9em'}}>🏫</span>
+                                        <span style={{color: '#475569'}}>{assignment.schoolName ?? 'No School'}</span>
+                                      </div>
+                                      <div style={{marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                        <span style={{color: '#94a3b8', fontSize: '0.9em'}}>📚</span>
+                                        <span style={{color: '#475569'}}>{assignment.course ?? '—'}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </td>
                               )}
@@ -803,11 +1274,13 @@ const handleConfirmNewYear = () => {
                               <td>
                                 <span className={`status-badge ${
                                   assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
-                                  assignment.status === 'PROPOSED' ? 'status-proposed' : 
+                                  editedAssignmentIds.has(assignment.id) ? 'status-edited' :
+                                  assignment.status === 'PROPOSED' ? 'status-proposed' :
                                   'status-other'
                                 }`}>
                                   {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
-                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' : 
+                                   editedAssignmentIds.has(assignment.id) ? 'Bearbeitet' :
+                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' :
                                    assignment.status}
                                 </span>
                               </td>
@@ -865,35 +1338,16 @@ const handleConfirmNewYear = () => {
               <p>Praktikumslehrer Konfiguration und Präferenzen</p>
             </div>
           </div>
-          <div style={{marginBottom: '20px'}}>
-                <input
-                  type="text"
-                  placeholder="🔍 Search teachers..."
-                  value={teacherSearchTerm}
-                  onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                  style={{
-                    width: '280px',
-                    padding: '8px 14px',
-                    fontSize: '0.95rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'all 0.2s ease',
-                    backgroundColor: '#f8fafc',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    color: '#000000'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.backgroundColor = '#ffffff';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e2e8f0';
-                    e.target.style.backgroundColor = '#f8fafc';
-                    e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                  }}
-                />
+          <div style={{marginLeft: '16px'}}>
+            <SearchFilter
+              searchPlaceholder="🔍 Search teachers..."
+              searchValue={plConfigSearchTerm}
+              onSearchChange={setPlConfigSearchTerm}
+              filters={plConfigFilterConfigs}
+              activeFilters={plConfigFilters}
+              onFilterChange={handlePlConfigFilterChange}
+              onClearFilters={handleClearPlConfigFilters}
+            />
           </div>
             <div className="schools-table-container">
               <table className="schools-table">
@@ -908,20 +1362,14 @@ const handleConfirmNewYear = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {teachers.filter(teacher => {
-                    const fullName = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
-                    return fullName.includes(teacherSearchTerm.toLowerCase());
-                  }).length === 0 ? (
+                  {filteredPlConfigTeachers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="empty-state">
-                        {teacherSearchTerm ? 'No teachers match your search' : 'No teachers found'}
+                        {plConfigSearchTerm || Object.values(plConfigFilters).some(v => v) ? 'No teachers match your filters' : 'No teachers found'}
                       </td>
                     </tr>
                   ) : (
-                    teachers.filter(teacher => {
-                      const fullName = `${teacher.firstName} ${teacher.lastName}`.toLowerCase();
-                      return fullName.includes(teacherSearchTerm.toLowerCase());
-                    }).flatMap((teacher) => {
+                    filteredPlConfigTeachers.flatMap((teacher) => {
                       const teacherConfigsForYear = teacher.plConfigs.filter(
                         (config) => config.schoolYear === selectedYear
                       );
@@ -1013,36 +1461,19 @@ const handleConfirmNewYear = () => {
               </button>
             </div>
           </div>
-          <div style={{marginBottom: '20px'}}>
-                <input
-                  type="text"
-                  placeholder="🔍 Schüler suchen..."
-                  value={studentSearchTerm}
-                  onChange={(e) => setStudentSearchTerm(e.target.value)}
-                  style={{
-                    width: '280px',
-                    padding: '8px 14px',
-                    fontSize: '0.95rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'all 0.2s ease',
-                    backgroundColor: '#f8fafc',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    color: '#000000'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.backgroundColor = '#ffffff';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e2e8f0';
-                    e.target.style.backgroundColor = '#f8fafc';
-                    e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                  }}
-                />
+
+          <div style={{marginLeft: '16px'}}>
+            <SearchFilter
+              searchPlaceholder="Suche nach Schülername..."
+              searchValue={studentSearchTerm}
+              onSearchChange={setStudentSearchTerm}
+              filters={studentConfigFilterConfigs}
+              activeFilters={studentConfigFilters}
+              onFilterChange={handleStudentConfigFilterChange}
+              onClearFilters={handleClearStudentConfigFilters}
+            />
           </div>
+
             <div className="schools-table-container">
               <table className="schools-table">
                 <thead>
@@ -1059,36 +1490,38 @@ const handleConfirmNewYear = () => {
                   </tr>
                 </thead>
 <tbody>
-  {students.filter(student => {
-    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-    return fullName.includes(studentSearchTerm.toLowerCase());
-  }).length === 0 ? (
-    <tr>
-      <td colSpan={12} className="empty-state">
-        {studentSearchTerm ? "No students match your search" : "No students found"}
-      </td>
-    </tr>
-  ) : (
-    students
-      .filter(student => {
-        const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-        return fullName.includes(studentSearchTerm.toLowerCase());
-      })
-      .flatMap(student => {
-        const studentConfigsForYear = studentConfigs.filter(
-          config =>
-            config.studentId === student.matriculationNbr &&
-            config.year === selectedYear
-        );
+  {/* Get unique student IDs from filtered configs */}
+  {(() => {
+    const uniqueStudentIds = [...new Set(filteredStudentConfigs.map(c => c.studentId))];
+    const filteredStudents = students.filter(s => uniqueStudentIds.includes(s.matriculationNbr));
+    
+    if (filteredStudents.length === 0) {
+      return (
+        <tr>
+          <td colSpan={12} className="empty-state">
+            {studentSearchTerm || Object.values(studentConfigFilters).some(v => v) ? 
+              'Keine Konfigurationen entsprechen den Filterkriterien' : 
+              'No students found'}
+          </td>
+        </tr>
+      );
+    }
+    
+    return filteredStudents.flatMap(student => {
+      const studentConfigsForYear = filteredStudentConfigs.filter(
+        config =>
+          config.studentId === student.matriculationNbr &&
+          config.year === selectedYear
+      );
 
-if (studentConfigsForYear.length === 0) {
-  return (
-    <tr key={`student-${student.matriculationNbr}`}>
-      <td>{student.firstName} {student.lastName}</td>
-      <td colSpan={8} className="empty-state">No configurations</td>
-    </tr>
-  );
-}
+      if (studentConfigsForYear.length === 0) {
+        return (
+          <tr key={`student-${student.matriculationNbr}`}>
+            <td>{student.firstName} {student.lastName}</td>
+            <td colSpan={8} className="empty-state">No configurations</td>
+          </tr>
+        );
+      }
 
         return studentConfigsForYear.map((config, index) => (
           <tr key={`student-${student.matriculationNbr}-config-${config.id}`}>
@@ -1140,8 +1573,8 @@ if (studentConfigsForYear.length === 0) {
             </td>
           </tr>
         ));
-      })
-  )}
+      });
+    })()}
 </tbody>
 
               </table>
@@ -1173,7 +1606,7 @@ if (studentConfigsForYear.length === 0) {
             </div>
             <div className="modal-actions">
               <button
-                className="btn-secondary"
+                className="btn btn-ghost"
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
@@ -1182,7 +1615,7 @@ if (studentConfigsForYear.length === 0) {
                 Cancel
               </button>
               <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleConfirmNewYear}
               >
                 Create Year
@@ -1225,12 +1658,16 @@ if (studentConfigsForYear.length === 0) {
               year={selectedYear}
               onClose={handleCloseStudentConfigModal}
               onSave={async () => {
-                const wasEditing = !!editingStudentConfig?.id;
+                const wasEditing = !!editingStudentConfig;
+                const yearBeingSaved = selectedYear; // Preserve the year being saved
                 handleCloseStudentConfigModal();
                 
-                // Refresh years list and configs
-                const yearsData = await studentConfigService.getAllYears();
-                setAvailableYears(yearsData);
+                // Small delay to ensure database transaction completes
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                // Refresh years list ensuring the saved year stays selected
+                await refreshAvailableYears(yearBeingSaved);
+                
                 await fetchStudentConfigsByYear();
                 
                 setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
@@ -1330,7 +1767,7 @@ if (studentConfigsForYear.length === 0) {
                     console.log('Parsed teacherId:', teacherId);
                     console.log('Found teacher:', teacher);
                     
-                    // Automatically set school based on teacher
+                    // Automatically set school based on teacher and mark as edited
                     const updated = {
                       ...editingAssignment, 
                       teacherId,
@@ -1398,18 +1835,18 @@ if (studentConfigsForYear.length === 0) {
             </div>
             <div className="modal-footer">
               <button
-                className="btn-cancel"
-                onClick={handleCloseEditAssignmentModal}
-              >
-                Abbrechen
-              </button>
-              <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleSaveEditAssignment}
                 disabled={validationResult && validationResult.hardValid === false}
 
               >
                 Speichern
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={handleCloseEditAssignmentModal}
+              >
+                Abbrechen
               </button>
             </div>
           </div>

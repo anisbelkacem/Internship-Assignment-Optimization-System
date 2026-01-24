@@ -13,4 +13,8 @@ public class Address {
     private String houseNbr;
     private String postalCode;
     private String country;
+    
+    // Geographic coordinates from Geoapify API
+    private Double longitude;
+    private Double latitude;
 }
