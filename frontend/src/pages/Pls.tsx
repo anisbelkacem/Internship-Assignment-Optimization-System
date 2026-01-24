@@ -335,10 +335,8 @@ const teacherPayload = {
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn-primary-filled"
             onClick={() => handleOpenFormModal()}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             PL hinzufügen
           </button>

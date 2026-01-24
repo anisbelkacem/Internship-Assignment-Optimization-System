@@ -155,13 +155,11 @@ const StudentList: React.FC = () => {
                 <h1>Studierende</h1>
                 <div className="header-actions">
                     <button
-                        className="btn btn-primary"
+                        className="btn-primary-filled"
                         onClick={() => {
                             setSelectedStudent(null);
                             setShowForm(true);
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         Add Student
                     </button>

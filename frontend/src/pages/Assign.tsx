@@ -950,11 +950,9 @@ const handleConfirmNewYear = () => {
             ))}
           </select>
           <button 
-            className="btn btn-primary"
+            className="btn-primary-filled"
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             New Year
           </button>
@@ -1608,7 +1606,7 @@ const handleConfirmNewYear = () => {
             </div>
             <div className="modal-actions">
               <button
-                className="btn-secondary"
+                className="btn btn-ghost"
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
@@ -1617,7 +1615,7 @@ const handleConfirmNewYear = () => {
                 Cancel
               </button>
               <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleConfirmNewYear}
               >
                 Create Year
@@ -1837,18 +1835,18 @@ const handleConfirmNewYear = () => {
             </div>
             <div className="modal-footer">
               <button
-                className="btn-cancel"
-                onClick={handleCloseEditAssignmentModal}
-              >
-                Abbrechen
-              </button>
-              <button
-                className="btn-primary"
+                className="btn-primary-filled"
                 onClick={handleSaveEditAssignment}
                 disabled={validationResult && validationResult.hardValid === false}
 
               >
                 Speichern
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={handleCloseEditAssignmentModal}
+              >
+                Abbrechen
               </button>
             </div>
           </div>

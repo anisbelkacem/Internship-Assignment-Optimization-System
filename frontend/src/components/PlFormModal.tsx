@@ -185,20 +185,17 @@ const PlFormModal: React.FC<PlFormModalProps> = ({
           </div>
 
           <div className="modal-footer">
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              {mode === "create" ? "Hinzufügen" : "Aktualisieren"}
-            </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-ghost"
               onClick={onClose}
             >
               Abbrechen
+            </button>
+            <button
+              className="btn-primary-filled"
+            >
+              {mode === "create" ? "Hinzufügen" : "Aktualisieren"}
             </button>
           </div>
         </form>

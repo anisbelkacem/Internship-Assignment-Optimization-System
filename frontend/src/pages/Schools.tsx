@@ -534,10 +534,8 @@ export default function Schools() {
             Importieren
           </button>
           <button 
-            className="btn-primary btn-add-school" 
+            className="btn-primary-filled btn-add-school" 
             onClick={() => handleOpenModal()}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             Schule hinzufügen
           </button>
@@ -782,16 +780,14 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={handleCloseModal}>
+                  Abbrechen
+                </button>
                 <button 
                   type="submit" 
-                  className="btn btn-primary"
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  className="btn-primary-filled"
                 >
                   {editingSchool ? 'Aktualisieren' : 'Hinzufügen'}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
-                  Abbrechen
                 </button>
               </div>
             </form>
@@ -838,11 +834,11 @@ export default function Schools() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={handleCloseImportModal}>
-                  Abbrechen
-                </button>
                 <button type="submit" className="btn-primary" disabled={!selectedFile}>
                   Importieren
+                </button>
+                <button type="button" className="btn-cancel" onClick={handleCloseImportModal}>
+                  Abbrechen
                 </button>
               </div>
             </form>
@@ -989,11 +985,11 @@ export default function Schools() {
               </p>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={handleCancelDelete}>
-                Abbrechen
-              </button>
               <button type="button" className="btn-danger" onClick={handleConfirmDelete}>
                 Löschen
+              </button>
+              <button type="button" className="btn-cancel" onClick={handleCancelDelete}>
+                Abbrechen
               </button>
             </div>
           </div>

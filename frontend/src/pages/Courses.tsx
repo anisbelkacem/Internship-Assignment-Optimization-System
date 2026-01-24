@@ -144,10 +144,8 @@ const handleDelete = async (id: number) => {
           <div className="table-card-title" aria-hidden="true"></div>
           <div className="table-card-actions">
             <button 
-              className="btn-primary" 
+              className="btn-primary-filled" 
               onClick={() => handleOpenModal()}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Neuer Kurs
             </button>
@@ -292,16 +290,14 @@ const handleDelete = async (id: number) => {
             </div>
 
             <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={handleCloseModal}>
+                Abbrechen
+              </button>
               <button 
-                className="btn btn-primary" 
+                className="btn-primary-filled" 
                 onClick={handleSubmit}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 {editingCourse ? 'Aktualisieren' : 'Hinzufügen'}
-              </button>
-              <button className="btn btn-secondary" onClick={handleCloseModal}>
-                Abbrechen
               </button>
             </div>
           </div>
