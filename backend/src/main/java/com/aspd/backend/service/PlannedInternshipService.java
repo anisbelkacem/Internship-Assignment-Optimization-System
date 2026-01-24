@@ -53,21 +53,19 @@ public class PlannedInternshipService {
      * Update a planned internship (e.g., change assigned teacher or school).        
      */
     @Transactional
-    public PlannedInternship update(Long id, Long teacherId, Long schoolId) {        
-        log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
-        // Server-side guard: never allow persisting an update that violates HARD constraints
+    public PlannedInternship update(Long id, Long teacherId, Long schoolId, boolean force) {
+
         ValidationResult vr = plannedInternshipValidationService
                 .validatePlannedInternshipUpdate(id, teacherId, schoolId);
 
-        if (!vr.isHardValid()) {
+        // block only if NOT forced
+        if (!vr.isHardValid() && !force) {
             throw new AssignmentValidationException(vr);
         }
 
-
-        PlannedInternship internship = plannedInternshipRepository.findById(id)      
+        PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
-        
-        // Update teacher if provided
+
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
                     .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
@@ -76,7 +74,6 @@ public class PlannedInternshipService {
             internship.setAssignedTeacher(null);
         }
 
-        // Update school if provided
         if (schoolId != null) {
             School school = schoolRepository.findById(schoolId)
                     .orElseThrow(() -> new RuntimeException("School not found: " + schoolId));
@@ -85,7 +82,14 @@ public class PlannedInternshipService {
             internship.setAssignedSchool(null);
         }
 
-        return plannedInternshipRepository.save(internship);
+        PlannedInternship saved = plannedInternshipRepository.save(internship);
+
+        if (!vr.isHardValid() && force) {
+            log.warn("Planned internship {} updated with HARD violations due to force=true. Violations: {}",
+                    id, vr.getHardViolations());
+        }
+
+        return saved;
     }
 
     /**

@@ -45,14 +45,21 @@ class StudentConfigService {
     }
 
     // Create new student config
-    async createConfig(dto: StudentConfigDto): Promise<StudentConfigDto> {
-        return apiService.post<StudentConfigDto>('/api/student-configs', dto);
+    async createConfig(dto: StudentConfigDto, options?: { force?: boolean }) {
+        const force = options?.force === true;
+        const qs = force ? "?force=true" : "";
+        return apiService.post(`/api/student-configs${qs}`, dto);
+    }
+    // Update existing config
+    async updateConfig(id: number, dto: Partial<StudentConfigDto>, options?: { force?: boolean }) {
+        const force = options?.force === true;
+        const qs = force ? "?force=true" : "";
+        return apiService.put(`/api/student-configs/${id}${qs}`, dto);
     }
 
-    // Update existing config
-    async updateConfig(id: number, dto: Partial<StudentConfigDto>): Promise<StudentConfigDto> {
-        return apiService.put<StudentConfigDto>(`/api/student-configs/${id}`, dto);
-    }
+
+
+    
 
     // Delete a config
     async deleteConfig(id: number): Promise<void> {

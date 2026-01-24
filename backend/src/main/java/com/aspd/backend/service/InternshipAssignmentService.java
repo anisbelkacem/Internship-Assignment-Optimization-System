@@ -217,10 +217,10 @@ public class InternshipAssignmentService {
     }
 
     @Transactional
-    public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req) {
+    public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req, boolean force) {
 
         ValidationResult vr = validationService.validateUpdate(id, req.getTeacherId(), req.getSchoolId());
-        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+        if (!vr.isHardValid() && !force) throw new AssignmentValidationException(vr);
 
         return assignmentRepository.findById(id).map(existing -> {
 
@@ -238,8 +238,16 @@ public class InternshipAssignmentService {
                 existing.setSchool(s);
             }
 
-            return assignmentRepository.save(existing);
+            InternshipAssignment saved = assignmentRepository.save(existing);
+
+            if (!vr.isHardValid() && force) {
+                log.warn("Internship assignment {} updated with HARD violations due to force=true. Violations: {}",
+                        id, vr.getHardViolations());
+            }
+
+            return saved;
         });
     }
+
 }
 
