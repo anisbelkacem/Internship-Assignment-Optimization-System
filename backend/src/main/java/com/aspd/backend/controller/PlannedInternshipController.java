@@ -62,18 +62,16 @@ public class PlannedInternshipController {
     public ResponseEntity<PlannedInternshipDto> update(
             @PathVariable Long id,
             @RequestBody UpdatePlannedInternshipRequest request) {
-        log.info("PUT /api/planned-internships/{} with teacher={} (school derived from teacher)", 
-                id, request.teacherId);
-        
-        try {
-            PlannedInternship updated = plannedInternshipService.update(
-                    id, request.teacherId, request.schoolId);
-            return ResponseEntity.ok(toDto(updated));
-        } catch (RuntimeException e) {
-            log.error("Failed to update planned internship: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+
+        log.info("PUT /api/planned-internships/{} with teacher={} school={}",
+                id, request.teacherId, request.schoolId);
+
+        PlannedInternship updated = plannedInternshipService.update(
+                id, request.teacherId, request.schoolId);
+
+        return ResponseEntity.ok(toDto(updated));
     }
+
 
     /**
      * Delete a planned internship by ID.
