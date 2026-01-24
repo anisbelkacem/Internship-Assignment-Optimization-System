@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -17,6 +18,7 @@ import type { Student } from "../services/studentService";
 import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentResult, AssignmentDto } from "../services/internshipAssignmentService";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
+import ForceSaveModal from "../components/ForceSaveModal";
 
 type TabType = "assignments" | "pl-config" | "student-config";
 
@@ -32,6 +34,7 @@ export default function InternshipAssignments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showForceSaveAssignment, setShowForceSaveAssignment] = useState(false);
 
   // Student Config Modal States
   const [showStudentConfigModal, setShowStudentConfigModal] = useState(false);
@@ -489,8 +492,13 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setValidationResult(null);
   };
 
-  const handleSaveEditAssignment = async () => {
+  const handleSaveEditAssignment = async (force = false) => {
     if (!editingAssignment) return;
+
+    if (!force && validationResult && validationResult.hardValid === false) {
+      setShowForceSaveAssignment(true);
+      return;
+    }
     
     console.log('=== SAVING ASSIGNMENT ===');
     console.log('Full assignment object:', editingAssignment);
@@ -521,7 +529,8 @@ const handleConfirmDeleteTeacherConfig = async () => {
             teacherId: editingAssignment.teacherId || null,
             schoolId: editingAssignment.schoolId || null,
             status: editingAssignment.status,
-          }
+          },
+          { force }
         );
       }
       
@@ -545,6 +554,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     if (err?.status === 400 && err?.hardViolations) {
       setValidationResult(err);       // store full ValidationResult
       setError(null);                 // don't show generic "Error"
+      setShowForceSaveAssignment(true);
       return;                         // keep modal open
     }
 
@@ -1834,20 +1844,33 @@ const handleConfirmNewYear = () => {
               
             </div>
             <div className="modal-footer">
-              <button
-                className="btn-primary-filled"
-                onClick={handleSaveEditAssignment}
-                disabled={validationResult && validationResult.hardValid === false}
-
-              >
-                Speichern
-              </button>
-              <button
+                            <button
                 className="btn btn-ghost"
                 onClick={handleCloseEditAssignmentModal}
               >
                 Abbrechen
               </button>
+
+<button className="btn-save" onClick={() => handleSaveEditAssignment(false)}>
+    Speichern
+  </button>
+
+  {showForceSaveAssignment && (
+    <ForceSaveModal
+      title="Trotzdem speichern?"
+      message="Diese Änderung verletzt mindestens eine harte Regel. Möchten Sie trotzdem speichern?"
+      hardViolations={(validationResult?.hardViolations || []).map((v: any) => v.message)}
+      warnings={(validationResult?.warnings || []).map((v: any) => v.message)}
+      onCancel={() => setShowForceSaveAssignment(false)}
+      onConfirm={async () => {
+        setShowForceSaveAssignment(false);
+        await handleSaveEditAssignment(true);
+      }}
+    />
+  )}
+
+
+
             </div>
           </div>
         </div>

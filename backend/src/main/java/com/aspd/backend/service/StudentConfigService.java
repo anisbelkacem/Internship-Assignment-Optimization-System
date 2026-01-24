@@ -29,9 +29,9 @@ public class StudentConfigService {
     private final AuditLogService auditLogService;
     private final StudentConfigValidationService validationService;
 
-    public StudentConfigDto createConfig(StudentConfigDto dto) {
+    public StudentConfigDto createConfig(StudentConfigDto dto,boolean force) {
         ValidationResult vr = validationService.validate(dto);
-        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+        if (!vr.isHardValid() && !force) throw new AssignmentValidationException(vr);
 
         Student student = studentRepository.findById(dto.getStudentId())
                 .orElseThrow(() -> new NotFoundException("Student", dto.getStudentId()));
@@ -89,11 +89,11 @@ public class StudentConfigService {
                 .toList();
     }
 
-    public StudentConfigDto updateConfig(Long id, StudentConfigDto dto) {
+    public StudentConfigDto updateConfig(Long id, StudentConfigDto dto, boolean force) {
         dto.setId(id);
 
         ValidationResult vr = validationService.validate(dto);
-        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+        if (!vr.isHardValid() && !force) throw new AssignmentValidationException(vr);
 
         StudentConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("StudentConfig", id));

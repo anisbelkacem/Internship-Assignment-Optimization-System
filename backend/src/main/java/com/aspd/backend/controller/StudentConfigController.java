@@ -48,17 +48,23 @@ public class StudentConfigController {
     }
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PostMapping
-    public ResponseEntity<StudentConfigDto> createConfig(@RequestBody StudentConfigDto dto) {
-        StudentConfigDto created = configService.createConfig(dto);
+    public ResponseEntity<StudentConfigDto> createConfig(
+            @RequestParam(name = "force", defaultValue = "false") boolean force,
+            @RequestBody StudentConfigDto dto) {
+        StudentConfigDto created = configService.createConfig(dto, force);
         return ResponseEntity.ok(created);
     }
 
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @PutMapping("/{id}")
-    public ResponseEntity<StudentConfigDto> updateConfig(@PathVariable Long id, @RequestBody StudentConfigDto dto) {
-        StudentConfigDto updated = configService.updateConfig(id, dto);
+    public ResponseEntity<StudentConfigDto> updateConfig(
+            @PathVariable Long id,
+            @RequestParam(name = "force", defaultValue = "false") boolean force,
+            @RequestBody StudentConfigDto dto) {
+        StudentConfigDto updated = configService.updateConfig(id, dto, force);
         return ResponseEntity.ok(updated);
     }
+
 
     @PreAuthorize("hasAnyAuthority('EDIT')")
     @DeleteMapping("/{id}")
