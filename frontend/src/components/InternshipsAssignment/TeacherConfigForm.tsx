@@ -260,17 +260,17 @@ export default function TeacherConfigForm({
       {/* ACTION BUTTONS */}
       <div className="student-config-form-actions">
         <button
-          className="student-config-btn"
+          className="btn btn-ghost"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn-primary-filled"
           onClick={handleSubmit}
           disabled={loadingCourses}
         >
           {config ? "Update" : "Create"}
-        </button>
-        <button
-          className="student-config-btn student-config-btn-cancel"
-          onClick={onClose}
-        >
-          Cancel
         </button>
       </div>
     </div>

@@ -322,15 +322,15 @@ const handleSubmit = async () => {
       </div>
 
       <div className="student-config-form-actions">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
         <button 
-          className="student-config-btn" 
+          className="btn-primary-filled" 
           onClick={handleSubmit}
           disabled={loadingCourses || courses.length === 0 || validating || (validation ? !validation.hardValid : false)}
         >
           {config ? "Update" : "Create"}
-        </button>
-        <button className="student-config-btn student-config-btn-cancel" onClick={onClose}>
-          Cancel
         </button>
       </div>
     </div>
