@@ -47,7 +47,7 @@ class CompletedInternshipsRepositoryTest {
         school.setName("Test School");
         school.setAddress("School Str");
         school.setZone("A");
-        school.setOepnv(true);
+        school.setOepnv(OepnvStatus.FOUR_A);
         school.setType(SchoolType.GS);
         schoolRepository.save(school);
 
@@ -103,7 +103,7 @@ class CompletedInternshipsRepositoryTest {
         school.setName("School");
         school.setAddress("Addr");
         school.setZone("C");
-        school.setOepnv(true);
+        school.setOepnv(OepnvStatus.FOUR_A);
         school.setType(SchoolType.MS);
         schoolRepository.saveAndFlush(school);
 

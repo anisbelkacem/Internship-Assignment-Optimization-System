@@ -4,6 +4,7 @@ import com.aspd.backend.common.exception.InvalidDataException;
 import com.aspd.backend.common.exception.NotFoundException;
 import com.aspd.backend.dto.SchoolImportResult;
 import com.aspd.backend.dto.SchoolRequest;
+import com.aspd.backend.model.OepnvStatus;
 import com.aspd.backend.model.School;
 import com.aspd.backend.model.SchoolType;
 import com.aspd.backend.repository.SchoolRepository;
@@ -186,7 +187,7 @@ public class SchoolService {
         String name = readString(row, headerIndex.get("name"));
         String address = readString(row, headerIndex.get("address"));
         String zone = readString(row, headerIndex.get("zone"));
-        Boolean oepnv = readBoolean(row, headerIndex.get("oepnv"));
+        OepnvStatus oepnv = readOepnv(row, headerIndex.get("oepnv"));
         SchoolType type = readType(row, headerIndex.get("type"));
 
         if (isBlank(name) || isBlank(address) || isBlank(zone) || oepnv == null || type == null) {
@@ -246,7 +247,7 @@ public class SchoolService {
     }
 
 
-    private Boolean readBoolean(Row row, Integer colIdx) {
+    private OepnvStatus readOepnv(Row row, Integer colIdx) {
         if (colIdx == null) {
             return null;
         }
@@ -254,25 +255,32 @@ public class SchoolService {
         if (cell == null) {
             return null;
         }
-        if (cell.getCellType() == CellType.BOOLEAN) {
-            return cell.getBooleanCellValue();
-        } else if (cell.getCellType() == CellType.STRING) {
-            String v = cell.getStringCellValue();
-            if (isBlank(v)) {
-                return null;
-            }
-            String t = v.trim().toLowerCase(Locale.ROOT);
-            if (t.equals("true") || t.equals("yes") || t.equals("ja") || t.equals("1")){ 
-                return true;
-            }
-            if (t.equals("false") || t.equals("no") || t.equals("nein") || t.equals("0")) {
-                return false;
-            }
-            throw new InvalidDataException("oepnv", v, "must be boolean (true/false/yes/no/ja/nein/1/0)");
-        } else if (cell.getCellType() == CellType.NUMERIC) {
-            return Math.abs(cell.getNumericCellValue()) >= 0.5;
+        String raw;
+        if (cell.getCellType() == CellType.STRING) {
+            raw = cell.getStringCellValue();
+        } else {
+            raw = new DataFormatter().formatCellValue(cell);
         }
-        return null;
+        if (isBlank(raw)) {
+            return OepnvStatus.NONE; // empty treated as not available
+        }
+        String val = raw.trim().toLowerCase(Locale.ROOT);
+        switch (val) {
+            case "4a":
+                return OepnvStatus.FOUR_A;
+            case "4b":
+                return OepnvStatus.FOUR_B;
+            case "none":
+            case "n/a":
+            case "na":
+            case "no":
+            case "nein":
+            case "0":
+            case "false":
+                return OepnvStatus.NONE;
+            default:
+                throw new InvalidDataException("oepnv", raw, "must be 4a, 4b, or empty/none");
+        }
     }
 
     private SchoolType readType(Row row, Integer colIdx) {

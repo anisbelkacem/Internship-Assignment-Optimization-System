@@ -322,7 +322,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
             PraktikumType type = i.getPraktikumType();
             String zone = i.getSchool().getZone();
-            Boolean hasOepnv = i.getSchool().getOepnv();
+            boolean hasOepnvAccess = hasOepnv(i.getSchool().getOepnv());
 
             boolean isViolation = false;
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
@@ -331,7 +331,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                     isViolation = false;
                 }
                 // Zone 2 with OEPNV is OK
-                else if ("2".equals(zone) && Boolean.TRUE.equals(hasOepnv)) {
+                else if ("2".equals(zone) && hasOepnvAccess) {
                     isViolation = false;
                 }
                 // Everything else is NOT OK
@@ -446,5 +446,9 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         }
 
         return softScore;
+    }
+
+    private boolean hasOepnv(OepnvStatus status) {
+        return status != null && status.isAvailable();
     }
 }

@@ -114,7 +114,7 @@ public class PlannedInternshipValidationService {
         // --------------------------------------------------------------------
         if (newTeacher != null && newTeacher.getSchool() != null) {
             String zone = newTeacher.getSchool().getZone();
-            boolean oepnv = Boolean.TRUE.equals(newTeacher.getSchool().getOepnv());
+            boolean oepnv = hasOepnv(newTeacher.getSchool().getOepnv());
             PraktikumType type = internship.getPraktikumType();
 
             boolean violates;
@@ -188,5 +188,9 @@ public class PlannedInternshipValidationService {
                 .message(message)
                 .fields(fields)
                 .build();
+    }
+
+    private boolean hasOepnv(OepnvStatus status) {
+        return status != null && status.isAvailable();
     }
 }
