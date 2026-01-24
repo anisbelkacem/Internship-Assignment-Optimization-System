@@ -44,6 +44,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         softScore += calculateDiversityPreference(internships);
         softScore += calculateZspCourseDistributionPreference(solution, internships);
         softScore += calculatePdpDistancePreference(solution, internships);
+        softScore += calculateZonePreference(internships);
 
         return HardSoftScore.of(hardScore, softScore);
     }
@@ -436,6 +437,20 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         return hardScore;
     }
 
+    /**
+     * HARD constraint: Zone feasibility based on internship type and ÖPNV availability.
+     * 
+     * ZSP & SFP (students go to schools):
+     * - Zone 1: Feasible
+     * - Zone 2: Feasible (if necessary, ÖPNV doesn't matter)
+     * - Zone 3+: NOT feasible
+     * 
+     * PDP_I & PDP_II (teachers go to schools):
+     * - Zone 3: Feasible
+     * - Zone 2: Feasible (if necessary)
+     * - Zone 1: NOT feasible
+     * - ÖPNV 4b: NOT compatible with PDP (1 hour travel too long for teachers)
+     */
     private int calculateZoneConstraint(List<PlannedInternship> internships) {
         int hardScore = 0;
 
@@ -446,39 +461,81 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
             PraktikumType type = i.getPraktikumType();
             String zone = i.getSchool().getZone();
-            boolean hasOepnvAccess = hasOepnv(i.getSchool().getOepnv());
+            OepnvStatus oepnv = i.getSchool().getOepnv();
 
             boolean isViolation = false;
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
-                // Zone 1 is OK
-                if ("1".equals(zone)) {
+                // ZSP & SFP: Zone 1 or Zone 2 acceptable (ÖPNV doesn't matter)
+                if ("1".equals(zone) || "2".equals(zone)) {
                     isViolation = false;
                 }
-                // Zone 2 with OEPNV is OK
-                else if ("2".equals(zone) && hasOepnvAccess) {
-                    isViolation = false;
-                }
-                // Everything else is NOT OK
+                // Zone 3+ is NOT OK
                 else {
                     isViolation = true;
                 }
             } else { // PDP_I or PDP_II
-                // Zone 2 or 3 is OK
-                if ("2".equals(zone) || "3".equals(zone)) {
+                // CRITICAL: PDP cannot use schools with ÖPNV 4b (1 hour travel too long)
+                if (oepnv == OepnvStatus.FOUR_B) {
+                    isViolation = true;
+                }
+                // PDP: Zone 2 or Zone 3 acceptable
+                else if ("2".equals(zone) || "3".equals(zone)) {
                     isViolation = false;
                 }
-                // Zone 1 is NOT OK
+                // Zone 1 is NOT OK for PDP
                 else {
                     isViolation = true;
                 }
             }
 
             if (isViolation) {
-                hardScore -= 1;
+                hardScore -= 4;
             }
         }
 
         return hardScore;
+    }
+
+    /**
+     * SOFT constraint: Prefer optimal zones.
+     * 
+     * ZSP & SFP prefer Zone 1:
+     * - Zone 1: Preferred (bonus)
+     * - Zone 2: Acceptable but not preferred (penalty)
+     * 
+     * PDP_I & PDP_II prefer Zone 3:
+     * - Zone 3: Preferred (bonus)
+     * - Zone 2: Acceptable but not preferred (penalty)
+     */
+    private int calculateZonePreference(List<PlannedInternship> internships) {
+        int softScore = 0;
+
+        for (PlannedInternship i : internships) {
+            if (!i.isActive() || i.getSchool() == null) {
+                continue;
+            }
+
+            PraktikumType type = i.getPraktikumType();
+            String zone = i.getSchool().getZone();
+
+            if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
+                // Prefer Zone 1 for ZSP & SFP
+                if ("1".equals(zone)) {
+                    softScore += 5; // Bonus for preferred zone
+                } else if ("2".equals(zone)) {
+                    softScore -= 3; // Penalty for "if necessary" zone
+                }
+            } else if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
+                // Prefer Zone 3 for PDP
+                if ("3".equals(zone)) {
+                    softScore += 5; // Bonus for preferred zone
+                } else if ("2".equals(zone)) {
+                    softScore -= 3; // Penalty for "if necessary" zone
+                }
+            }
+        }
+
+        return softScore;
     }
 
     private int calculateTeacher2InternshipsPreference(List<PlannedInternship> internships) {
@@ -498,24 +555,52 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         return softScore;
     }
 
+    /**
+     * SOFT constraint: Prefer diverse internship types at each school.
+     * Penalizes schools where one type dominates (lack of diversity).
+     * 
+     * Calculates: most_common_type_count / total_internships_at_school
+     * - Lower ratio = more diverse = better (bonus)
+     * - Higher ratio = less diverse = worse (penalty)
+     * 
+     * Examples:
+     * - School with 3 PDP_I, 1 ZSP: ratio = 3/4 = 0.75 (not diverse, penalty)
+     * - School with 2 PDP_I, 2 ZSP: ratio = 2/4 = 0.50 (better diversity)
+     * - School with 1 of each type: ratio = 1/4 = 0.25 (most diverse, bonus)
+     */
     private int calculateDiversityPreference(List<PlannedInternship> internships) {
         int softScore = 0;
 
-        // Group by school and type, count occurrences
-        Map<String, Long> typeBySchool = new HashMap<>();
-        
+        // Group internships by school
+        Map<Long, List<PlannedInternship>> bySchool = new HashMap<>();
         for (PlannedInternship i : internships) {
             if (i.isActive() && i.getSchool() != null) {
-                String key = i.getSchool().getId() + "/" + i.getPraktikumType();
-                typeBySchool.merge(key, 1L, Long::sum);
+                bySchool.computeIfAbsent(i.getSchool().getId(), k -> new ArrayList<>()).add(i);
             }
         }
 
-        // Penalize if same type appears multiple times in same school
-        for (long count : typeBySchool.values()) {
-            if (count > 1) {
-                softScore -= (count - 1) * 2; // Penalize repeated types
+        // For each school, calculate diversity ratio
+        for (List<PlannedInternship> schoolInternships : bySchool.values()) {
+            if (schoolInternships.size() <= 1) {
+                continue; // Single internship = perfectly diverse by default
             }
+
+            // Count each type at this school
+            Map<PraktikumType, Long> typeCounts = schoolInternships.stream()
+                .collect(Collectors.groupingBy(PlannedInternship::getPraktikumType, Collectors.counting()));
+
+            // Find the most common type count
+            long maxCount = typeCounts.values().stream().max(Long::compare).orElse(0L);
+            int totalCount = schoolInternships.size();
+
+            // Calculate diversity ratio (0.0 to 1.0)
+            double ratio = (double) maxCount / totalCount;
+
+            // Penalize high ratios (lack of diversity)
+            // Ratio of 1.0 (all same type) = -10 points
+            // Ratio of 0.5 (balanced) = -5 points
+            // Ratio of 0.25 (most diverse) = -2.5 points
+            softScore -= (int) Math.round(ratio * 10);
         }
 
         return softScore;
