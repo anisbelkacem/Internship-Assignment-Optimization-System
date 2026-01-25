@@ -429,6 +429,50 @@ const Dashboard: React.FC = () => {
             </div>
           </section>
 
+          {/* Constraint Violations */}
+          <section className="section-container">
+            <div className="section-header">
+              <h2>⛔ Constraint Violations</h2>
+            </div>
+            <div className="card-row">
+              <div className="status-card warning">
+                <div className="card-header-row">
+                  <span className="card-icon" style={{ fontSize: '22px' }}>❌</span>
+                  <div className="card-content">
+                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Forbidden Combinations</h3>
+                    <p style={{ fontSize: '13px' }}>2 invalid PL-praktika pairs</p>
+                  </div>
+                </div>
+                <span className="badge" style={{ 
+                  backgroundColor: '#fee2e2', 
+                  color: '#991b1b',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}>Review needed</span>
+              </div>
+
+              <div className="status-card warning">
+                <div className="card-header-row">
+                  <span className="card-icon" style={{ fontSize: '22px' }}>🚫</span>
+                  <div className="card-content">
+                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Zone Violations</h3>
+                    <p style={{ fontSize: '13px' }}>5 Wed-praktika in Zone 3</p>
+                  </div>
+                </div>
+                <span className="badge" style={{ 
+                  backgroundColor: '#fef3c7', 
+                  color: '#92400e',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '500'
+                }}>Reassign</span>
+              </div>
+            </div>
+          </section>
+
           {/* Kapazitätsauslastung */}
           <section className="section-container">
             <div className="section-header">
