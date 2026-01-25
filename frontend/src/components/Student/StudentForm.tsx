@@ -93,11 +93,11 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
     return (
         <div className="student-form-container">
             <h3 className="student-form-title">
-                {student ? "Update Student" : "Create Student"}
+                {student ? "Studierenden aktualisieren" : "Studierenden erstellen"}
             </h3>
 
             <div className="student-field">
-                <label className="required" htmlFor="matriculationNbr">Matriculation Number</label>
+                <label className="required" htmlFor="matriculationNbr">Matrikelnummer</label>
                 <input
                     id="matriculationNbr"
                     className="student-input"
@@ -109,7 +109,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label className="required" htmlFor="firstName">First Name</label>
+                <label className="required" htmlFor="firstName">Vorname</label>
                 <input
                     id="firstName"
                     className="student-input"
@@ -120,7 +120,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label className="required" htmlFor="lastName">Last Name</label>
+                <label className="required" htmlFor="lastName">Nachname</label>
                 <input
                     id="lastName"
                     className="student-input"
@@ -142,7 +142,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="phone">Phone</label>
+                <label htmlFor="phone">Telefon</label>
                 <input
                     id="phone"
                     className="student-input"
@@ -152,7 +152,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="birthDate">Birth Date</label>
+                <label htmlFor="birthDate">Geburtsdatum</label>
                 <input
                     id="birthDate"
                     className="student-input"
@@ -163,7 +163,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field full-width">
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">Beschreibung</label>
                 <textarea
                     id="description"
                     className="student-input"
@@ -173,7 +173,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label className="required" htmlFor="schoolType">School Type</label>
+                <label className="required" htmlFor="schoolType">Schultyp</label>
                 <select
                     id="schoolType"
                     className="student-input"
@@ -187,7 +187,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-            <label htmlFor="mainCourse">Main Course</label>
+            <label htmlFor="mainCourse">Hauptfach</label>
             <select
                 id="mainCourse"
                 className="student-input"
@@ -206,7 +206,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label htmlFor="prefCourse1">Preferred Course 1</label>
+                <label htmlFor="prefCourse1">Bevorzugtes Fach 1</label>
 
             <select
             id="prefCourse1"
@@ -216,7 +216,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                 handleChange("prefCourse1Id", Number(e.target.value))
             }
             >
-            <option value="">-- Select course --</option>
+            <option value="">-- Fach ausw\u00e4hlen --</option>
             {courses.map(course => (
                 <option key={course.id} value={course.id}>
                 {course.name}
@@ -226,7 +226,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
         <div className="student-field">
-            <label htmlFor="prefCourse2">Preferred Course 2</label>
+            <label htmlFor="prefCourse2">Bevorzugtes Fach 2</label>
             <select
                 id="prefCourse2"
                 className="student-input"
@@ -235,7 +235,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     handleChange("prefCourse2Id", Number(e.target.value))
                 }
             >
-                <option value="">-- Select course --</option>
+                <option value="">-- Fach ausw\u00e4hlen --</option>
                 {courses.map(course => (
                     <option key={course.id} value={course.id}>
                         {course.name}
@@ -245,7 +245,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
         </div>
 
         <div className="student-field">
-            <label htmlFor="prefCourse3">Preferred Course 3</label>
+            <label htmlFor="prefCourse3">Bevorzugtes Fach 3</label>
             <select
                 id="prefCourse3"
                 className="student-input"
@@ -254,7 +254,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     handleChange("prefCourse3Id", Number(e.target.value))
                 }
             >
-                <option value="">-- Select course --</option>
+                <option value="">-- Fach ausw\u00e4hlen --</option>
                 {courses.map(course => (
                     <option key={course.id} value={course.id}>
                         {course.name}
@@ -271,7 +271,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     checked={form.registred}
                     onChange={e => handleChange("registred", e.target.checked)}
                 />
-                <label htmlFor="registred">Registered</label>
+                <label htmlFor="registred">Registriert</label>
             </div>
 
             <div className="student-checkbox-row">
@@ -281,34 +281,52 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                     checked={form.oriented}
                     onChange={e => handleChange("oriented", e.target.checked)}
                 />
-                <label htmlFor="oriented">Oriented</label>
+                <label htmlFor="oriented">Orientiert</label>
             </div>
 
-            <h4 className="student-address-title">Address</h4>
-            {["street", "city", "houseNbr", "postalCode", "country"].map((key) => (
-                <div className="student-field full-width" key={key}>
-                    <label htmlFor={`address-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}</label>
-                    <input
-                        id={`address-${key}`}
-                        className="student-input"
-                        value={(form.address ?? emptyAddress)[key as keyof Address]}
-                        onChange={e => handleAddressChange(key as keyof Address, e.target.value, "address")}
-                    />
-                </div>
-            ))}
+            <h4 className="student-address-title">Adresse</h4>
+            {["street", "city", "houseNbr", "postalCode", "country"].map((key) => {
+                const labels: Record<string, string> = {
+                    street: "Straße",
+                    city: "Stadt",
+                    houseNbr: "Hausnummer",
+                    postalCode: "Postleitzahl",
+                    country: "Land"
+                };
+                return (
+                    <div className="student-field full-width" key={key}>
+                        <label htmlFor={`address-${key}`}>{labels[key] || key}</label>
+                        <input
+                            id={`address-${key}`}
+                            className="student-input"
+                            value={(form.address ?? emptyAddress)[key as keyof Address]}
+                            onChange={e => handleAddressChange(key as keyof Address, e.target.value, "address")}
+                        />
+                    </div>
+                );
+            })}
 
-            <h4 className="student-address-title">Semester Address</h4>
-            {["street", "city", "houseNbr", "postalCode", "country"].map((key) => (
-                <div className="student-field full-width" key={key}>
-                    <label htmlFor={`semester-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}</label>
-                    <input
-                        id={`semester-${key}`}
-                        className="student-input"
-                        value={(form.addressSemester ?? emptyAddress)[key as keyof Address]}
-                        onChange={e => handleAddressChange(key as keyof Address, e.target.value, "addressSemester")}
-                    />
-                </div>
-            ))}
+            <h4 className="student-address-title">Semesteradresse</h4>
+            {["street", "city", "houseNbr", "postalCode", "country"].map((key) => {
+                const labels: Record<string, string> = {
+                    street: "Straße",
+                    city: "Stadt",
+                    houseNbr: "Hausnummer",
+                    postalCode: "Postleitzahl",
+                    country: "Land"
+                };
+                return (
+                    <div className="student-field full-width" key={key}>
+                        <label htmlFor={`semester-${key}`}>{labels[key] || key}</label>
+                        <input
+                            id={`semester-${key}`}
+                            className="student-input"
+                            value={(form.addressSemester ?? emptyAddress)[key as keyof Address]}
+                            onChange={e => handleAddressChange(key as keyof Address, e.target.value, "addressSemester")}
+                        />
+                    </div>
+                );
+            })}
 
             <div className="student-form-actions">
                 <button className="btn btn-ghost" onClick={onClose}>

@@ -549,6 +549,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       originalAssignment.status !== editingAssignment.status;
 
     // 1) PATCH status first (reliable)
+    console.log("Updating status to:", editingAssignment.status);
     await internshipAssignmentService.updateAssignmentStatus(
       editingAssignment.id,
       editingAssignment.status
@@ -557,14 +558,15 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // 2) If teacher/school changed, attempt PUT update (backend might ignore teacher/school,
     //    but status was already updated via PATCH)
     if (originalAssignment && (teacherChanged || schoolChanged)) {
-      console.log("Teacher or school changed, attempting full update...");
+      const updatePayload = {
+        teacherId: editingAssignment.teacherId || null,
+        schoolId: editingAssignment.schoolId || null,
+        status: editingAssignment.status,
+      };
+      console.log("Teacher or school changed, attempting full update with payload:", updatePayload);
       await internshipAssignmentService.updateStudentAssignment(
         editingAssignment.id,
-        {
-          teacherId: editingAssignment.teacherId || null,
-          schoolId: editingAssignment.schoolId || null,
-          status: editingAssignment.status,
-        },
+        updatePayload,
         { force }
       );
     }
@@ -612,6 +614,14 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Update error:", err);
+    console.error("Error details:", {
+      status: err?.status,
+      message: err?.message,
+      response: err?.response,
+      data: err?.data,
+      hardViolations: err?.hardViolations,
+      softViolations: err?.softViolations
+    });
 
     // backend validation (AssignmentValidationException -> ValidationResult) comes here
     if (err?.status === 400 && err?.hardViolations) {
@@ -624,8 +634,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // fallback generic error
     setValidationResult(null);
     setShowForceSaveAssignment(false);
-    setError(err?.message || "Failed to update assignment");
-    setTimeout(() => setError(null), 3000);
+    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Failed to update assignment";
+    setError(errorMessage);
+    setTimeout(() => setError(null), 5000);
   }
 };
 
