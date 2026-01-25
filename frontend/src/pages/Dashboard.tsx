@@ -1287,7 +1287,7 @@ const Dashboard: React.FC = () => {
                   window.location.href = '/assignments';
                 }}
               >
-                Zuweisungen bearbeiten
+                Beheben
               </button>
             </div>
           </div>
