@@ -31,11 +31,24 @@ public class PlannedInternshipValidationService {
         } else {
             newTeacher = null;
         }
-        // School is derived from teacher. If a schoolId is provided, ensure it matches the teacher's school when teacherId is present.
+        // If teacher and school are both provided, they must belong together.
+        List<ValidationViolation> hard = new ArrayList<>();
+        List<ValidationViolation> warn = new ArrayList<>();
+
         if (teacherId != null) {
             newSchool = newTeacher != null ? newTeacher.getSchool() : null;
+
             if (schoolId != null && newSchool != null && !newSchool.getId().equals(schoolId)) {
-                throw new IllegalArgumentException("Provided schoolId does not match teacher's school");
+                hard.add(v("SCHOOL_MISMATCH", ViolationSeverity.HARD,
+                        "Schule passt nicht: Die ausgewählte Schule gehört nicht zur ausgewählten Lehrkraft. " +
+                                "Bitte wählen Sie die Schule der Lehrkraft oder ändern Sie die Lehrkraft.",
+                        List.of("teacherId", "schoolId")));
+
+                return ValidationResult.builder()
+                        .hardValid(false)
+                        .hardViolations(hard)
+                        .warnings(warn)
+                        .build();
             }
         }
 
@@ -51,8 +64,7 @@ public class PlannedInternshipValidationService {
                 .assignedTeacher(newTeacher)
                 .build();
 
-        List<ValidationViolation> hard = new ArrayList<>();
-        List<ValidationViolation> warn = new ArrayList<>();
+
 
         // --------------------------------------------------------------------
         // (Extra safety) Capacity consistency check
@@ -114,7 +126,7 @@ public class PlannedInternshipValidationService {
         // --------------------------------------------------------------------
         if (newTeacher != null && newTeacher.getSchool() != null) {
             String zone = newTeacher.getSchool().getZone();
-            boolean oepnv = Boolean.TRUE.equals(newTeacher.getSchool().getOepnv());
+            boolean oepnv = hasOepnv(newTeacher.getSchool().getOepnv());
             PraktikumType type = internship.getPraktikumType();
 
             boolean violates;
@@ -152,6 +164,20 @@ public class PlannedInternshipValidationService {
                     .toList();
 
             int count = teacherInternships.size();
+            // --------------------------------------------------------------------
+            // HARD: maxPraktikaPerYear (max_praktikas)
+            // --------------------------------------------------------------------
+                        if (cfg != null && cfg.getMaxPraktikaPerYear() != null) {
+                            int maxAllowed = cfg.getMaxPraktikaPerYear();
+                            if (count > maxAllowed) {
+                                hard.add(v("TEACHER_MAX_PRAKTIKA_EXCEEDED", ViolationSeverity.HARD,
+                                        "Ungültige PL-Auslastung: Der ausgewählte PL würde " + count +
+                                                " Praktika betreuen (maximal erlaubt: " + maxAllowed + ").",
+                                        List.of("teacherId")));
+                            }
+                        }
+
+
 
             // 0/1/2/4 only
             if (count == 3 || count > 4) {
@@ -188,5 +214,9 @@ public class PlannedInternshipValidationService {
                 .message(message)
                 .fields(fields)
                 .build();
+    }
+
+    private boolean hasOepnv(OepnvStatus status) {
+        return status != null && status.isAvailable();
     }
 }

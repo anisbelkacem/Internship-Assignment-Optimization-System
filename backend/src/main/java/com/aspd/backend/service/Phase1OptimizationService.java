@@ -5,6 +5,7 @@ import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.solver.InternshipEasyScoreCalculator;
 import com.aspd.backend.solver.InternshipSolution;
+import com.aspd.backend.dto.CoordinatesDto;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
@@ -67,6 +68,10 @@ public class Phase1OptimizationService {
         
         // Build ZSP course distribution maps from student preferences
         ZspCourseDistribution zspDistribution = buildZspCourseDistribution(studentConfigs);
+
+        // Build PDP student coordinate lists (GS/MS) from semester address, falling back to home address
+        List<CoordinatesDto> pdpGsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.GS);
+        List<CoordinatesDto> pdpMsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.MS);
         
         log.info("Created {} internship slots\n", plannedInternships.size());
         
@@ -75,7 +80,8 @@ public class Phase1OptimizationService {
         
         // Run Phase 1
         InternshipSolution phase1Result = runPhase1(
-                teachers, schools, courses, plannedInternships, schoolYear, timeBudget, zspDistribution);
+            teachers, schools, courses, plannedInternships, schoolYear, timeBudget, zspDistribution,
+            pdpGsStudentCoords, pdpMsStudentCoords);
         
         // Remove inactive internships (solver decided we don't need them)
         List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
@@ -104,14 +110,16 @@ public class Phase1OptimizationService {
     /**
      * PHASE 1: Activate internship slots and assign teachers/schools.
      */
-    private InternshipSolution runPhase1(
+        private InternshipSolution runPhase1(
             List<Teacher> teachers,
             List<School> schools,
             List<Course> courses,
             List<PlannedInternship> plannedInternships,
             String schoolYear,
             Integer timeBudget,
-            ZspCourseDistribution zspDistribution) {
+            ZspCourseDistribution zspDistribution,
+            List<CoordinatesDto> pdpGsStudentCoords,
+            List<CoordinatesDto> pdpMsStudentCoords) {
         
         // Create solver for Phase 1
         SolverFactory<InternshipSolution> solverFactory = 
@@ -127,6 +135,8 @@ public class Phase1OptimizationService {
         unsolvedProblem.setTimeBudget(timeBudget);
         unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
         unsolvedProblem.setZspCourseDistribution(zspDistribution);
+        unsolvedProblem.setPdpGsStudentCoords(pdpGsStudentCoords);
+        unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
         
         // Solve
         InternshipSolution solution = solver.solve(unsolvedProblem);
@@ -135,6 +145,38 @@ public class Phase1OptimizationService {
         logMinimumActivationStatus(solution.getPlannedInternships());
         
         return solution;
+    }
+
+    /**
+     * Collects PDP student coordinates for a given school type.
+     * Prefers semester address; falls back to home address; skips if none.
+     */
+    private List<CoordinatesDto> buildPdpStudentCoords(List<StudentConfig> studentConfigs, SchoolType targetType) {
+        List<CoordinatesDto> coords = new ArrayList<>();
+        for (StudentConfig config : studentConfigs) {
+            if (!(config.isPdpI() || config.isPdpII())) {
+                continue;
+            }
+            if (config.getSchoolType() != targetType) {
+                continue;
+            }
+            Student student = config.getStudent();
+            if (student == null) {
+                continue;
+            }
+            // Prefer semester address
+            Address sem = student.getAddressSemester();
+            if (sem != null && sem.getLatitude() != null && sem.getLongitude() != null) {
+                coords.add(new CoordinatesDto(sem.getLongitude(), sem.getLatitude()));
+                continue;
+            }
+            // Fall back to primary address
+            Address home = student.getAddress();
+            if (home != null && home.getLatitude() != null && home.getLongitude() != null) {
+                coords.add(new CoordinatesDto(home.getLongitude(), home.getLatitude()));
+            }
+        }
+        return coords;
     }
 
     /**

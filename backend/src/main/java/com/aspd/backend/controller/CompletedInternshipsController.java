@@ -105,8 +105,6 @@ public class CompletedInternshipsController {
                 ci.getSchool().getId(),
                 ci.getType(),
                 ci.getCourse(),
-                ci.getStartDate(),
-                ci.getEndDate(),
                 ci.getDescription()
         );
     }

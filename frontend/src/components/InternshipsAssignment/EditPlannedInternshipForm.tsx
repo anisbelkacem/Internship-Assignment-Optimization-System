@@ -4,6 +4,8 @@ import type { TeacherDto } from "../../services/plService";
 import plService from "../../services/plService";
 import schoolService from "../../services/schoolService";
 import type { School } from "../../services/schoolService";
+import internshipAssignmentService from "../../services/internshipAssignmentService";
+import ForceSaveModal from "../ForceSaveModal";
 
 interface EditPlannedInternshipFormProps {
   internship: PlannedInternshipDto;
@@ -41,6 +43,7 @@ export default function EditPlannedInternshipForm({
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [validating, setValidating] = useState(false);
+  const [showForceSave, setShowForceSave] = useState(false);
 
 
   useEffect(() => {
@@ -96,37 +99,48 @@ const validate = async (tId: number | null, sId: number | null) => {
     }
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    setError(null);
+  const handleSave = async (force = false) => {
+    if (!force && validation && validation.hardValid === false) {
+    setShowForceSave(true);
+    return;
+  }
+  setLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/planned-internships/${internship.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            teacherId: selectedTeacherId,
-            schoolId: selectedSchoolId,
-          }),
-        }
-      );
+  try {
+    await internshipAssignmentService.updatePlannedInternship(
+      internship.id!,
+      selectedTeacherId,
+      selectedSchoolId,
+      { force }
+    );
 
-      if (!response.ok) {
-        throw new Error("Failed to update assignment");
+    onSave();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    // If backend returned ValidationResult, show it like the live validation does
+    if (err && typeof err === "object" && "hardValid" in err && "hardViolations" in err) {
+      setValidation(err as ValidationResult);
+      setError(null);
+
+      // open modal right away after save attempt
+      if (!force && (err as ValidationResult).hardValid === false) {
+        setShowForceSave(true);
       }
-
-      onSave();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update assignment");
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // fallback
+    const msg =
+      err?.message ||
+      err?.error ||
+      "Failed to update assignment";
+    setError(msg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="modal-form-container">
@@ -252,11 +266,25 @@ const validate = async (tId: number | null, sId: number | null) => {
         <button
           type="button"
           className="btn-save"
-          onClick={handleSave}
-           disabled={loading || validating || (validation ? !validation.hardValid : false)}
->
-  {loading ? "Speichern..." : validating ? "Prüfe..." : "Speichern"}
+          onClick={() => handleSave(false)}
+          disabled={loading || validating}
+        >
+          {loading ? "Speichern..." : validating ? "Prüfe..." : "Speichern"}
         </button>
+        {showForceSave && (
+        <ForceSaveModal
+          title="Trotzdem speichern?"
+          message="Diese Änderung verletzt mindestens eine harte Regel. Möchten Sie trotzdem speichern?"
+          hardViolations={(validation?.hardViolations || []).map(v => v.message)}
+          warnings={(validation?.warnings || []).map(v => v.message)}
+          onCancel={() => setShowForceSave(false)}
+          onConfirm={async () => {
+            setShowForceSave(false);
+            await handleSave(true);
+          }}
+        />
+      )}
+
       </div>
     </div>
   );

@@ -51,17 +51,24 @@ const AuditLogs: React.FC = () => {
 
   return (
     <div className="audit-logs-page">
-      <div className="page-header">
-        <h1>Audit Logs</h1>
-        <p className="subtitle">Who did what, when, and what changed</p>
+      <div className="schools-header">
+        <div className="schools-header-content">
+          <h1>Audit Logs</h1>
+          <p className="subtitle">Who did what, when, and what changed</p>
+        </div>
       </div>
 
       {loading && logs.length === 0 ? (
-        <div className="loading">Loading...</div>
+        <div className="empty-state">
+          <p>Loading...</p>
+        </div>
       ) : logs.length === 0 ? (
-        <div className="empty">No audit logs available.</div>
+        <div className="empty-state">
+          <p>No audit logs available.</p>
+        </div>
       ) : (
         <>
+          <div className="schools-table-container">
           <table className="audit-table">
             <thead>
               <tr>
@@ -98,6 +105,8 @@ const AuditLogs: React.FC = () => {
                           <button
                             className="btn-expand"
                             onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
                             {expandedId === log.id ? '▼' : '▶'}
                           </button>
@@ -139,19 +148,26 @@ const AuditLogs: React.FC = () => {
               })}
             </tbody>
           </table>
+          </div>
 
           {totalPages > 1 && (
             <div className="pagination">
               <button
+                className="btn btn-secondary"
                 onClick={() => setPage(Math.max(0, page - 1))}
                 disabled={page === 0}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 Previous
               </button>
               <span>Page {page + 1} of {totalPages}</span>
               <button
+                className="btn btn-secondary"
                 onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                 disabled={page >= totalPages - 1}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 Next
               </button>

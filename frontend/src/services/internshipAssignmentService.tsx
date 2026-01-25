@@ -74,15 +74,16 @@ class InternshipAssignmentService {
    * @param schoolId - New school ID (or null to unassign)
    */
   async updatePlannedInternship(
-    id: number,
-    teacherId: number | null,
-    schoolId: number | null
-  ): Promise<PlannedInternshipDto> {
-    return apiService.put<PlannedInternshipDto>(
-      `/api/planned-internships/${id}`,
-      { teacherId, schoolId }
-    );
-  }
+  id: number,
+  teacherId: number | null,
+  schoolId: number | null,
+  options?: { force?: boolean }
+) {
+  const force = options?.force === true;
+  const qs = force ? `?force=true` : "";
+  return apiService.put(`/api/planned-internships/${id}${qs}`, { teacherId, schoolId });
+}
+
 
   /**
    * Delete a single planned internship
@@ -148,18 +149,14 @@ class InternshipAssignmentService {
    * Update full student assignment (teacher, school, status, etc.)
    */
   async updateStudentAssignment(
-    id: number,
-    data: {
-      teacherId?: number | null;
-      schoolId?: number | null;
-      status?: string;
-    }
-  ): Promise<AssignmentDto> {
-    return apiService.put<AssignmentDto>(
-      `/api/internship-assignments/${id}`,
-      data
-    );
-  }
+  id: number,
+  data: { teacherId?: number | null; schoolId?: number | null; status?: string },
+  options?: { force?: boolean }
+) {
+  const force = options?.force === true;
+  const qs = force ? `?force=true` : "";
+  return apiService.put(`/api/internship-assignments/${id}${qs}`, data);
+}
 }
 
 export default new InternshipAssignmentService();

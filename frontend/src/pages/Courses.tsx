@@ -10,6 +10,7 @@ export default function Courses() {
   const [error, setError] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState<CourseCreate>({
     name: '',
@@ -109,6 +110,10 @@ const handleDelete = async (id: number) => {
 };
 
 
+  const filteredCourses = courses.filter(course =>
+    course.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -138,14 +143,50 @@ const handleDelete = async (id: number) => {
         <div className="table-card-header">
           <div className="table-card-title" aria-hidden="true"></div>
           <div className="table-card-actions">
-            <button className="btn-primary" onClick={() => handleOpenModal()}>
+            <button 
+              className="btn-primary-filled" 
+              onClick={() => handleOpenModal()}
+            >
               Neuer Kurs
             </button>
           </div>
         </div>
 
-        {courses.length === 0 ? (
-          <div className="table-empty">Keine Kurse gefunden. Fügen Sie einen neuen Kurs hinzu, um zu beginnen.</div>
+        <div style={{padding: '16px 16px 20px 16px'}}>
+          <input
+            type="text"
+            placeholder="🔍 Kurse suchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '14px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+              backgroundColor: '#f8fafc',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+              color: '#000000'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#3b82f6';
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = '#f8fafc';
+              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+            }}
+          />
+        </div>
+
+        {filteredCourses.length === 0 ? (
+          <div className="table-empty">
+            {searchTerm ? 'Keine Kurse gefunden, die Ihrer Suche entsprechen.' : 'Keine Kurse gefunden. Fügen Sie einen neuen Kurs hinzu, um zu beginnen.'}
+          </div>
         ) : (
           <div className="table-container">
             <table className="settings-table">
@@ -157,7 +198,7 @@ const handleDelete = async (id: number) => {
                 </tr>
               </thead>
               <tbody>
-                {courses.map((course) => (
+                {filteredCourses.map((course) => (
                   <tr key={course.id}>
                     <td>
                       <div className="cell-strong">{course.name}</div>
@@ -238,26 +279,25 @@ const handleDelete = async (id: number) => {
 
             {/* Aktiv / Inaktiv */}
             <div className="form-group">
-                <label className="form-checkbox">
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <input
                     type="checkbox"
                     checked={formData.active}
-                    onChange={(e) =>
-                    setFormData({ ...formData, active: e.target.checked })
-                    }
+                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                 />
-                <span style={{ marginLeft: '0.5rem' }}>
-                    Kurs ist aktiv
-                </span>
+                <span style={{ marginLeft: '0.5rem' }}>Kurs ist aktiv</span>
                 </label>
             </div>
 
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={handleCloseModal}>
+              <button className="btn btn-ghost" onClick={handleCloseModal}>
                 Abbrechen
               </button>
-              <button className="btn-primary" onClick={handleSubmit}>
-                {editingCourse ? 'Aktualisieren' : 'Erstellen'}
+              <button 
+                className="btn-primary-filled" 
+                onClick={handleSubmit}
+              >
+                {editingCourse ? 'Aktualisieren' : 'Hinzufügen'}
               </button>
             </div>
           </div>

@@ -31,9 +31,10 @@ public class School {
     @NotBlank
     private String zone;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "oepnv", nullable = false)
     @NotNull
-    private Boolean oepnv; // ÖPNV accessibility
+    private OepnvStatus oepnv = OepnvStatus.FOUR_A;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,6 +45,10 @@ public class School {
     @NotNull
     private Boolean active = true;
 
+    // Geographic coordinates from Geoapify API
+    private Double longitude;
+    private Double latitude;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -52,10 +57,14 @@ public class School {
     public void setAddress(String address) { this.address = address; }
     public String getZone() { return zone; }
     public void setZone(String zone) { this.zone = zone; }
-    public Boolean getOepnv() { return oepnv; }
-    public void setOepnv(Boolean oepnv) { this.oepnv = oepnv; }
+    public OepnvStatus getOepnv() { return oepnv; }
+    public void setOepnv(OepnvStatus oepnv) { this.oepnv = oepnv; }
     public SchoolType getType() { return type; }
     public void setType(SchoolType type) { this.type = type; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
 }

@@ -72,12 +72,6 @@ public class InternshipAssignmentService {
                     // Capture previous values for audit log
                     Map<String, Object> previousValues = captureAssignmentState(existing);
                     
-                    if (updatedAssignment.getStartDate() != null) {
-                        existing.setStartDate(updatedAssignment.getStartDate());
-                    }
-                    if (updatedAssignment.getEndDate() != null) {
-                        existing.setEndDate(updatedAssignment.getEndDate());
-                    }
                     if (updatedAssignment.getStatus() != null) {
                         existing.setStatus(updatedAssignment.getStatus());
                     }
@@ -205,8 +199,6 @@ public class InternshipAssignmentService {
         Map<String, Object> state = new HashMap<>();
         state.put("id", assignment.getId());
         state.put("status", assignment.getStatus().name());
-        state.put("startDate", assignment.getStartDate());
-        state.put("endDate", assignment.getEndDate());
         state.put("praktikumType", assignment.getPraktikumType().name());
         if (assignment.getTeacher() != null) {
             state.put("teacherId", assignment.getTeacher().getTeacherId());
@@ -225,10 +217,10 @@ public class InternshipAssignmentService {
     }
 
     @Transactional
-    public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req) {
+    public Optional<InternshipAssignment> updateByIds(Long id, InternshipAssignmentUpdateRequest req, boolean force) {
 
         ValidationResult vr = validationService.validateUpdate(id, req.getTeacherId(), req.getSchoolId());
-        if (!vr.isHardValid()) throw new AssignmentValidationException(vr);
+        if (!vr.isHardValid() && !force) throw new AssignmentValidationException(vr);
 
         return assignmentRepository.findById(id).map(existing -> {
 
@@ -246,8 +238,16 @@ public class InternshipAssignmentService {
                 existing.setSchool(s);
             }
 
-            return assignmentRepository.save(existing);
+            InternshipAssignment saved = assignmentRepository.save(existing);
+
+            if (!vr.isHardValid() && force) {
+                log.warn("Internship assignment {} updated with HARD violations due to force=true. Violations: {}",
+                        id, vr.getHardViolations());
+            }
+
+            return saved;
         });
     }
+
 }
 

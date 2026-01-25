@@ -95,7 +95,6 @@ public class TeacherPlConfigService {
         cfg.setSchoolYear(request.schoolYear());
         cfg.setMaxPraktikaPerYear(request.maxPraktikaPerYear());
         cfg.setTotalHoursCredit(request.totalHoursCredit());
-        cfg.setAvailabilityStatus(request.availabilityStatus());
         Set<Course> courses = new HashSet<>();
         if (request.subjectSpecializations() != null) {
             for (Long courseId : request.subjectSpecializations()) {
@@ -128,7 +127,6 @@ public class TeacherPlConfigService {
                 cfg.getSchoolYear(),
                 cfg.getMaxPraktikaPerYear(),
                 cfg.getTotalHoursCredit(),
-                cfg.getAvailabilityStatus(),
                 cfg.getSubjectSpecializations(),
                 cfg.getInternshipPreferences()
         );

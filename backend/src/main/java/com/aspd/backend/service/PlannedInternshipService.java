@@ -7,6 +7,9 @@ import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.repository.TeacherRepository;
+import com.aspd.backend.validation.AssignmentValidationException;
+import com.aspd.backend.validation.PlannedInternshipValidationService;
+import com.aspd.backend.validation.ValidationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ public class PlannedInternshipService {
     private final SchoolRepository schoolRepository;
     private final InternshipAssignmentService internshipAssignmentService;
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
+    private final PlannedInternshipValidationService plannedInternshipValidationService;
+
 
     /**
      * Get all planned internships for a specific school year.
@@ -48,13 +53,19 @@ public class PlannedInternshipService {
      * Update a planned internship (e.g., change assigned teacher or school).        
      */
     @Transactional
-    public PlannedInternship update(Long id, Long teacherId, Long schoolId) {        
-        log.info("Updating planned internship {} with teacher {} and school {}", id, teacherId, schoolId);
+    public PlannedInternship update(Long id, Long teacherId, Long schoolId, boolean force) {
 
-        PlannedInternship internship = plannedInternshipRepository.findById(id)      
+        ValidationResult vr = plannedInternshipValidationService
+                .validatePlannedInternshipUpdate(id, teacherId, schoolId);
+
+        // block only if NOT forced
+        if (!vr.isHardValid() && !force) {
+            throw new AssignmentValidationException(vr);
+        }
+
+        PlannedInternship internship = plannedInternshipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("PlannedInternship not found: " + id));
-        
-        // Update teacher if provided
+
         if (teacherId != null) {
             Teacher teacher = teacherRepository.findById(teacherId)
                     .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
@@ -63,7 +74,6 @@ public class PlannedInternshipService {
             internship.setAssignedTeacher(null);
         }
 
-        // Update school if provided
         if (schoolId != null) {
             School school = schoolRepository.findById(schoolId)
                     .orElseThrow(() -> new RuntimeException("School not found: " + schoolId));
@@ -72,7 +82,14 @@ public class PlannedInternshipService {
             internship.setAssignedSchool(null);
         }
 
-        return plannedInternshipRepository.save(internship);
+        PlannedInternship saved = plannedInternshipRepository.save(internship);
+
+        if (!vr.isHardValid() && force) {
+            log.warn("Planned internship {} updated with HARD violations due to force=true. Violations: {}",
+                    id, vr.getHardViolations());
+        }
+
+        return saved;
     }
 
     /**

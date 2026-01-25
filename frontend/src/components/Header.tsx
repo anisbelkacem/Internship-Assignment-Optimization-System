@@ -6,6 +6,36 @@ import { useAuth } from "../contexts/AuthContext";
 const Header: FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Check more specific terms first to avoid substring matches
+      if (query.includes('schulen') || query === 'schule') {
+        navigate('/schools');
+      } else if (query.includes('schüler') || query.includes('student')) {
+        navigate('/students');
+      } else if (query.includes('lehrer') || query.includes('pl') || query.includes('praxis')) {
+        navigate('/pls');
+      } else if (query.includes('kurs') || query.includes('fach')) {
+        navigate('/courses');
+      } else if (query.includes('praktikum') || query.includes('planung') || query.includes('zuwei')) {
+        navigate('/assign');
+      } else if (query.includes('bericht')) {
+        navigate('/reports');
+      } else if (query.includes('audit') || query.includes('log') || query.includes('protokoll')) {
+        navigate('/audit-logs');
+      } else if (query.includes('dashboard') || query.includes('start') || query.includes('home')) {
+        navigate('/');
+      } else {
+        navigate('/students');
+      }
+      
+      setSearchQuery("");
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -48,7 +78,13 @@ const Header: FC = () => {
                 <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round" />
                 <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <input className="topbar-search" placeholder="Search Anything" />
+              <input 
+                className="topbar-search" 
+                placeholder="Suche..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+              />
             </div>
 
             <div className="topbar-divider" />

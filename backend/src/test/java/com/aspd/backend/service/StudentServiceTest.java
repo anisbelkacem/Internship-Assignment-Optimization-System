@@ -20,13 +20,15 @@ class StudentServiceTest {
     private StudentRepository studentRepository;
     private StudentService studentService;
     private CourseRepository courseRepository;
+    private GeoapifyService geoapifyService;
 
 
     @BeforeEach
     void setup() {
         studentRepository = mock(StudentRepository.class);
         courseRepository = mock(CourseRepository.class);
-        studentService = new StudentService(studentRepository, courseRepository);
+        geoapifyService = mock(GeoapifyService.class);
+        studentService = new StudentService(studentRepository, courseRepository, geoapifyService);
     }
 
     @Test

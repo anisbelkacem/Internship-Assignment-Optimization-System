@@ -8,7 +8,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,7 +47,7 @@ class CompletedInternshipsRepositoryTest {
         school.setName("Test School");
         school.setAddress("School Str");
         school.setZone("A");
-        school.setOepnv(true);
+        school.setOepnv(OepnvStatus.FOUR_A);
         school.setType(SchoolType.GS);
         schoolRepository.save(school);
 
@@ -72,8 +71,6 @@ class CompletedInternshipsRepositoryTest {
         ci.setTeacher(t);
         ci.setSchool(school);
         ci.setCourse(cs);
-        ci.setStartDate(LocalDate.of(2024, 1, 1));
-        ci.setEndDate(LocalDate.of(2024, 6, 30));
         ci.setDescription("Test internship");
         ci.setType(PraktikumType.PDP_I);
         completedInternshipsRepository.save(ci);
@@ -106,7 +103,7 @@ class CompletedInternshipsRepositoryTest {
         school.setName("School");
         school.setAddress("Addr");
         school.setZone("C");
-        school.setOepnv(true);
+        school.setOepnv(OepnvStatus.FOUR_A);
         school.setType(SchoolType.MS);
         schoolRepository.saveAndFlush(school);
 
@@ -130,8 +127,6 @@ class CompletedInternshipsRepositoryTest {
         ci.setTeacher(t);
         ci.setSchool(school);
         ci.setCourse(other);
-        ci.setStartDate(LocalDate.of(2023, 9, 1));
-        ci.setEndDate(LocalDate.of(2024, 2, 28));
         ci.setType(PraktikumType.SFP);
         completedInternshipsRepository.saveAndFlush(ci);
 
