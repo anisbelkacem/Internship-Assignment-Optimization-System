@@ -47,6 +47,13 @@ const Dashboard: React.FC = () => {
     teacherName: string;
     combinations: string[];
   }>>([]);
+  const [zoneViolationsCount, setZoneViolationsCount] = useState(0);
+  const [showZoneViolationsModal, setShowZoneViolationsModal] = useState(false);
+  const [zoneViolations, setZoneViolations] = useState<Array<{
+    zone: string;
+    count: number;
+    internships: Array<{ praktikumType: string; schoolName: string; teacherName: string | null }>;
+  }>>([]);
 
   // Define valid combinations - any other combination is forbidden
   // Each PL must supervise exactly 2 Praktika
@@ -295,6 +302,40 @@ const Dashboard: React.FC = () => {
       
       setTeachersWithForbiddenCombinations(teachersWithViolations);
       setForbiddenCombinationsCount(teachersWithViolations.length);
+
+      // Calculate zone violations - Wednesday praktika (SFP, ZSP) should be in Zone 1, not Zone 3
+      const WEDNESDAY_PRAKTIKA = ['SFP', 'ZSP'];
+      const FORBIDDEN_ZONES_FOR_WEDNESDAY = ['Zone 3', '3'];
+      
+      const zoneViolationsByZone = new Map<string, Array<{ praktikumType: string; schoolName: string; teacherName: string | null }>>();
+      
+      plannedInternships.forEach(internship => {
+        if (internship.schoolZone && WEDNESDAY_PRAKTIKA.includes(internship.praktikumType)) {
+          // Check if Wednesday praktikum is in forbidden zone
+          if (FORBIDDEN_ZONES_FOR_WEDNESDAY.some(forbiddenZone => internship.schoolZone?.includes(forbiddenZone))) {
+            if (!zoneViolationsByZone.has(internship.schoolZone)) {
+              zoneViolationsByZone.set(internship.schoolZone, []);
+            }
+            zoneViolationsByZone.get(internship.schoolZone)!.push({
+              praktikumType: internship.praktikumType,
+              schoolName: internship.schoolName || 'Unknown School',
+              teacherName: internship.teacherName
+            });
+          }
+        }
+      });
+      
+      const violations = [];
+      for (const [zone, internships] of zoneViolationsByZone.entries()) {
+        violations.push({
+          zone,
+          count: internships.length,
+          internships
+        });
+      }
+      
+      setZoneViolations(violations);
+      setZoneViolationsCount(violations.reduce((sum, v) => sum + v.count, 0));
     } catch (err) {
       console.error('Failed to load action items:', err);
     } finally {
@@ -512,17 +553,23 @@ const Dashboard: React.FC = () => {
                   <span className="card-icon" style={{ fontSize: '22px' }}>🚫</span>
                   <div className="card-content">
                     <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Zone Violations</h3>
-                    <p style={{ fontSize: '13px' }}>5 Wed-praktika in Zone 3</p>
+                    <p style={{ fontSize: '13px' }}>
+                      {loadingActionItems ? (
+                        <span style={{ opacity: 0.5 }}>Laden...</span>
+                      ) : (
+                        <>{zoneViolationsCount} {zoneViolationsCount === 1 ? 'Mittwochspraktikum in falscher Zone' : 'Mittwochspraktika in falscher Zone'}</>
+                      )}
+                    </p>
                   </div>
                 </div>
-                <span className="badge" style={{ 
-                  backgroundColor: '#fef3c7', 
-                  color: '#92400e',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>Reassign</span>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  onClick={() => setShowZoneViolationsModal(true)}
+                  disabled={loadingActionItems || zoneViolationsCount === 0}
+                  style={{ fontSize: '15px' }}
+                >
+                  Details
+                </button>
               </div>
             </div>
           </section>
@@ -745,6 +792,65 @@ const Dashboard: React.FC = () => {
                 <button 
                   className="btn btn-ghost" 
                   onClick={() => setShowForbiddenModal(false)}
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zone Violations Modal */}
+      {showZoneViolationsModal && (
+        <div className="modal-overlay" onClick={() => setShowZoneViolationsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="student-form-container">
+              <h3 className="student-form-title">Zonen-Verstöße: Mittwochspraktika</h3>
+
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px' }}>
+                <p style={{ fontSize: '14px', margin: 0 }}>
+                  <strong>Regel:</strong><br/>
+                  Mittwochspraktika (SFP und ZSP) sollten in <strong>Zone 1</strong> (Passau-nah) stattfinden, da Studierende nachmittags zur Universität zurückkehren müssen.<br/>
+                  <strong>Zone 3 ist zu weit entfernt für Mittwochspraktika.</strong>
+                </p>
+              </div>
+
+              <div className="overbooked-list">
+                {zoneViolations.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                    Keine Zonen-Verstöße gefunden
+                  </div>
+                ) : (
+                  zoneViolations.map((violation) => (
+                    <div key={violation.zone} className="overbooked-item">
+                      <div className="item-header">
+                        <h4>{violation.zone}</h4>
+                        <span className="badge danger">{violation.count} Verstöße</span>
+                      </div>
+                      <div className="item-detail">
+                        <strong>Problematische Zuweisungen:</strong>
+                        <ul style={{ marginTop: '8px', marginLeft: '20px' }}>
+                          {violation.internships.map((internship, idx) => (
+                            <li key={idx} style={{ color: '#dc2626' }}>
+                              {internship.praktikumType} • {internship.schoolName}
+                              {internship.teacherName && ` • ${internship.teacherName}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <p className="item-detail" style={{ color: '#dc2626', marginTop: '8px' }}>
+                        ⚠️ Diese Mittwochspraktika sollten in Zone 1 (Passau-nah) stattfinden
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="student-form-actions">
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowZoneViolationsModal(false)}
                 >
                   Schließen
                 </button>
