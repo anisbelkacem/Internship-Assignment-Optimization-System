@@ -40,6 +40,24 @@ const Dashboard: React.FC = () => {
   }>>([]);
   const [assignedStudents, setAssignedStudents] = useState(0);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [forbiddenCombinationsCount, setForbiddenCombinationsCount] = useState(0);
+  const [showForbiddenModal, setShowForbiddenModal] = useState(false);
+  const [teachersWithForbiddenCombinations, setTeachersWithForbiddenCombinations] = useState<Array<{
+    teacherId: string;
+    teacherName: string;
+    combinations: string[];
+  }>>([]);
+
+  // Define valid combinations - any other combination is forbidden
+  // Each PL must supervise exactly 2 Praktika
+  const VALID_COMBINATIONS = [
+    ['PDP_I', 'PDP_II'],
+    ['PDP_I', 'SFP'],
+    ['PDP_I', 'ZSP'],
+    ['PDP_II', 'SFP'],
+    ['PDP_II', 'ZSP'],
+    ['SFP', 'ZSP']
+  ];
 
   useEffect(() => {
     fetchAvailableYears();
@@ -247,6 +265,36 @@ const Dashboard: React.FC = () => {
       
       setAssignedStudents(assignedStudentNames.size);
       setTotalStudents(uniqueStudentIds.size);
+
+      // Calculate forbidden combinations
+      const teachersWithViolations = [];
+      for (const [teacherId, internships] of teacherInternshipMap.entries()) {
+        // Get unique praktikum types for this teacher
+        const types = [...new Set(internships.map(i => i.praktikumType))].sort();
+        
+        // If teacher has 2 or more types, check if combination is valid
+        if (types.length >= 2) {
+          const isValid = VALID_COMBINATIONS.some(validCombo => {
+            const sortedValid = [...validCombo].sort();
+            return types.length === sortedValid.length && 
+                   types.every((type, idx) => type === sortedValid[idx]);
+          });
+          
+          if (!isValid) {
+            const teacher = teachers.find(t => t.teacherId.toString() === teacherId);
+            if (teacher) {
+              teachersWithViolations.push({
+                teacherId,
+                teacherName: `${teacher.firstName} ${teacher.lastName}`,
+                combinations: types
+              });
+            }
+          }
+        }
+      }
+      
+      setTeachersWithForbiddenCombinations(teachersWithViolations);
+      setForbiddenCombinationsCount(teachersWithViolations.length);
     } catch (err) {
       console.error('Failed to load action items:', err);
     } finally {
@@ -440,17 +488,23 @@ const Dashboard: React.FC = () => {
                   <span className="card-icon" style={{ fontSize: '22px' }}>❌</span>
                   <div className="card-content">
                     <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Forbidden Combinations</h3>
-                    <p style={{ fontSize: '13px' }}>2 invalid PL-praktika pairs</p>
+                    <p style={{ fontSize: '13px' }}>
+                      {loadingActionItems ? (
+                        <span style={{ opacity: 0.5 }}>Laden...</span>
+                      ) : (
+                        <>{forbiddenCombinationsCount} {forbiddenCombinationsCount === 1 ? 'PL mit ungültigen Kombinationen' : 'PLs mit ungültigen Kombinationen'}</>
+                      )}
+                    </p>
                   </div>
                 </div>
-                <span className="badge" style={{ 
-                  backgroundColor: '#fee2e2', 
-                  color: '#991b1b',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>Review needed</span>
+                <button 
+                  className="btn btn-ghost btn-sm" 
+                  onClick={() => setShowForbiddenModal(true)}
+                  disabled={loadingActionItems || forbiddenCombinationsCount === 0}
+                  style={{ fontSize: '15px' }}
+                >
+                  Details
+                </button>
               </div>
 
               <div className="status-card warning">
@@ -629,6 +683,68 @@ const Dashboard: React.FC = () => {
                 <button 
                   className="btn btn-ghost" 
                   onClick={() => setShowOverbookedModal(false)}
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forbidden Combinations Modal */}
+      {showForbiddenModal && (
+        <div className="modal-overlay" onClick={() => setShowForbiddenModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="student-form-container">
+              <h3 className="student-form-title">PLs mit ungültigen Kombinationen</h3>
+
+              <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px' }}>
+                <p style={{ fontSize: '14px', margin: 0 }}>
+                  <strong>Gültige Kombinationen (genau 2 Praktika):</strong><br/>
+                  • PDP I + PDP II<br/>
+                  • PDP I + SFP<br/>
+                  • PDP I + ZSP<br/>
+                  • PDP II + SFP<br/>
+                  • PDP II + ZSP<br/>
+                  • SFP + ZSP
+                </p>
+              </div>
+
+              <div className="overbooked-list">
+                {teachersWithForbiddenCombinations.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                    Keine ungültigen Kombinationen gefunden
+                  </div>
+                ) : (
+                  teachersWithForbiddenCombinations.map((teacher) => (
+                    <div key={teacher.teacherId} className="overbooked-item">
+                      <div className="item-header">
+                        <h4>{teacher.teacherName}</h4>
+                        <span className="badge danger">Ungültige Kombination</span>
+                      </div>
+                      <div className="item-detail">
+                        <strong>Zugewiesene Praktikumstypen:</strong>
+                        <ul style={{ marginTop: '8px', marginLeft: '20px' }}>
+                          {teacher.combinations.map((type, idx) => (
+                            <li key={idx} style={{ color: '#dc2626', fontWeight: '500' }}>
+                              {type}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <p className="item-detail" style={{ color: '#dc2626', marginTop: '8px' }}>
+                        ❌ Diese Kombination ist nicht erlaubt
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="student-form-actions">
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => setShowForbiddenModal(false)}
                 >
                   Schließen
                 </button>
