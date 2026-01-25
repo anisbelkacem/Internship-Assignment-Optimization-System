@@ -40,6 +40,14 @@ public class StudentConfigValidationService {
         }
 
         // -------------------------
+        // School type required (Phase 2 hard constraint depends on it)
+        // -------------------------
+        if (dto.getSchoolType() == null) {
+            hard.add(v("SCHOOL_TYPE_REQUIRED", ViolationSeverity.HARD,
+                    "Schultyp fehlt (GS/MS).", List.of("schoolType")));
+        }
+
+        // -------------------------
         // Internship type selection (at least one)
         // -------------------------
         boolean anyType = dto.isPdpI() || dto.isPdpII() || dto.isZsp() || dto.isSfp();

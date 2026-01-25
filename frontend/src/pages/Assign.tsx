@@ -493,77 +493,142 @@ const handleConfirmDeleteTeacherConfig = async () => {
   };
 
   const handleSaveEditAssignment = async (force = false) => {
-    if (!editingAssignment) return;
-
-    if (!force && validationResult && validationResult.hardValid === false) {
-      setShowForceSaveAssignment(true);
-      return;
-    }
-    
-    console.log('=== SAVING ASSIGNMENT ===');
-    console.log('Full assignment object:', editingAssignment);
-    console.log('Saving assignment with data:', {
-      id: editingAssignment.id,
-      teacherId: editingAssignment.teacherId,
-      schoolId: editingAssignment.schoolId,
-      status: editingAssignment.status,
-    });
-    
+  if (!editingAssignment) return;
+    // CANCELLED should always be possible: do status-only update, no validation flow
+  if (editingAssignment.status === 'CANCELLED') {
     try {
-      // Use PATCH endpoint for status updates (this works reliably)
       await internshipAssignmentService.updateAssignmentStatus(
         editingAssignment.id,
-        editingAssignment.status
+        'CANCELLED'
       );
-      
-      // If teacher/school changed, also try to update via PUT
-      // (Note: Backend currently doesn't update teacher/school, but status is already updated via PATCH)
-      const originalAssignment = studentAssignments.find(a => a.id === editingAssignment.id);
-      if (originalAssignment && 
-          (originalAssignment.teacherId !== editingAssignment.teacherId || 
-           originalAssignment.schoolId !== editingAssignment.schoolId)) {
-        console.log('Teacher or school changed, attempting full update...');
-        await internshipAssignmentService.updateStudentAssignment(
-          editingAssignment.id,
-          {
-            teacherId: editingAssignment.teacherId || null,
-            schoolId: editingAssignment.schoolId || null,
-            status: editingAssignment.status,
-          },
-          { force }
-        );
-      }
-      
-      console.log('Update successful, fetching updated assignments...');
-      
-      // Mark this assignment as edited
+
+      // Make sure cancelled assignments are no longer treated as "edited"
       const newEditedIds = new Set(editedAssignmentIds);
-      newEditedIds.add(editingAssignment.id);
+      newEditedIds.delete(editingAssignment.id);
       setEditedAssignmentIds(newEditedIds);
-      
+
       await fetchStudentAssignments();
-      console.log('Student assignments refreshed');
-      setSuccess("Student assignment updated successfully!");
+      setSuccess("Student assignment cancelled successfully!");
       setTimeout(() => setSuccess(null), 3000);
       handleCloseEditAssignmentModal();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err:any) {
-      console.error('Update error:', err);
+    } catch (err: any) {
+      setError(err?.message || "Failed to cancel assignment");
+      setTimeout(() => setError(null), 3000);
+    }
+    return;
+  }
 
-    //  backend validation (AssignmentValidationException -> ValidationResult) comes here
+  // If user is not forcing and we already have a hard violation stored -> show force dialog
+  if (!force && validationResult && validationResult.hardValid === false) {
+    setShowForceSaveAssignment(true);
+    return;
+  }
+
+  console.log("=== SAVING ASSIGNMENT ===");
+  console.log("Full assignment object:", editingAssignment);
+  console.log("Saving assignment with data:", {
+    id: editingAssignment.id,
+    teacherId: editingAssignment.teacherId,
+    schoolId: editingAssignment.schoolId,
+    status: editingAssignment.status,
+  });
+
+  try {
+    const originalAssignment = studentAssignments.find(
+      (a) => a.id === editingAssignment.id
+    );
+
+    const teacherChanged =
+      !!originalAssignment &&
+      originalAssignment.teacherId !== editingAssignment.teacherId;
+    const schoolChanged =
+      !!originalAssignment &&
+      originalAssignment.schoolId !== editingAssignment.schoolId;
+    const statusChanged =
+      !!originalAssignment &&
+      originalAssignment.status !== editingAssignment.status;
+
+    // 1) PATCH status first (reliable)
+    await internshipAssignmentService.updateAssignmentStatus(
+      editingAssignment.id,
+      editingAssignment.status
+    );
+
+    // 2) If teacher/school changed, attempt PUT update (backend might ignore teacher/school,
+    //    but status was already updated via PATCH)
+    if (originalAssignment && (teacherChanged || schoolChanged)) {
+      console.log("Teacher or school changed, attempting full update...");
+      await internshipAssignmentService.updateStudentAssignment(
+        editingAssignment.id,
+        {
+          teacherId: editingAssignment.teacherId || null,
+          schoolId: editingAssignment.schoolId || null,
+          status: editingAssignment.status,
+        },
+        { force }
+      );
+    }
+
+    // 3) Update local UI immediately (so status changes are visible without refresh)
+    //    This avoids waiting for fetchStudentAssignments to reflect the change.
+    setStudentAssignments((prev) =>
+      prev.map((a) =>
+        a.id === editingAssignment.id
+          ? {
+              ...a,
+              teacherId: editingAssignment.teacherId,
+              schoolId: editingAssignment.schoolId,
+              status: editingAssignment.status,
+            }
+          : a
+      )
+    );
+
+    // 4) IMPORTANT: Do NOT mark CANCELLED/CONFIRMED as "Edited"
+    //    Otherwise your badge logic shows "Edited" instead of "Cancelled".
+    const newEditedIds = new Set(editedAssignmentIds);
+    const isCancelled = editingAssignment.status === "CANCELLED";
+    const isConfirmed = editingAssignment.status === "CONFIRMED";
+
+    const shouldMarkEdited =
+      (teacherChanged || schoolChanged || statusChanged) && !isCancelled && !isConfirmed;
+
+    if (shouldMarkEdited) newEditedIds.add(editingAssignment.id);
+    else newEditedIds.delete(editingAssignment.id);
+
+    setEditedAssignmentIds(newEditedIds);
+
+    // 5) Clear validation state after a successful save
+    setValidationResult(null);
+    setShowForceSaveAssignment(false);
+
+    // 6) Refresh from backend (kept as in your code)
+    await fetchStudentAssignments();
+    console.log("Student assignments refreshed");
+
+    setSuccess("Student assignment updated successfully!");
+    setTimeout(() => setSuccess(null), 3000);
+    handleCloseEditAssignmentModal();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("Update error:", err);
+
+    // backend validation (AssignmentValidationException -> ValidationResult) comes here
     if (err?.status === 400 && err?.hardViolations) {
-      setValidationResult(err);       // store full ValidationResult
-      setError(null);                 // don't show generic "Error"
+      setValidationResult(err); // store full ValidationResult
+      setError(null); // don't show generic "Error"
       setShowForceSaveAssignment(true);
-      return;                         // keep modal open
+      return; // keep modal open
     }
 
     // fallback generic error
     setValidationResult(null);
+    setShowForceSaveAssignment(false);
     setError(err?.message || "Failed to update assignment");
     setTimeout(() => setError(null), 3000);
-    }
-  };
+  }
+};
+
 
   const handleValidateAssignment = async (assignmentId: number) => {
     const confirmed = window.confirm('Möchten Sie diese Zuweisung bestätigen?');
@@ -802,6 +867,22 @@ const handleConfirmNewYear = () => {
   const uniqueConfigYears = [...new Set(studentConfigs.map(c => c.year).filter(Boolean))].sort();
   const uniqueConfigSchoolTypes = [...new Set(studentConfigs.map(c => c.schoolType).filter(Boolean))].sort();
   const uniqueConfigMainCourses = [...new Set(studentConfigs.map(c => c.mainCourse?.name).filter((c): c is string => !!c))].sort();
+  const statusLabelDE = (status?: string) => {
+  switch (status) {
+    case "CANCELLED":
+      return "Abgesagt";
+    case "CONFIRMED":
+      return "Bestätigt";
+    case "PROPOSED":
+      return "Vorgeschlagen";
+    case "PLANNED":
+      return "Geplant";
+    case "DONE":
+      return "Abgeschlossen";
+    default:
+      return status ?? "-";
+  }
+};
 
   const studentConfigFilterConfigs: FilterConfig[] = [
     {
@@ -1282,17 +1363,29 @@ const handleConfirmNewYear = () => {
                                 </span>
                               </td>
                               <td>
-                                <span className={`status-badge ${
-                                  assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
-                                  editedAssignmentIds.has(assignment.id) ? 'status-edited' :
-                                  assignment.status === 'PROPOSED' ? 'status-proposed' :
-                                  'status-other'
-                                }`}>
-                                  {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
-                                   editedAssignmentIds.has(assignment.id) ? 'Bearbeitet' :
-                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' :
-                                   assignment.status}
-                                </span>
+                                <span
+                                className={`status-badge ${
+                                  assignment.status === "CANCELLED"
+                                    ? "status-cancelled"
+                                    : assignment.status === "CONFIRMED"
+                                    ? "status-confirmed"
+                                    : editedAssignmentIds.has(assignment.id)
+                                    ? "status-edited"
+                                    : assignment.status === "PROPOSED"
+                                    ? "status-proposed"
+                                    : "status-other"
+                                }`}
+                              >
+                                {assignment.status === "CANCELLED"
+                                  ? "Abgesagt"
+                                  : assignment.status === "CONFIRMED"
+                                  ? "Bestätigt"
+                                  : editedAssignmentIds.has(assignment.id)
+                                  ? "Bearbeitet"
+                                  : statusLabelDE(assignment.status)}
+                              </span>
+
+
                               </td>
                               <td>
                                 <button 
@@ -1787,6 +1880,9 @@ const handleConfirmNewYear = () => {
                     };
                     console.log('Updating assignment to:', updated);
                     setEditingAssignment(updated);
+                    setValidationResult(null);
+                    setShowForceSaveAssignment(false);
+
                   }}
                 >
                   <option value="">Kein Betreuer</option>
@@ -1821,10 +1917,29 @@ const handleConfirmNewYear = () => {
                   className="form-select"
                   value={editingAssignment.status}
                   onChange={(e) => {
-                    console.log('Status changed to:', e.target.value);
-                    const updated = {...editingAssignment, status: e.target.value};
-                    console.log('Updating assignment to:', updated);
-                    setEditingAssignment(updated);
+  const nextStatus = e.target.value;
+
+  // Clear any previous validation results / force-save UI
+  setValidationResult(null);
+  setShowForceSaveAssignment(false);
+
+  if (nextStatus === 'CANCELLED') {
+    // revert other pending edits to the original assignment
+    const original = studentAssignments.find(a => a.id === editingAssignment.id);
+
+    setEditingAssignment({
+      ...editingAssignment,
+      status: nextStatus,
+      teacherId: original?.teacherId ?? editingAssignment.teacherId,
+      teacherName: original?.teacherName ?? editingAssignment.teacherName,
+      schoolId: original?.schoolId ?? editingAssignment.schoolId,
+      schoolName: original?.schoolName ?? editingAssignment.schoolName,
+    });
+    return;
+  }
+
+  setEditingAssignment({ ...editingAssignment, status: nextStatus });
+
                   }}
                 >
                   <option value="PROPOSED">Vorgeschlagen</option>

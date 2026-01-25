@@ -2,6 +2,7 @@ package com.aspd.backend.validation;
 
 import com.aspd.backend.model.*;
 import com.aspd.backend.repository.PlannedInternshipRepository;
+import com.aspd.backend.repository.SchoolRepository;
 import com.aspd.backend.repository.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ public class PlannedInternshipValidationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final TeacherRepository teacherRepository;
-
+    private final SchoolRepository schoolRepository;
     public ValidationResult validatePlannedInternshipUpdate(Long internshipId, Long teacherId, Long schoolId) {
 
         PlannedInternship internship = plannedInternshipRepository.findById(internshipId)
@@ -31,7 +32,10 @@ public class PlannedInternshipValidationService {
         } else {
             newTeacher = null;
         }
-        // If teacher and school are both provided, they must belong together.
+
+        // If teacher and school are both provided, they should belong together.
+        // NOTE: This is a business rule (not an OptaPlanner hard constraint).
+        // Keep it as HARD to avoid inconsistent data entry.
         List<ValidationViolation> hard = new ArrayList<>();
         List<ValidationViolation> warn = new ArrayList<>();
 
@@ -52,23 +56,30 @@ public class PlannedInternshipValidationService {
             }
         }
 
+        // Resolve explicit school selection (can be null)
+        School explicitSchool = null;
+        if (schoolId != null) {
+            explicitSchool = schoolRepository.findById(schoolId)
+                    .orElseThrow(() -> new IllegalArgumentException("School not found: " + schoolId));
+        }
+
         // Build a simulated copy with the new selections
         PlannedInternship simulated = PlannedInternship.builder()
                 .id(internship.getId())
                 .praktikumType(internship.getPraktikumType())
                 .schoolType(internship.getSchoolType())
                 .course(internship.getCourse())
+                .originalCourse(internship.getOriginalCourse())
                 .schoolYear(internship.getSchoolYear())
                 .maxCapacity(internship.getMaxCapacity())
                 .currentAssignments(internship.getCurrentAssignments())
+                .active(internship.getActive())
                 .assignedTeacher(newTeacher)
+                .assignedSchool(explicitSchool)
                 .build();
-
-
 
         // --------------------------------------------------------------------
         // (Extra safety) Capacity consistency check
-        // This does NOT change solver logic. It just prevents an obviously invalid state.
         // --------------------------------------------------------------------
         if (simulated.getCurrentAssignments() > simulated.getMaxCapacity()) {
             hard.add(v("CAPACITY_EXCEEDED", ViolationSeverity.HARD,
@@ -77,10 +88,28 @@ public class PlannedInternshipValidationService {
         }
 
         // --------------------------------------------------------------------
-        // HARD (same as teacherMustSupportPraktikumType)
+        // HARD (same as calculateTeacherAssignmentConstraint)
+        // Active internship must have a teacher; inactive can be unassigned.
+        // --------------------------------------------------------------------
+        if (simulated.isActive() && simulated.getAssignedTeacher() == null) {
+            hard.add(v("TEACHER_REQUIRED", ViolationSeverity.HARD,
+                    "Lehrkraft fehlt: Ein aktives Praktikum muss einer Lehrkraft zugewiesen sein.",
+                    List.of("teacherId")));
+        }
+
+        // --------------------------------------------------------------------
+        // HARD (same as calculateTeacherAssignmentConstraint) - teacher must be active
+        // + HARD (same as calculateTeacherPraktikumTypeConstraint / calculateTeacherCourseMatchConstraint)
         // --------------------------------------------------------------------
         TeacherPlConfig cfg = null;
-        if (newTeacher != null) {
+        if (simulated.isActive() && newTeacher != null) {
+
+            if (!newTeacher.isActive()) {
+                hard.add(v("TEACHER_INACTIVE", ViolationSeverity.HARD,
+                        "Lehrkraft ist inaktiv: Eine inaktive Lehrkraft darf nicht zugewiesen werden.",
+                        List.of("teacherId")));
+            }
+
             cfg = newTeacher.getPlConfigs().stream()
                     .filter(c -> Objects.equals(c.getSchoolYear(), internship.getSchoolYear()))
                     .findFirst()
@@ -101,10 +130,7 @@ public class PlannedInternshipValidationService {
                 }
             }
 
-            // ----------------------------------------------------------------
-            // HARD (same as teacherMustMatchCourseForZspAndSfp)
-            // Only applies to ZSP/SFP and course != null
-            // ----------------------------------------------------------------
+            // ZSP/SFP require course match (main subject or specialization)
             if ((internship.getPraktikumType() == PraktikumType.ZSP || internship.getPraktikumType() == PraktikumType.SFP)
                     && internship.getCourse() != null) {
 
@@ -122,32 +148,80 @@ public class PlannedInternshipValidationService {
         }
 
         // --------------------------------------------------------------------
-        // HARD (same as internshipsMustBeInAcceptableZones)
+        // HARD (same as calculateCoursePinningConstraint + calculateZspCourseAssignmentConstraint)
         // --------------------------------------------------------------------
-        if (newTeacher != null && newTeacher.getSchool() != null) {
-            String zone = newTeacher.getSchool().getZone();
-            boolean oepnv = hasOepnv(newTeacher.getSchool().getOepnv());
-            PraktikumType type = internship.getPraktikumType();
+        if (simulated.isActive()) {
+            PraktikumType type = simulated.getPraktikumType();
 
-            boolean violates;
-            if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
-                // OK: zone 1 OR zone 2 + OEPNV
-                violates = !(("1".equals(zone)) || ("2".equals(zone) && oepnv));
-            } else {
-                // PDP_I or PDP_II: OK zone 2 or 3 (zone 1 not allowed)
-                violates = !("2".equals(zone) || "3".equals(zone));
+            if ((type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) && simulated.getCourse() != null) {
+                hard.add(v("PDP_COURSE_NOT_ALLOWED", ViolationSeverity.HARD,
+                        "Ungültiger Kurs: PDP-Praktika dürfen keinen Kurs haben.",
+                        List.of("course")));
             }
 
-            if (violates) {
-                hard.add(v("ZONE_VIOLATION", ViolationSeverity.HARD,
-                        "Zonen-Verstoß: Diese Schule ist für den ausgewählten Praktikumstyp nicht zulässig.",
-                        List.of("teacherId")));
+            if (type == PraktikumType.SFP && simulated.getOriginalCourse() != null) {
+                if (simulated.getCourse() == null || !simulated.getCourse().equals(simulated.getOriginalCourse())) {
+                    hard.add(v("SFP_COURSE_PINNED", ViolationSeverity.HARD,
+                            "Ungültiger Kurs: Der SFP-Kurs ist fest vorgegeben und darf nicht geändert werden.",
+                            List.of("course")));
+                }
+            }
+
+            if (type == PraktikumType.ZSP && simulated.getCourse() == null) {
+                hard.add(v("ZSP_COURSE_REQUIRED", ViolationSeverity.HARD,
+                        "Kurs fehlt: Ein aktives ZSP-Praktikum muss einen Kurs haben.",
+                        List.of("course")));
             }
         }
 
         // --------------------------------------------------------------------
-        // HARD (same as teacherCanOnlyTake_0_1_2_or_4 and teacherWith_2_or_4_InternshipsMustHaveAllDifferentTypes)
-        // Apply across all planned internships in same schoolYear (simulate the change)
+        // HARD (same as calculateSchoolTypeMatchConstraint)
+        // --------------------------------------------------------------------
+        if (simulated.isActive()) {
+            School effSchool = simulated.getSchool();
+            if (effSchool != null) {
+                if (!Boolean.TRUE.equals(effSchool.getActive())) {
+                    hard.add(v("SCHOOL_INACTIVE", ViolationSeverity.HARD,
+                            "Schule ist inaktiv: Eine inaktive Schule darf nicht zugewiesen werden.",
+                            List.of("schoolId")));
+                } else if (effSchool.getType() != simulated.getSchoolType()) {
+                    hard.add(v("SCHOOL_TYPE_MISMATCH", ViolationSeverity.HARD,
+                            "Schultyp passt nicht: Die ausgewählte Schule passt nicht zum benötigten Schultyp (GS/MS).",
+                            List.of("schoolId")));
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // HARD (same as calculateZoneConstraint)
+        // --------------------------------------------------------------------
+        if (simulated.isActive()) {
+            School effSchool = simulated.getSchool();
+            if (effSchool != null) {
+                String zone = effSchool.getZone();
+                OepnvStatus oepnv = effSchool.getOepnv();
+                PraktikumType type = simulated.getPraktikumType();
+
+                boolean violates;
+                if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
+                    // ZSP & SFP: Zone 1 or 2 (ÖPNV doesn't matter)
+                    violates = !("1".equals(zone) || "2".equals(zone));
+                } else {
+                    // PDP: Zone 2 or 3, and ÖPNV FOUR_B is forbidden
+                    violates = !("2".equals(zone) || "3".equals(zone)) || oepnv == OepnvStatus.FOUR_B;
+                }
+
+                if (violates) {
+                    hard.add(v("ZONE_VIOLATION", ViolationSeverity.HARD,
+                            "Zonen-Verstoß: Diese Schule ist für den ausgewählten Praktikumstyp nicht zulässig.",
+                            List.of("schoolId")));
+                }
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // HARD (same as calculateTeacherWorkloadConstraint/calculateTeacherDiversityConstraint/calculateTeacherMaxPraktikaConstraint)
+        // Count only ACTIVE internships (solver uses isActive()).
         // --------------------------------------------------------------------
         if (newTeacher != null) {
             List<PlannedInternship> allYear = plannedInternshipRepository.findBySchoolYear(internship.getSchoolYear());
@@ -159,25 +233,23 @@ public class PlannedInternshipValidationService {
             }
 
             List<PlannedInternship> teacherInternships = view.stream()
+                    .filter(PlannedInternship::isActive)
                     .filter(pi -> pi.getAssignedTeacher() != null)
                     .filter(pi -> pi.getAssignedTeacher().getTeacherId().equals(newTeacher.getTeacherId()))
                     .toList();
 
             int count = teacherInternships.size();
-            // --------------------------------------------------------------------
-            // HARD: maxPraktikaPerYear (max_praktikas)
-            // --------------------------------------------------------------------
-                        if (cfg != null && cfg.getMaxPraktikaPerYear() != null) {
-                            int maxAllowed = cfg.getMaxPraktikaPerYear();
-                            if (count > maxAllowed) {
-                                hard.add(v("TEACHER_MAX_PRAKTIKA_EXCEEDED", ViolationSeverity.HARD,
-                                        "Ungültige PL-Auslastung: Der ausgewählte PL würde " + count +
-                                                " Praktika betreuen (maximal erlaubt: " + maxAllowed + ").",
-                                        List.of("teacherId")));
-                            }
-                        }
 
-
+            // Max praktika per year (ACTIVE only)
+            if (cfg != null && cfg.getMaxPraktikaPerYear() != null) {
+                int maxAllowed = cfg.getMaxPraktikaPerYear();
+                if (count > maxAllowed) {
+                    hard.add(v("TEACHER_MAX_PRAKTIKA_EXCEEDED", ViolationSeverity.HARD,
+                            "Ungültige PL-Auslastung: Der ausgewählte PL würde " + count +
+                                    " aktive Praktika betreuen (maximal erlaubt: " + maxAllowed + ").",
+                            List.of("teacherId")));
+                }
+            }
 
             // 0/1/2/4 only
             if (count == 3 || count > 4) {
@@ -206,7 +278,6 @@ public class PlannedInternshipValidationService {
                 .warnings(warn)
                 .build();
     }
-
     private ValidationViolation v(String code, ViolationSeverity severity, String message, List<String> fields) {
         return ValidationViolation.builder()
                 .code(code)
