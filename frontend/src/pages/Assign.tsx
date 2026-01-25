@@ -101,10 +101,16 @@ export default function InternshipAssignments() {
   });
   const [plConfigSearchTerm, setPlConfigSearchTerm] = useState('');
   const [timeBudget, setTimeBudget] = useState<number>(210);
+  const [uncompletedInternships, setUncompletedInternships] = useState<number>(0);
 
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
+  const [newSemesterType, setNewSemesterType] = useState('WiSe');
+
+  // Reoptimization state
+  const [reoptimizing, setReoptimizing] = useState(false);
+  const [copyingConfigs, setCopyingConfigs] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const [validationResult, setValidationResult] = useState<any>(null);
@@ -606,23 +612,125 @@ const handleConfirmNewYear = () => {
     return;
   }
 
-  if (availableYears.includes(newYearInput.trim())) {
+  // Create year format with selected semester type
+  const fullYear = `${newSemesterType}${newYearInput.trim()}`;
+
+  if (availableYears.includes(fullYear)) {
     setError("This year already exists");
     setTimeout(() => setError(null), 3000);
     return;
   }
 
   // Add the new year to the list and select it
-  const updatedYears = [...availableYears, newYearInput.trim()].sort();
+  const updatedYears = [...availableYears, fullYear].sort();
   setAvailableYears(updatedYears);
-  setSelectedYear(newYearInput.trim());
+  setSelectedYear(fullYear);
   setStudentConfigs([]); // Clear configs for new year
   
   setShowNewYearModal(false);
   setNewYearInput('');
-  setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
+  setNewSemesterType('WiSe');
+  setSuccess(`New planning year "${fullYear}" created successfully!`);
   setTimeout(() => setSuccess(null), 3000);
 };
+
+  // Reoptimization Handler
+  const handleReoptimization = async () => {
+    if (!selectedYear) {
+      setError("Please select a year first");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      setReoptimizing(true);
+      const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ schoolYear: selectedYear })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Reoptimization failed' }));
+        throw new Error(errorData.message || 'Reoptimization failed');
+      }
+
+      const result = await response.json();
+      setSuccess(`Reoptimization completed! Preserved: ${result.preservedAssignments}, Reassigned: ${result.reassignedCount}`);
+      
+      // Refresh Phase 1 and Phase 2 assignments
+      await fetchPlannedInternships();
+      await fetchStudentAssignments();
+      
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reoptimization failed");
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setReoptimizing(false);
+    }
+  };
+
+  // Copy Semester Configs Handler
+  const handleCopySemesterConfigs = async () => {
+    if (!selectedYear) {
+      setError("Please select a year first");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // Determine source and target years
+    let sourceYear = '';
+    let targetYear = '';
+    
+    if (selectedYear.startsWith('SoSe')) {
+      // If summer semester is selected, copy from previous winter
+      const year = selectedYear.replace('SoSe', '');
+      sourceYear = `WiSe${year}`;
+      targetYear = selectedYear;
+    } else {
+      setError("Semester config copy is only available for summer semesters (SoSe)");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      setCopyingConfigs(true);
+      const response = await fetch(
+        `http://localhost:8080/api/semester-config/copy-to-next-semester?sourceYear=${sourceYear}&targetYear=${targetYear}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to copy semester configs');
+      }
+
+      const result = await response.json();
+      setSuccess(
+        `Configs copied successfully! Teachers: ${result.teacherConfigsCopied}, Students: ${result.studentConfigsCopied}`
+      );
+      
+      // Refresh student configs and teacher data without changing selected year
+      await fetchStudentConfigsByYear();
+      const teachersData = await plService.getAllPls();
+      setTeachers(teachersData.filter(t => t.active !== false));
+      
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to copy semester configs");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setCopyingConfigs(false);
+    }
+  };
 
   // Teacher assignments filter configuration
   const filteredTeacherAssignments = phase1Result?.plannedInternships.filter(pi => {
@@ -959,6 +1067,16 @@ const handleConfirmNewYear = () => {
               </option>
             ))}
           </select>
+          {selectedYear?.startsWith('SoSe') && (
+            <button 
+              className="btn-primary-filled"
+              onClick={handleCopySemesterConfigs}
+              disabled={copyingConfigs}
+              style={{whiteSpace: 'nowrap'}}
+            >
+              {copyingConfigs ? "Copying..." : "Copy from WiSe"}
+            </button>
+          )}
           <button 
             className="btn-primary-filled"
             onClick={handleCreateNewYear}
@@ -1020,16 +1138,61 @@ const handleConfirmNewYear = () => {
                     }}
                   />
                 </div>
-                <button 
-                  className="btn-primary"
-                  onClick={handlePhase1Assignment}
-                  disabled={!selectedYear || assigningPhase1}
-                  style={{marginTop: '20px'}}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
-                </button>
+                {selectedYear?.startsWith('SoSe') && (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Uncompleted</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      value={uncompletedInternships}
+                      onChange={(e) => setUncompletedInternships(parseInt(e.target.value) || 0)}
+                      style={{
+                        width: '100px',
+                        padding: '8px 12px',
+                        fontSize: '0.875rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        color: '#111827',
+                        textAlign: 'center'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.outline = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                <div style={{display: 'flex', gap: '12px', marginTop: '20px'}}>
+                  {!selectedYear?.startsWith('SoSe') && (
+                    <button 
+                      className="btn-primary"
+                      onClick={handlePhase1Assignment}
+                      disabled={!selectedYear || assigningPhase1}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
+                    </button>
+                  )}
+                  {selectedYear?.startsWith('SoSe') && (
+                    <button 
+                      className="btn-primary"
+                      onClick={handleReoptimization}
+                      disabled={!selectedYear || reoptimizing}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {reoptimizing ? "Reoptimizing..." : "Reoptimize"}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1151,15 +1314,17 @@ const handleConfirmNewYear = () => {
                 <h1 style={{fontSize: '20px'}}>Studentenzuweisungen</h1>
               </div>
               <div className="header-actions">
-                <button 
-                  className="btn-primary"
-                  onClick={handleAssignPhase2}
-                  disabled={assigningPhase2 || !phase1Result}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  {assigningPhase2 ? "Läuft..." : "Zuweisen"}
-                </button>
+                {!selectedYear?.startsWith('SoSe') && (
+                  <button 
+                    className="btn-primary"
+                    onClick={handleAssignPhase2}
+                    disabled={assigningPhase2 || !phase1Result}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    {assigningPhase2 ? "Läuft..." : "Zuweisen"}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1597,12 +1762,21 @@ const handleConfirmNewYear = () => {
         <div className="modal-overlay">
           <div className="modal-content modal-small">
             <h2>Create New Planning Year</h2>
-            <p>Enter the academic year (e.g., 2026)</p>
-            <div style={{marginBottom: '20px'}}>
+            <p>Select semester type and enter the year (e.g., WiSe2026 or SoSe2025)</p>
+            <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <select
+                className="form-select-small"
+                value={newSemesterType}
+                onChange={(e) => setNewSemesterType(e.target.value)}
+                style={{padding: '10px', fontSize: '1rem', width: '120px'}}
+              >
+                <option value="WiSe">WiSe</option>
+                <option value="SoSe">SoSe</option>
+              </select>
               <input
                 type="text"
                 className="student-config-input"
-                placeholder="e.g., 2026"
+                placeholder="2026"
                 value={newYearInput}
                 onChange={(e) => setNewYearInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -1611,7 +1785,7 @@ const handleConfirmNewYear = () => {
                   }
                 }}
                 autoFocus
-                style={{width: '100%', padding: '10px', fontSize: '1rem'}}
+                style={{flex: 1, padding: '10px', fontSize: '1rem', minWidth: '150px'}}
               />
             </div>
             <div className="modal-actions">
@@ -1620,6 +1794,7 @@ const handleConfirmNewYear = () => {
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
+                  setNewSemesterType('WiSe');
                 }}
               >
                 Cancel

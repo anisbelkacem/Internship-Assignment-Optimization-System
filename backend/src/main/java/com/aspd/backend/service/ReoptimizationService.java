@@ -189,8 +189,8 @@ public class ReoptimizationService {
                 budget = previousInternships.size();
                 log.info("Using budget from {}: {} internship slots (from Phase 1 results)", previousSemester, budget);
             } else {
-                throw new IllegalStateException("No Phase 1 results found for previous semester: " + previousSemester + 
-                    ". Please run Phase 1 for the previous semester first.");
+                throw new IllegalStateException("Lehrerzuweisungen (Phase 1) fehlt für " + previousSemester + 
+                    ". Bitte führen Sie zuerst Phase 1 Optimierung für " + previousSemester + " aus.");
             }
         }
         
