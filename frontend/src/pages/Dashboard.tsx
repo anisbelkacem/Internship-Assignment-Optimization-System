@@ -510,7 +510,7 @@ const Dashboard: React.FC = () => {
       <div className="dashboard-grid">
         <main className="main-column">
           {/* Action Items Section */}
-          <section className="section-container">
+          <section className="section-container" id="action-items">
             <div className="section-header">
               <h2>🎯 Aktionsbedarf</h2>
             </div>
@@ -596,7 +596,7 @@ const Dashboard: React.FC = () => {
           </section>
 
           {/* Constraint Violations */}
-          <section className="section-container">
+          <section className="section-container" id="constraint-violations">
             <div className="section-header">
               <h2>⛔ Constraint Violations</h2>
             </div>
