@@ -59,6 +59,18 @@ const Dashboard: React.FC = () => {
     count: number;
     internships: Array<{ praktikumType: string; schoolName: string; teacherName: string | null }>;
   }>>([]);
+  const [selectedZoneForModal, setSelectedZoneForModal] = useState<string | null>(null);
+  const [statusBreakdown, setStatusBreakdown] = useState<{
+    proposed: number;
+    confirmed: number;
+    cancelled: number;
+  }>({ proposed: 0, confirmed: 0, cancelled: 0 });
+  const [praktikumDistribution, setPraktikumDistribution] = useState<{
+    PDP_I: number;
+    PDP_II: number;
+    SFP: number;
+    ZSP: number;
+  }>({ PDP_I: 0, PDP_II: 0, SFP: 0, ZSP: 0 });
 
   // Define valid combinations - any other combination is forbidden
   // Each PL must supervise exactly 2 Praktika
@@ -367,6 +379,34 @@ const Dashboard: React.FC = () => {
       
       setZoneViolations(violations);
       setZoneViolationsCount(violations.reduce((sum, v) => sum + v.count, 0));
+
+      // Calculate status breakdown
+      const statusCounts = { proposed: 0, confirmed: 0, cancelled: 0 };
+      studentAssignments.forEach(assignment => {
+        if (assignment.status === 'PROPOSED') statusCounts.proposed++;
+        else if (assignment.status === 'CONFIRMED') statusCounts.confirmed++;
+        else if (assignment.status === 'CANCELLED') statusCounts.cancelled++;
+      });
+      setStatusBreakdown(statusCounts);
+
+      // Calculate praktikum type distribution (unique students per type)
+      const praktikumCounts = { PDP_I: 0, PDP_II: 0, SFP: 0, ZSP: 0 };
+      const studentsByType = {
+        PDP_I: new Set<string>(),
+        PDP_II: new Set<string>(),
+        SFP: new Set<string>(),
+        ZSP: new Set<string>()
+      };
+      studentAssignments.forEach(assignment => {
+        if (assignment.praktikumType in studentsByType) {
+          studentsByType[assignment.praktikumType as keyof typeof studentsByType].add(assignment.studentName);
+        }
+      });
+      praktikumCounts.PDP_I = studentsByType.PDP_I.size;
+      praktikumCounts.PDP_II = studentsByType.PDP_II.size;
+      praktikumCounts.SFP = studentsByType.SFP.size;
+      praktikumCounts.ZSP = studentsByType.ZSP.size;
+      setPraktikumDistribution(praktikumCounts);
     } catch (err) {
       console.error('Failed to load action items:', err);
     } finally {
@@ -611,61 +651,277 @@ const Dashboard: React.FC = () => {
             </div>
           </section>
 
-          {/* Kapazitätsauslastung */}
+          {/* Status Breakdown & Praktikum Distribution */}
           <section className="section-container">
             <div className="section-header">
-              <h2>📊 Kapazitätsauslastung</h2>
+              <h2>📈 Statistiken</h2>
             </div>
-            <div className="capacity-bars">
-              <div className="capacity-item">
-                <div className="capacity-row">
-                  <span className="capacity-label">PDP I (Herbst)</span>
-                  <span className="capacity-meta">{capacityData.PDP_I.assigned} / {capacityData.PDP_I.total} PLs</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-fill ${capacityData.PDP_I.total > 0 && (capacityData.PDP_I.assigned / capacityData.PDP_I.total) > 0.8 ? 'warn' : 'ok'}`} 
-                    style={{ width: capacityData.PDP_I.total > 0 ? `${(capacityData.PDP_I.assigned / capacityData.PDP_I.total) * 100}%` : '0%' }} 
-                  />
+            <div className="card-row">
+              {/* Status Breakdown Donut Chart */}
+              <div className="status-card info" style={{ flex: 1, width: '280px', height: '280px', minWidth: '280px', maxWidth: '280px' }}>
+                <div className="card-content" style={{ padding: '10px' }}>
+                  <h3 style={{ fontSize: '14px', marginBottom: '10px', fontWeight: '600', color: '#111827' }}>
+                    Zuweisungsstatus
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* Donut Chart */}
+                    <div style={{ position: 'relative', width: '85px', height: '85px', flexShrink: 0 }}>
+                      {(() => {
+                        const total = statusBreakdown.proposed + statusBreakdown.confirmed + statusBreakdown.cancelled;
+                        if (total === 0) {
+                          return (
+                            <div style={{ 
+                              width: '85px', 
+                              height: '85px', 
+                              borderRadius: '50%', 
+                              background: '#e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              color: '#6b7280',
+                              textAlign: 'center',
+                              padding: '8px'
+                            }}>
+                              Keine Daten
+                            </div>
+                          );
+                        }
+                        const proposedPercent = (statusBreakdown.proposed / total) * 100;
+                        const confirmedPercent = (statusBreakdown.confirmed / total) * 100;
+                        
+                        // Create conic gradient
+                        let gradientStops = [];
+                        let currentPercent = 0;
+                        
+                        if (statusBreakdown.proposed > 0) {
+                          gradientStops.push(`#a8c5d9 0% ${proposedPercent}%`);
+                          currentPercent = proposedPercent;
+                        }
+                        if (statusBreakdown.confirmed > 0) {
+                          gradientStops.push(`#547792 ${currentPercent}% ${currentPercent + confirmedPercent}%`);
+                          currentPercent += confirmedPercent;
+                        }
+                        if (statusBreakdown.cancelled > 0) {
+                          gradientStops.push(`#213448 ${currentPercent}% 100%`);
+                        }
+                        
+                        return (
+                          <div style={{ 
+                            width: '85px', 
+                            height: '85px', 
+                            borderRadius: '50%', 
+                            background: `conic-gradient(${gradientStops.join(', ')})`,
+                            position: 'relative',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                          }}>
+                            <div style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: '52px',
+                              height: '52px',
+                              borderRadius: '50%',
+                              background: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexDirection: 'column',
+                              fontSize: '18px',
+                              fontWeight: '700',
+                              color: '#111827'
+                            }}>
+                              {total}
+                              <span style={{ fontSize: '9px', fontWeight: '500', color: '#6b7280', marginTop: '0px' }}>
+                                Total
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* Legend */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#a8c5d9' }}></div>
+                          <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: '500' }}>Vorgeschlagen</span>
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginLeft: '20px' }}>
+                          {statusBreakdown.proposed}
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#547792' }}></div>
+                          <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: '500' }}>Bestätigt</span>
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginLeft: '20px' }}>
+                          {statusBreakdown.confirmed}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#213448' }}></div>
+                          <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: '500' }}>Abgesagt</span>
+                        </div>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginLeft: '20px' }}>
+                          {statusBreakdown.cancelled}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="capacity-item">
-                <div className="capacity-row">
-                  <span className="capacity-label">PDP II (Frühjahr)</span>
-                  <span className="capacity-meta">{capacityData.PDP_II.assigned} / {capacityData.PDP_II.total} PLs</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-fill ${capacityData.PDP_II.total > 0 && (capacityData.PDP_II.assigned / capacityData.PDP_II.total) > 0.8 ? 'warn' : 'ok'}`} 
-                    style={{ width: capacityData.PDP_II.total > 0 ? `${(capacityData.PDP_II.assigned / capacityData.PDP_II.total) * 100}%` : '0%' }} 
-                  />
+              {/* Praktikum Distribution Bar Chart */}
+              <div className="status-card info" style={{ flex: 1, width: '280px', height: '280px', minWidth: '280px', maxWidth: '280px' }}>
+                <div className="card-content" style={{ padding: '10px' }}>
+                  <h3 style={{ fontSize: '14px', marginBottom: '2px', fontWeight: '600', color: '#111827' }}>
+                    👥 Studentenverteilung
+                  </h3>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px' }}>
+                    Studenten pro Praktikumsart
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(() => {
+                      const maxValue = Math.max(
+                        praktikumDistribution.PDP_I,
+                        praktikumDistribution.PDP_II,
+                        praktikumDistribution.SFP,
+                        praktikumDistribution.ZSP,
+                        1
+                      );
+                      
+                      const praktikums = [
+                        { name: 'PDP I', value: praktikumDistribution.PDP_I, color: '#a8c5d9' },
+                        { name: 'PDP II', value: praktikumDistribution.PDP_II, color: '#7da3be' },
+                        { name: 'SFP', value: praktikumDistribution.SFP, color: '#547792' },
+                        { name: 'ZSP', value: praktikumDistribution.ZSP, color: '#213448' }
+                      ];
+                      
+                      return praktikums.map(({ name, value, color }) => (
+                        <div key={name}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#4b5563' }}>
+                              {name}
+                            </span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#111827' }}>
+                              {value}
+                            </span>
+                          </div>
+                          <div className="progress-bar" style={{ height: '8px' }}>
+                            <div 
+                              className="progress-fill"
+                              style={{ 
+                                width: `${(value / maxValue) * 100}%`, 
+                                background: color
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
                 </div>
               </div>
 
-              <div className="capacity-item">
-                <div className="capacity-row">
-                  <span className="capacity-label">SFP (SoSe)</span>
-                  <span className="capacity-meta">{capacityData.SFP.assigned} / {capacityData.SFP.total} PLs</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-fill ${capacityData.SFP.total > 0 && (capacityData.SFP.assigned / capacityData.SFP.total) > 0.8 ? 'warn' : 'ok'}`} 
-                    style={{ width: capacityData.SFP.total > 0 ? `${(capacityData.SFP.assigned / capacityData.SFP.total) * 100}%` : '0%' }} 
-                  />
-                </div>
-              </div>
+              {/* Kapazitätsauslastung Card */}
+              <div className="status-card info" style={{ flex: 1, width: '280px', height: '280px', minWidth: '280px', maxWidth: '280px' }}>
+                <div className="card-content" style={{ padding: '10px' }}>
+                  <h3 style={{ fontSize: '14px', marginBottom: '2px', fontWeight: '600', color: '#111827' }}>
+                    📊 Kapazitätsauslastung
+                  </h3>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px' }}>
+                    PL-Plätze: zugewiesen vs. verfügbar
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* PDP I */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#4b5563' }}>
+                          PDP I
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                          {capacityData.PDP_I.assigned} / {capacityData.PDP_I.total}
+                        </span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '8px' }}>
+                        <div 
+                          className="progress-fill"
+                          style={{ 
+                            width: capacityData.PDP_I.total > 0 ? `${(capacityData.PDP_I.assigned / capacityData.PDP_I.total) * 100}%` : '0%',
+                            background: capacityData.PDP_I.total > 0 && (capacityData.PDP_I.assigned / capacityData.PDP_I.total) > 0.8 ? '#ef4444' : '#a8c5d9'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
 
-              <div className="capacity-item">
-                <div className="capacity-row">
-                  <span className="capacity-label">ZSP (WiSe)</span>
-                  <span className="capacity-meta">{capacityData.ZSP.assigned} / {capacityData.ZSP.total} PLs</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className={`progress-fill ${capacityData.ZSP.total > 0 && (capacityData.ZSP.assigned / capacityData.ZSP.total) > 0.8 ? 'warn' : 'ok'}`} 
-                    style={{ width: capacityData.ZSP.total > 0 ? `${(capacityData.ZSP.assigned / capacityData.ZSP.total) * 100}%` : '0%' }} 
-                  />
+                    {/* PDP II */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#4b5563' }}>
+                          PDP II
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                          {capacityData.PDP_II.assigned} / {capacityData.PDP_II.total}
+                        </span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '8px' }}>
+                        <div 
+                          className="progress-fill"
+                          style={{ 
+                            width: capacityData.PDP_II.total > 0 ? `${(capacityData.PDP_II.assigned / capacityData.PDP_II.total) * 100}%` : '0%',
+                            background: capacityData.PDP_II.total > 0 && (capacityData.PDP_II.assigned / capacityData.PDP_II.total) > 0.8 ? '#ef4444' : '#7da3be'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* SFP */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#4b5563' }}>
+                          SFP
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                          {capacityData.SFP.assigned} / {capacityData.SFP.total}
+                        </span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '8px' }}>
+                        <div 
+                          className="progress-fill"
+                          style={{ 
+                            width: capacityData.SFP.total > 0 ? `${(capacityData.SFP.assigned / capacityData.SFP.total) * 100}%` : '0%',
+                            background: capacityData.SFP.total > 0 && (capacityData.SFP.assigned / capacityData.SFP.total) > 0.8 ? '#ef4444' : '#547792'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* ZSP */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#4b5563' }}>
+                          ZSP
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                          {capacityData.ZSP.assigned} / {capacityData.ZSP.total}
+                        </span>
+                      </div>
+                      <div className="progress-bar" style={{ height: '8px' }}>
+                        <div 
+                          className="progress-fill"
+                          style={{ 
+                            width: capacityData.ZSP.total > 0 ? `${(capacityData.ZSP.assigned / capacityData.ZSP.total) * 100}%` : '0%',
+                            background: capacityData.ZSP.total > 0 && (capacityData.ZSP.assigned / capacityData.ZSP.total) > 0.8 ? '#ef4444' : '#213448'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -683,15 +939,36 @@ const Dashboard: React.FC = () => {
                   const totalPls = gsPlCount + msPlCount;
                   const percentage = totalPls > 0 ? (count / totalPls) * 100 : 0;
                   
+                  // Check if this zone has violations
+                  const hasViolation = zoneViolations.some(v => v.zone === zone);
+                  const zoneViolationData = zoneViolations.find(v => v.zone === zone);
+                  
                   return (
                     <div 
                       key={zone} 
-                      className="status-card info"
+                      className={`status-card ${hasViolation ? 'warning' : 'info'}`}
                       style={{
                         padding: '12px 16px',
                         minWidth: '140px',
+                        position: 'relative',
+                        cursor: hasViolation ? 'pointer' : 'default'
+                      }}
+                      onClick={() => {
+                        if (hasViolation) {
+                          setSelectedZoneForModal(zone);
+                        }
                       }}
                     >
+                      {hasViolation && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          fontSize: '16px'
+                        }}>
+                          ⚠️
+                        </div>
+                      )}
                       <div className="card-content">
                         <h3 style={{ fontSize: '14px', margin: '0 0 8px 0', color: '#64748b' }}>
                           📍 {zone}
@@ -700,7 +977,7 @@ const Dashboard: React.FC = () => {
                           fontSize: '20px', 
                           fontWeight: '600', 
                           margin: '0 0 8px 0',
-                          color: '#547792'
+                          color: hasViolation ? '#d97706' : '#547792'
                         }}>
                           {count} PLs
                         </p>
@@ -709,10 +986,21 @@ const Dashboard: React.FC = () => {
                             className="progress-fill"
                             style={{ 
                               width: `${Math.min(percentage, 100)}%`,
-                              background: '#547792'
+                              background: hasViolation ? '#f59e0b' : '#547792'
                             }} 
                           />
                         </div>
+                        {hasViolation && (
+                          <p style={{ 
+                            fontSize: '11px', 
+                            marginTop: '6px', 
+                            color: '#d97706',
+                            fontWeight: '500',
+                            textDecoration: 'underline'
+                          }}>
+                            {zoneViolationData?.count} Verstoß{zoneViolationData && zoneViolationData.count > 1 ? 'e' : ''} - Details
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -892,6 +1180,115 @@ const Dashboard: React.FC = () => {
                   Schließen
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zone-Specific Violations Modal (from zone card click) */}
+      {selectedZoneForModal && (
+        <div className="modal-overlay" onClick={() => setSelectedZoneForModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <button 
+              className="modal-close" 
+              onClick={() => setSelectedZoneForModal(null)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0',
+                lineHeight: '1',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >×</button>
+            <div className="modal-header">
+              <h2>📍 {selectedZoneForModal} - Zonen-Verstöße</h2>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              {(() => {
+                const violation = zoneViolations.find(v => v.zone === selectedZoneForModal);
+                if (!violation) {
+                  return <p>Keine Verstöße gefunden</p>;
+                }
+                
+                return (
+                  <>
+                    <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px', border: '1px solid #fcd34d' }}>
+                      <p style={{ fontSize: '14px', margin: 0, color: '#92400e' }}>
+                        <strong>⚠️ Problem:</strong><br/>
+                        Diese Zone hat <strong>{violation.count} Mittwochspraktikum{violation.count > 1 ? 'a' : ''}</strong> (SFP/ZSP), die zu weit von der Universität entfernt sind.<br/>
+                        Studierende müssen mittwochs nachmittags zurück zur Uni.
+                      </p>
+                    </div>
+                    
+                    <h4 style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px', color: '#111827' }}>
+                      Betroffene Zuweisungen:
+                    </h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {violation.internships.map((internship, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '12px', 
+                          border: '2px solid #fca5a5', 
+                          borderRadius: '6px',
+                          backgroundColor: '#fef2f2'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'start', gap: '8px', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '18px' }}>🚫</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '4px' }}>
+                                {internship.praktikumType}
+                              </div>
+                              <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
+                                <strong>Schule:</strong> {internship.schoolName}
+                              </div>
+                              {internship.teacherName && (
+                                <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
+                                  <strong>Betreuer:</strong> {internship.teacherName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#991b1b', 
+                            backgroundColor: '#fee2e2',
+                            padding: '6px 8px',
+                            borderRadius: '4px',
+                            marginTop: '8px'
+                          }}>
+                            💡 <strong>Empfehlung:</strong> Zu Zone 1 (Passau-nah) verschieben
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setSelectedZoneForModal(null)}>
+                Schließen
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setSelectedZoneForModal(null);
+                  window.location.href = '/assignments';
+                }}
+              >
+                Zuweisungen bearbeiten
+              </button>
             </div>
           </div>
         </div>
