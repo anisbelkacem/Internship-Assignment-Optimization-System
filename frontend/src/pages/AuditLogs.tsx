@@ -54,17 +54,17 @@ const AuditLogs: React.FC = () => {
       <div className="schools-header">
         <div className="schools-header-content">
           <h1>Audit Logs</h1>
-          <p className="subtitle">Who did what, when, and what changed</p>
+          <p className="subtitle">Wer hat was, wann und was geändert</p>
         </div>
       </div>
 
       {loading && logs.length === 0 ? (
         <div className="empty-state">
-          <p>Loading...</p>
+          <p>Laden...</p>
         </div>
       ) : logs.length === 0 ? (
         <div className="empty-state">
-          <p>No audit logs available.</p>
+          <p>Keine Audit-Protokolle verfügbar.</p>
         </div>
       ) : (
         <>
@@ -72,12 +72,12 @@ const AuditLogs: React.FC = () => {
           <table className="audit-table">
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>Entity</th>
-                <th>Action</th>
-                <th>User</th>
-                <th>Description</th>
-                <th>Changes</th>
+                <th>Zeitstempel</th>
+                <th>Entität</th>
+                <th>Aktion</th>
+                <th>Benutzer</th>
+                <th>Beschreibung</th>
+                <th>Änderungen</th>
               </tr>
             </thead>
             <tbody>
@@ -120,9 +120,9 @@ const AuditLogs: React.FC = () => {
                             <table className="changes-table">
                               <thead>
                                 <tr>
-                                  <th>Field</th>
-                                  <th>Previous</th>
-                                  <th>New</th>
+                                  <th>Feld</th>
+                                  <th>Vorher</th>
+                                  <th>Neu</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -159,9 +159,9 @@ const AuditLogs: React.FC = () => {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                Previous
+                Zurück
               </button>
-              <span>Page {page + 1} of {totalPages}</span>
+              <span>Seite {page + 1} von {totalPages}</span>
               <button
                 className="btn btn-secondary"
                 onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
@@ -169,7 +169,7 @@ const AuditLogs: React.FC = () => {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                Next
+                Weiter
               </button>
             </div>
           )}

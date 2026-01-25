@@ -15,34 +15,6 @@ const RightPanel: FC = () => {
 
   return (
   <div className="right-panel">
-    {/* Map Section */}
-    <div className="section-container">
-      <div className="section-header">
-        <h2>🗺️ Schulen & Zonen</h2>
-        <span className="badge">100 Schulen</span>
-      </div>
-
-      <div className="school-list">
-        <div className="school-item">
-          <div className="card-content">
-            <h3>GS St. Nikola</h3>
-            <p>Zone 1 • ÖPNV: Yes</p>
-          </div>
-          <span className="badge primary">5 PLs</span>
-        </div>
-
-        <div className="school-item">
-          <div className="card-content">
-            <h3>MS Hohenau</h3>
-            <p>Zone 3 • ÖPNV: No</p>
-          </div>
-          <span className="badge primary">2 PLs</span>
-        </div>
-      </div>
-
-      <button className="btn btn-primary btn-full">Kartenansicht öffnen</button>
-    </div>
-
     {/* Add Student Modal */}
     {showStudentModal && (
       <div className="modal-overlay" onClick={() => setShowStudentModal(false)}>
