@@ -40,6 +40,11 @@ const Dashboard: React.FC = () => {
   }>>([]);
   const [assignedStudents, setAssignedStudents] = useState(0);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [showUnassignedModal, setShowUnassignedModal] = useState(false);
+  const [unassignedStudents, setUnassignedStudents] = useState<Array<{
+    studentName: string;
+    assignments: Array<{ praktikumType: string; status: string }>;
+  }>>([]);
   const [forbiddenCombinationsCount, setForbiddenCombinationsCount] = useState(0);
   const [showForbiddenModal, setShowForbiddenModal] = useState(false);
   const [teachersWithForbiddenCombinations, setTeachersWithForbiddenCombinations] = useState<Array<{
@@ -254,24 +259,50 @@ const Dashboard: React.FC = () => {
       setOverbookedCount(overbooked.length);
 
       // Calculate student assignment status
-      const [studentAssignments, studentConfigs] = await Promise.all([
-        internshipAssignmentService.getStudentAssignments(selectedYear),
-        studentConfigService.getConfigsByYear(selectedYear)
-      ]);
+      const studentAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
       
-      // Get unique student names who have ASSIGNED status
+      // Group assignments by student and check if ALL their assignments are valid
       const assignedStudentNames = new Set<string>();
+      const allStudentNames = new Set<string>();
+      const studentAssignmentMap = new Map<string, Array<{ praktikumType: string; status: string }>>();
+      
       studentAssignments.forEach(assignment => {
-        if (assignment.status === 'ASSIGNED') {
-          assignedStudentNames.add(assignment.studentName);
+        allStudentNames.add(assignment.studentName);
+        
+        if (!studentAssignmentMap.has(assignment.studentName)) {
+          studentAssignmentMap.set(assignment.studentName, []);
         }
+        studentAssignmentMap.get(assignment.studentName)!.push({
+          praktikumType: assignment.praktikumType,
+          status: assignment.status
+        });
       });
       
-      // Total unique students from student configs
-      const uniqueStudentIds = new Set(studentConfigs.map(config => config.studentId));
+      // A student is "assigned" only if ALL their assignments are PROPOSED or CONFIRMED (none CANCELLED)
+      for (const [studentName, assignments] of studentAssignmentMap.entries()) {
+        const hasOnlyValidAssignments = assignments.every(
+          a => a.status === 'PROPOSED' || a.status === 'CONFIRMED'
+        );
+        if (hasOnlyValidAssignments) {
+          assignedStudentNames.add(studentName);
+        }
+      }
+      
+      // Find unassigned or partially assigned students
+      const unassigned = [];
+      for (const studentName of allStudentNames) {
+        if (!assignedStudentNames.has(studentName)) {
+          const assignments = studentAssignmentMap.get(studentName) || [];
+          unassigned.push({
+            studentName,
+            assignments
+          });
+        }
+      }
       
       setAssignedStudents(assignedStudentNames.size);
-      setTotalStudents(uniqueStudentIds.size);
+      setTotalStudents(allStudentNames.size);
+      setUnassignedStudents(unassigned);
 
       // Calculate forbidden combinations
       const teachersWithViolations = [];
@@ -508,11 +539,17 @@ const Dashboard: React.FC = () => {
                 </div>
                 <button 
                   className="btn btn-ghost btn-sm" 
-                  onClick={() => window.location.href = '/assignments?tab=phase2'}
+                  onClick={() => {
+                    if (unassignedStudents.length > 0) {
+                      setShowUnassignedModal(true);
+                    } else {
+                      window.location.href = '/assignments?tab=phase2';
+                    }
+                  }}
                   disabled={loadingActionItems}
                   style={{ fontSize: '15px' }}
                 >
-                  Details
+                  {unassignedStudents.length > 0 ? 'Nicht zugewiesen' : 'Details'}
                 </button>
               </div>
             </div>
@@ -855,6 +892,157 @@ const Dashboard: React.FC = () => {
                   Schließen
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unassigned Students Modal */}
+      {showUnassignedModal && (
+        <div className="modal-overlay" onClick={() => setShowUnassignedModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2>Nicht zugewiesene Studierende</h2>
+              <button className="modal-close" onClick={() => setShowUnassignedModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              {unassignedStudents.length === 0 ? (
+                <p>Alle Studierenden wurden zugewiesen.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {unassignedStudents.map((student, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '12px', 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '6px',
+                      backgroundColor: '#f9fafb'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '8px', color: '#111827' }}>
+                        {student.studentName}
+                      </div>
+                      {student.assignments.length > 0 ? (
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                          <strong>Zuweisungen:</strong>
+                          <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
+                            {student.assignments.map((assignment, assignIdx) => (
+                              <li key={assignIdx}>
+                                {assignment.praktikumType} - <span style={{ 
+                                  color: assignment.status === 'CANCELLED' ? '#dc2626' : '#f59e0b',
+                                  fontWeight: '500'
+                                }}>{assignment.status}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.875rem', color: '#dc2626' }}>
+                          Keine Zuweisungen vorhanden
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowUnassignedModal(false)}>
+                Schließen
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setShowUnassignedModal(false);
+                  window.location.href = '/assignments';
+                }}
+              >
+                Zu Zuweisungen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unassigned Students Modal */}
+      {showUnassignedModal && (
+        <div className="modal-overlay" onClick={() => setShowUnassignedModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', position: 'relative' }}>
+            <button 
+              className="modal-close" 
+              onClick={() => setShowUnassignedModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0',
+                lineHeight: '1',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >×</button>
+            <div className="modal-header">
+              <h2>Nicht zugewiesene Studierende</h2>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              {unassignedStudents.length === 0 ? (
+                <p>Alle Studierenden wurden zugewiesen.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {unassignedStudents.map((student, idx) => (
+                    <div key={idx} style={{ 
+                      padding: '12px', 
+                      border: '1px solid #e5e7eb', 
+                      borderRadius: '6px',
+                      backgroundColor: '#f9fafb'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '8px', color: '#111827' }}>
+                        {student.studentName}
+                      </div>
+                      {student.assignments.length > 0 ? (
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                          <strong>Zuweisungen:</strong>
+                          <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
+                            {student.assignments.map((assignment, assignIdx) => (
+                              <li key={assignIdx}>
+                                {assignment.praktikumType} - <span style={{ 
+                                  color: assignment.status === 'CANCELLED' ? '#dc2626' : '#f59e0b',
+                                  fontWeight: '500'
+                                }}>{assignment.status}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.875rem', color: '#dc2626' }}>
+                          Keine Zuweisungen vorhanden
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowUnassignedModal(false)}>
+                Schließen
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setShowUnassignedModal(false);
+                  window.location.href = '/assignments';
+                }}
+              >
+                Zu Zuweisungen
+              </button>
             </div>
           </div>
         </div>
