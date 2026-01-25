@@ -39,6 +39,11 @@ public class ReoptimizationService {
     private final BaselineAssignmentRepository baselineAssignmentRepository;
     private final StudentInternshipDemandRepository demandRepository;
     private final InternshipAssignmentRepository assignmentRepository;
+    
+    // Thread-safe storage for budget information during reoptimization
+    private final ThreadLocal<Double> winterBudgetUsed = new ThreadLocal<>();
+    private final ThreadLocal<Integer> initialBudget = new ThreadLocal<>();
+    private final ThreadLocal<Integer> finalBudget = new ThreadLocal<>();
 
     /**
      * Re-optimize student assignments for a new semester using previous semester as baseline.
@@ -50,58 +55,67 @@ public class ReoptimizationService {
      * 4. Saves results as new baseline
      * 
      * @param schoolYear Academic year with semester notation (e.g., "SoSe2025")
-     * @param timeBudget Optional time budget for validation
+     * @param timeBudget Optional initial time budget
+     * @param uncompletedInternships Number of uncompleted internships from previous semester
      * @return Optimization solution with assignments
      */
     @Transactional
-    public StudentAssignmentSolution reoptimize(String schoolYear, Integer timeBudget) {
+    public StudentAssignmentSolution reoptimize(String schoolYear, Integer timeBudget, Integer uncompletedInternships) {
         
-        log.info("\n========== AUTOMATIC RE-OPTIMIZATION ==========");
-        log.info("Target Semester: {}", schoolYear);
-        
-        // Determine previous semester
-        String previousSemester = getPreviousSemester(schoolYear);
-        log.info("Previous Semester: {}", previousSemester);
-        log.info("==============================================\n");
-        
-        // STEP 1: Capture baseline from previous semester
-        log.info("STEP 1: Capturing baseline from {}", previousSemester);
-        captureBaselineFromPreviousSemester(previousSemester);
-        
-        // STEP 2: Run Phase 1 for target semester
-        log.info("\nSTEP 2: Running Phase 1 for {}", schoolYear);
-        runPhase1ForTargetSemester(schoolYear, timeBudget);
-        
-        // STEP 3: Load student configurations for target semester
-        log.info("\nSTEP 3: Loading student configurations for {}", schoolYear);
-        List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
-        
-        if (studentConfigs.isEmpty()) {
-            throw new IllegalStateException(
-                "No student configurations found for school year: " + schoolYear);
+        try {
+            // Store initial budget
+            initialBudget.set(timeBudget);
+            
+            log.info("\n========== AUTOMATIC RE-OPTIMIZATION ==========");
+            log.info("Target Semester: {}", schoolYear);
+            
+            // Determine previous semester
+            String previousSemester = getPreviousSemester(schoolYear);
+            log.info("Previous Semester: {}", previousSemester);
+            log.info("==============================================\n");
+            
+            // STEP 1: Capture baseline from previous semester
+            log.info("STEP 1: Capturing baseline from {}", previousSemester);
+            captureBaselineFromPreviousSemester(previousSemester);
+            
+            // STEP 2: Run Phase 1 for target semester
+            log.info("\nSTEP 2: Running Phase 1 for {}", schoolYear);
+            runPhase1ForTargetSemester(schoolYear, timeBudget, uncompletedInternships);
+            
+            // STEP 3: Load student configurations for target semester
+            log.info("\nSTEP 3: Loading student configurations for {}", schoolYear);
+            List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
+            
+            if (studentConfigs.isEmpty()) {
+                throw new IllegalStateException(
+                    "No student configurations found for school year: " + schoolYear);
+            }
+            
+            log.info("Loaded {} student configurations", studentConfigs.size());
+            
+            // STEP 4: Run Phase 2 re-optimization with baseline preservation
+            log.info("\nSTEP 4: Running Phase 2 re-optimization");
+            String semester = getSemesterType(schoolYear);
+            StudentAssignmentSolution solution = phase2OptimizationService.optimize(
+                studentConfigs,
+                schoolYear,
+                timeBudget,
+                semester
+            );
+            
+            log.info("Re-optimization completed with score: {}", solution.getScore());
+            
+            // STEP 5: Save results as baseline for this semester
+            log.info("\nSTEP 5: Saving results as baseline for {}", schoolYear);
+            saveAsBaseline(solution, schoolYear);
+            
+            log.info("\n========== RE-OPTIMIZATION COMPLETE ==========\n");
+            
+            return solution;
+        } finally {
+            // Note: Don't clear ThreadLocal here, controller needs to access values
+            // Controller will clear after building response
         }
-        
-        log.info("Loaded {} student configurations", studentConfigs.size());
-        
-        // STEP 4: Run Phase 2 re-optimization with baseline preservation
-        log.info("\nSTEP 4: Running Phase 2 re-optimization");
-        String semester = getSemesterType(schoolYear);
-        StudentAssignmentSolution solution = phase2OptimizationService.optimize(
-            studentConfigs,
-            schoolYear,
-            timeBudget,
-            semester
-        );
-        
-        log.info("Re-optimization completed with score: {}", solution.getScore());
-        
-        // STEP 5: Save results as baseline for this semester
-        log.info("\nSTEP 5: Saving results as baseline for {}", schoolYear);
-        saveAsBaseline(solution, schoolYear);
-        
-        log.info("\n========== RE-OPTIMIZATION COMPLETE ==========\n");
-        
-        return solution;
     }
     
     /**
@@ -145,13 +159,21 @@ public class ReoptimizationService {
     /**
      * Run Phase 1 for target semester.
      * Deletes existing Phase 1 results and runs fresh optimization.
-     * Uses the same budget as the previous semester for consistency.
+     * Calculates budget as: timeBudget - winterBudgetUsed + uncompletedInternships
+     * where winterBudgetUsed = sum of (0.5 * number of unique internship types per teacher)
      */
-    private void runPhase1ForTargetSemester(String schoolYear, Integer timeBudget) {
+    private void runPhase1ForTargetSemester(String schoolYear, Integer timeBudget, Integer uncompletedInternships) {
         // Delete old baseline assignments first (foreign key constraint)
         if (baselineAssignmentRepository.existsBySchoolYear(schoolYear)) {
             log.info("Deleting existing baseline assignments for {}", schoolYear);
             baselineAssignmentRepository.deleteBySchoolYear(schoolYear);
+        }
+        
+        // Delete old student internship demands first (foreign key to planned_internships)
+        List<StudentInternshipDemand> existingDemands = demandRepository.findBySchoolYear(schoolYear);
+        if (!existingDemands.isEmpty()) {
+            log.info("Deleting {} existing student internship demands for {}", existingDemands.size(), schoolYear);
+            demandRepository.deleteAll(existingDemands);
         }
         
         // Delete old internship assignments (foreign key to planned_internships)
@@ -179,20 +201,49 @@ public class ReoptimizationService {
             throw new IllegalStateException("No student configurations for " + schoolYear);
         }
         
-        // Use budget from previous semester's Phase 1 results
-        Integer budget = timeBudget;
-        if (budget == null) {
-            String previousSemester = getPreviousSemester(schoolYear);
-            List<PlannedInternship> previousInternships = plannedInternshipRepository.findBySchoolYear(previousSemester);
-            
-            if (!previousInternships.isEmpty()) {
-                budget = previousInternships.size();
-                log.info("Using budget from {}: {} internship slots (from Phase 1 results)", previousSemester, budget);
-            } else {
-                throw new IllegalStateException("Lehrerzuweisungen (Phase 1) fehlt für " + previousSemester + 
-                    ". Bitte führen Sie zuerst Phase 1 Optimierung für " + previousSemester + " aus.");
-            }
+        // Calculate budget using formula: timeBudget - winterBudgetUsed + uncompletedInternships
+        String previousSemester = getPreviousSemester(schoolYear);
+        List<PlannedInternship> previousInternships = plannedInternshipRepository.findBySchoolYear(previousSemester);
+        
+        if (previousInternships.isEmpty()) {
+            throw new IllegalStateException("Lehrerzuweisungen (Phase 1) fehlt für " + previousSemester + 
+                ". Bitte führen Sie zuerst Phase 1 Optimierung für " + previousSemester + " aus.");
         }
+        
+        // Calculate winter budget used by counting unique internship types per teacher (0.5 per type)
+        // Group by teacher and count distinct internship types
+        double winterBudgetUsed = previousInternships.stream()
+            .filter(pi -> pi.getAssignedTeacher() != null)
+            .filter(pi -> "PDP_I".equals(pi.getPraktikumType().name()) || "ZSP".equals(pi.getPraktikumType().name()))
+            .collect(Collectors.groupingBy(
+                pi -> pi.getAssignedTeacher().getTeacherId(),
+                Collectors.mapping(pi -> pi.getPraktikumType().name(), Collectors.toSet())
+            ))
+            .values()
+            .stream()
+            .mapToDouble(types -> types.size() * 0.5)
+            .sum();
+        
+        log.info("Winter budget used (PDP_I + ZSP): {} (counted as 0.5 per internship type per teacher)", winterBudgetUsed);
+        
+        // Store winter budget for response
+        this.winterBudgetUsed.set(winterBudgetUsed);
+        
+        // Apply formula: timeBudget - winterBudgetUsed + uncompletedInternships
+        Integer budget;
+        if (timeBudget != null) {
+            int uncompleted = (uncompletedInternships != null) ? uncompletedInternships : 0;
+            budget = (int) Math.ceil(timeBudget - winterBudgetUsed + uncompleted);
+            log.info("Budget calculation: {} (initial) - {} (winter used) + {} (uncompleted) = {}",
+                timeBudget, winterBudgetUsed, uncompleted, budget);
+        } else {
+            // Default to previous semester's total if no timeBudget provided
+            budget = previousInternships.size();
+            log.info("Using default budget from {}: {} internship slots", previousSemester, budget);
+        }
+        
+        // Store final budget for response
+        this.finalBudget.set(budget);
         
         // Run Phase 1
         InternshipSolution solution = phase1OptimizationService.optimize(
@@ -296,5 +347,37 @@ public class ReoptimizationService {
         List<BaselineAssignmentDto> baseline = baselineService.captureBaseline(request);
         
         log.info("Saved {} baseline assignments for future re-optimizations", baseline.size());
+    }
+    
+    /**
+     * Get the winter budget used during the last reoptimization.
+     * This value represents the budget consumed in winter (PDP_I + ZSP).
+     */
+    public Double getWinterBudgetUsed() {
+        return winterBudgetUsed.get();
+    }
+    
+    /**
+     * Get the initial budget provided for the last reoptimization.
+     */
+    public Integer getInitialBudget() {
+        return initialBudget.get();
+    }
+    
+    /**
+     * Get the final calculated budget for the last reoptimization.
+     */
+    public Integer getFinalBudget() {
+        return finalBudget.get();
+    }
+    
+    /**
+     * Clear the thread-local budget values after use.
+     * Should be called by controller after building response.
+     */
+    public void clearBudgetInfo() {
+        winterBudgetUsed.remove();
+        initialBudget.remove();
+        finalBudget.remove();
     }
 }

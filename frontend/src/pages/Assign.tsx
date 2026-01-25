@@ -111,6 +111,14 @@ export default function InternshipAssignments() {
   // Reoptimization state
   const [reoptimizing, setReoptimizing] = useState(false);
   const [copyingConfigs, setCopyingConfigs] = useState(false);
+  const [reoptimizationResults, setReoptimizationResults] = useState<{
+    studentsAssigned: number;
+    totalDemands: number;
+    assignmentsPreserved: number;
+    winterBudgetUsed: number;
+    initialBudget: number;
+    finalBudget: number;
+  } | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const [validationResult, setValidationResult] = useState<any>(null);
@@ -145,6 +153,8 @@ export default function InternshipAssignments() {
       fetchStudentConfigsByYear();
       fetchPlannedInternships(); // Load saved teacher assignments
       fetchStudentAssignments(); // Load saved student assignments
+      // Clear reoptimization results when changing year
+      setReoptimizationResults(null);
     }
   }, [selectedYear]);
 
@@ -650,7 +660,11 @@ const handleConfirmNewYear = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
-        body: JSON.stringify({ schoolYear: selectedYear })
+        body: JSON.stringify({ 
+          schoolYear: selectedYear,
+          timeBudget: timeBudget,
+          uncompletedInternships: uncompletedInternships
+        })
       });
 
       if (!response.ok) {
@@ -659,13 +673,24 @@ const handleConfirmNewYear = () => {
       }
 
       const result = await response.json();
-      setSuccess(`Reoptimization completed! Preserved: ${result.preservedAssignments}, Reassigned: ${result.reassignedCount}`);
+      
+      // Store results persistently
+      setReoptimizationResults({
+        studentsAssigned: result.studentsAssigned,
+        totalDemands: result.totalDemands,
+        assignmentsPreserved: result.assignmentsPreserved,
+        winterBudgetUsed: result.winterBudgetUsed,
+        initialBudget: result.initialBudget,
+        finalBudget: result.finalBudget
+      });
+      
+      setSuccess('Reoptimization completed successfully!');
       
       // Refresh Phase 1 and Phase 2 assignments
       await fetchPlannedInternships();
       await fetchStudentAssignments();
       
-      setTimeout(() => setSuccess(null), 5000);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reoptimization failed");
       setTimeout(() => setError(null), 5000);
@@ -1195,6 +1220,40 @@ const handleConfirmNewYear = () => {
                 </div>
               </div>
             </div>
+
+            {/* Reoptimization Results Panel */}
+            {reoptimizationResults && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px 16px',
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '24px',
+                  fontSize: '0.9em',
+                  flexWrap: 'wrap'
+                }}>
+                  <span style={{color: '#15803d'}}>
+                    <strong>Students:</strong> {reoptimizationResults.studentsAssigned}/{reoptimizationResults.totalDemands}
+                  </span>
+                  <span style={{color: '#3b82f6'}}>
+                    <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}
+                  </span>
+                  <span style={{color: '#0ea5e9'}}>
+                    <strong>Initial Budget:</strong> {reoptimizationResults.initialBudget}
+                  </span>
+                  <span style={{color: '#f59e0b'}}>
+                    <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
+                  </span>
+                  <span style={{color: '#10b981'}}>
+                    <strong>Final Budget:</strong> {reoptimizationResults.finalBudget}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Optimization Progress Bar */}
             {assigningPhase1 && (

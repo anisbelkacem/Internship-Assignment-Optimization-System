@@ -72,11 +72,15 @@ public class ReoptimizationController {
         // Run re-optimization
         StudentAssignmentSolution solution = reoptimizationService.reoptimize(
             request.getSchoolYear(),
-            request.getTimeBudget()
+            request.getTimeBudget(),
+            request.getUncompletedInternships()
         );
         
         // Convert to response DTO
         ReoptimizationResponse response = buildResponse(solution, request);
+        
+        // Clear budget info from ThreadLocal after building response
+        reoptimizationService.clearBudgetInfo();
         
         log.info("Re-optimization completed: {} students assigned, score: {}", 
             response.getStudentsAssigned(), response.getScore());
@@ -145,6 +149,9 @@ public class ReoptimizationController {
             .totalDemands(demands.size())
             .assignments(assignments)
             .message(message)
+            .winterBudgetUsed(reoptimizationService.getWinterBudgetUsed())
+            .initialBudget(reoptimizationService.getInitialBudget())
+            .finalBudget(reoptimizationService.getFinalBudget())
             .build();
     }
     

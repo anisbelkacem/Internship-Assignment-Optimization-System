@@ -25,4 +25,10 @@ public class ReoptimizationRequest {
      * Optional time budget for optimization in seconds.
      */
     private Integer timeBudget;
+    
+    /**
+     * Number of uncompleted internships from the previous semester (winter).
+     * These internships were not completed and need to be added to the summer semester budget.
+     */
+    private Integer uncompletedInternships;
 }

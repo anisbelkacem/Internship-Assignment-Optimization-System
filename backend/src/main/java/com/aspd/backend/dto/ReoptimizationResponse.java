@@ -55,4 +55,20 @@ public class ReoptimizationResponse {
      * Message describing the re-optimization result
      */
     private String message;
+    
+    /**
+     * Budget used in winter semester (PDP_I + ZSP)
+     * Calculated as 0.5 per unique internship type per teacher
+     */
+    private Double winterBudgetUsed;
+    
+    /**
+     * Initial budget provided for optimization
+     */
+    private Integer initialBudget;
+    
+    /**
+     * Final budget calculated after formula: initialBudget - winterBudgetUsed + uncompletedInternships
+     */
+    private Integer finalBudget;
 }
