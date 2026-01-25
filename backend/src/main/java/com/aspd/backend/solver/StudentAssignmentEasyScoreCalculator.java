@@ -19,9 +19,9 @@ import java.util.stream.Collectors;
  * - Type/school-type matching is guaranteed by problem structure
  * - PDP internships have null courses, SFP courses are fixed, ZSP courses assigned
  * 
- * Phase 2 focus:
- * - Hard: Capacity constraints, all students assigned, SFP course match
- * - Soft: ZSP course preferences, capacity balance, distance for PDP, baseline preservation
+ * Phase 2 optimization:
+ * - Hard: Every student assigned, every internship has ≥1 student, capacity respected
+ * - Soft: Minimize distance from students to their assigned school
  */
 public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator<StudentAssignmentSolution, HardSoftScore> {
 
@@ -93,12 +93,8 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         return penalty;
     }
 
-    /**
-     * Soft constraints for optimization:
-     * - ZSP course preferences (soft)
-     * - Capacity balance (soft)
-     * - Distance preference for PDP (soft)
-     * - Baseline preservation (soft)
+    /*
+     * Soft constraints for optimization.
      */
     private int checkSoftConstraints(StudentInternshipDemand demand, PlannedInternship internship) {
         int reward = 0;
@@ -108,11 +104,6 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         // For ZSP, reward matching student course preferences with internship course
         if (internshipType == PraktikumType.ZSP && internship.getCourse() != null) {
             reward += evaluateZspCourseMatch(demand, internship.getCourse());
-        }
-        
-        // For PDP, prefer closer schools (zone-based distance penalty)
-        if ((internshipType == PraktikumType.PDP_I || internshipType == PraktikumType.PDP_II) && internship.getSchool() != null) {
-            reward += evaluateDistancePreference(demand, internship);
         }
         
         // Baseline preservation: reward keeping existing assignments
