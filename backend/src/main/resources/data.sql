@@ -52,19 +52,19 @@ INSERT INTO `courses` (`id`, `name`, `active`) VALUES
 -- SCHOOLS - Expanded to 10 schools across 3 zones
 -- ============================================================================
 INSERT INTO `schools` (`active`, `oepnv`, `id`, `address`, `name`, `zone`, `type`) VALUES
-(1, 1, '15', '123 Main St', 'Central School', '1', 'MS'),
-(1, 0, '16', '456 Elm St', 'North High', '2', 'GS'),
-(1, 1, '17', '789 Oak St', 'East Academy', '3', 'MS'),
-(1, 1, '18', '321 Maple Ave', 'West Elementary', '1', 'GS'),
-(1, 0, '19', '654 Pine Rd', 'South Middle School', '2', 'MS'),
-(1, 1, '20', '987 Cedar Blvd', 'Downtown Academy', '3', 'GS'),
-(1, 1, '21', '147 Birch Ln', 'Riverside School', '1', 'MS'),
-(1, 0, '22', '258 Walnut St', 'Hillside Elementary', '2', 'GS'),
-(1, 1, '23', '369 Spruce Dr', 'Lakeside Middle', '3', 'MS'),
-(1, 1, '24', '741 Ash Ct', 'Harbor View School', '1', 'GS'),
-(1, 1, '101', '100 Test St', 'Test GS School Zone 1', '1', 'GS'),
-(1, 1, '102', '200 Test Ave', 'Test MS School Zone 2', '2', 'MS'),
-(1, 1, '103', '300 Test Blvd', 'Test GS School Zone 2', '2', 'GS');
+(1, 'FOUR_A', 15, '123 Main St', 'Central School', '1', 'MS'),
+(1, 'NA', 16, '456 Elm St', 'North High', '2', 'GS'),
+(1, 'FOUR_B', 17, '789 Oak St', 'East Academy', '3', 'MS'),
+(1, 'FOUR_A', 18, '321 Maple Ave', 'West Elementary', '1', 'GS'),
+(1, 'NA', 19, '654 Pine Rd', 'South Middle School', '2', 'MS'),
+(1, 'FOUR_B', 20, '987 Cedar Blvd', 'Downtown Academy', '3', 'GS'),
+(1, 'FOUR_A', 21, '147 Birch Ln', 'Riverside School', '1', 'MS'),
+(1, 'NA', 22, '258 Walnut St', 'Hillside Elementary', '2', 'GS'),
+(1, 'FOUR_B', 23, '369 Spruce Dr', 'Lakeside Middle', '3', 'MS'),
+(1, 'FOUR_A', 24, '741 Ash Ct', 'Harbor View School', '1', 'GS'),
+(1, 'FOUR_A', 101, '100 Test St', 'Test GS School Zone 1', '1', 'GS'),
+(1, 'FOUR_B', 102, '200 Test Ave', 'Test MS School Zone 2', '2', 'MS'),
+(1, 'FOUR_A', 103, '300 Test Blvd', 'Test GS School Zone 2', '2', 'GS');
 
 -- ============================================================================
 -- TEACHERS - Now using course IDs with 'active' field set to TRUE
@@ -131,63 +131,63 @@ INSERT INTO students (birth_date, matriculation_nbr, oriented, registred, city, 
 -- ============================================================================
 -- TEACHER PLANNING CONFIGURATIONS (WiSe2025) - WINTER SEMESTER
 -- ============================================================================
-INSERT INTO teacher_pl_configs (teacher_id, school_year, max_praktika_per_year, total_hours_credit, availability_status, active) VALUES
-(1001, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1002, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1003, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1004, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1005, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1006, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1007, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1008, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1009, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1010, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1011, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1012, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1013, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1014, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1015, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1016, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1017, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1018, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1019, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1020, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1021, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1022, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1023, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1024, 'WiSe2025', 3, 4, 'AVAILABLE', 1),
-(1025, 'WiSe2025', 3, 4, 'AVAILABLE', 1);
+INSERT INTO teacher_pl_configs (teacher_id, school_year, max_praktika_per_year, total_hours_credit, active) VALUES
+(1001, 'WiSe2025', 3, 4, 1),
+(1002, 'WiSe2025', 3, 4, 1),
+(1003, 'WiSe2025', 3, 4, 1),
+(1004, 'WiSe2025', 3, 4, 1),
+(1005, 'WiSe2025', 3, 4, 1),
+(1006, 'WiSe2025', 3, 4, 1),
+(1007, 'WiSe2025', 3, 4, 1),
+(1008, 'WiSe2025', 3, 4, 1),
+(1009, 'WiSe2025', 3, 4, 1),
+(1010, 'WiSe2025', 3, 4, 1),
+(1011, 'WiSe2025', 3, 4, 1),
+(1012, 'WiSe2025', 3, 4, 1),
+(1013, 'WiSe2025', 3, 4, 1),
+(1014, 'WiSe2025', 3, 4, 1),
+(1015, 'WiSe2025', 3, 4, 1),
+(1016, 'WiSe2025', 3, 4, 1),
+(1017, 'WiSe2025', 3, 4, 1),
+(1018, 'WiSe2025', 3, 4, 1),
+(1019, 'WiSe2025', 3, 4, 1),
+(1020, 'WiSe2025', 3, 4, 1),
+(1021, 'WiSe2025', 3, 4, 1),
+(1022, 'WiSe2025', 3, 4, 1),
+(1023, 'WiSe2025', 3, 4, 1),
+(1024, 'WiSe2025', 3, 4, 1),
+(1025, 'WiSe2025', 3, 4, 1);
 
 -- ============================================================================
 -- TEACHER PLANNING CONFIGURATIONS (SoSe2025) - SUMMER SEMESTER  
 -- MINIMAL CHANGES: Only 1 teacher drops out for testing
 -- ============================================================================
-INSERT INTO teacher_pl_configs (teacher_id, school_year, max_praktika_per_year, total_hours_credit, availability_status, active) VALUES
-(1001, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
+INSERT INTO teacher_pl_configs (teacher_id, school_year, max_praktika_per_year, total_hours_credit, active) VALUES
+(1001, 'SoSe2025', 3, 4, 1),
 (1002, 'SoSe2025', 3, 4, 'UNAVAILABLE', 0),  -- DROPPED OUT (illness) - only dropout for testing
-(1003, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1004, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1005, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1006, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1007, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1008, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1009, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1010, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1011, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1012, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1013, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1014, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1015, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1016, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1017, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1018, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1019, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1020, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1021, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1022, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1023, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1024, 'SoSe2025', 3, 4, 'AVAILABLE', 1),
-(1025, 'SoSe2025', 3, 4, 'AVAILABLE', 1);
+(1003, 'SoSe2025', 3, 4, 1),
+(1004, 'SoSe2025', 3, 4, 1),
+(1005, 'SoSe2025', 3, 4, 1),
+(1006, 'SoSe2025', 3, 4, 1),
+(1007, 'SoSe2025', 3, 4, 1),
+(1008, 'SoSe2025', 3, 4, 1),
+(1009, 'SoSe2025', 3, 4, 1),
+(1010, 'SoSe2025', 3, 4, 1),
+(1011, 'SoSe2025', 3, 4, 1),
+(1012, 'SoSe2025', 3, 4, 1),
+(1013, 'SoSe2025', 3, 4, 1),
+(1014, 'SoSe2025', 3, 4, 1),
+(1015, 'SoSe2025', 3, 4, 1),
+(1016, 'SoSe2025', 3, 4, 1),
+(1017, 'SoSe2025', 3, 4, 1),
+(1018, 'SoSe2025', 3, 4, 1),
+(1019, 'SoSe2025', 3, 4, 1),
+(1020, 'SoSe2025', 3, 4, 1),
+(1021, 'SoSe2025', 3, 4, 1),
+(1022, 'SoSe2025', 3, 4, 1),
+(1023, 'SoSe2025', 3, 4, 1),
+(1024, 'SoSe2025', 3, 4, 1),
+(1025, 'SoSe2025', 3, 4, 1);
 
 -- ============================================================================
 -- TEACHER SUBJECT SPECIALIZATIONS (WiSe2025) - WINTER SEMESTER
