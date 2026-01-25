@@ -6,36 +6,6 @@ import { useAuth } from "../contexts/AuthContext";
 const Header: FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      
-      // Check more specific terms first to avoid substring matches
-      if (query.includes('schulen') || query === 'schule') {
-        navigate('/schools');
-      } else if (query.includes('schüler') || query.includes('student')) {
-        navigate('/students');
-      } else if (query.includes('lehrer') || query.includes('pl') || query.includes('praxis')) {
-        navigate('/pls');
-      } else if (query.includes('kurs') || query.includes('fach')) {
-        navigate('/courses');
-      } else if (query.includes('praktikum') || query.includes('planung') || query.includes('zuwei')) {
-        navigate('/assign');
-      } else if (query.includes('bericht')) {
-        navigate('/reports');
-      } else if (query.includes('audit') || query.includes('log') || query.includes('protokoll')) {
-        navigate('/audit-logs');
-      } else if (query.includes('dashboard') || query.includes('start') || query.includes('home')) {
-        navigate('/');
-      } else {
-        navigate('/students');
-      }
-      
-      setSearchQuery("");
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -73,28 +43,6 @@ const Header: FC = () => {
           </div>
 
           <div className="topbar-right">
-            <div className="search-box">
-              <svg className="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="0.6mm" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <input 
-                className="topbar-search" 
-                placeholder="Suche..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearch}
-              />
-            </div>
-
-            <div className="topbar-divider" />
-
-            <button className="icon-btn" aria-label="Notifications">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#6b7280" strokeWidth="1.5" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-              </svg>
-            </button>
-
             <div className="user-chip" ref={userChipRef}>
               <div className="user-chip__avatar">
                 <div className="avatar">
@@ -131,7 +79,7 @@ const Header: FC = () => {
                     </div>
                   </div>
 
-                  <button className="user-menu__link" role="menuitem">View Account</button>
+                  <button className="user-menu__link" role="menuitem" onClick={() => { navigate('/settings'); setMenuOpen(false); }}>View Account</button>
 
                   <button className="user-menu__item" onClick={handleLogout} role="menuitem">Logout</button>
                 </div>
