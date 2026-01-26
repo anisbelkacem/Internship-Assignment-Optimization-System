@@ -459,7 +459,7 @@ const Header: FC = () => {
               {menuOpen && (
                 <div className="user-menu" role="menu">
                   <div className="user-menu__header">
-                    <div className="org-name">Passau University</div>
+                    <div className="org-name">Universität Passau</div>
                   </div>
                   
                   <div className="user-menu__profile">
@@ -476,9 +476,9 @@ const Header: FC = () => {
                     </div>
                   </div>
 
-                  <button className="user-menu__link" role="menuitem" onClick={() => { navigate('/settings'); setMenuOpen(false); }} style={{ outline: 'none' }}>View Account</button>
+                  <button className="user-menu__link" role="menuitem" onClick={() => { navigate('/settings'); setMenuOpen(false); }} style={{ outline: 'none' }}>Konto anzeigen</button>
 
-                  <button className="user-menu__item" onClick={handleLogout} role="menuitem" style={{ outline: 'none' }}>Logout</button>
+                  <button className="user-menu__item" onClick={handleLogout} role="menuitem" style={{ outline: 'none' }}>Abmelden</button>
                 </div>
               )}
             </div>

@@ -449,7 +449,7 @@ const Dashboard: React.FC = () => {
       {/* Current Year Status */}
       <div className="dashboard-top">
         <div className="semester-header">
-          <h1>{selectedYear ? `${selectedYear} — Mission Control` : 'Mission Control'}</h1>
+          <h1>{selectedYear ? `${selectedYear} — Kontrollzentrum` : 'Kontrollzentrum'}</h1>
           <div className="semester-menu-container" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
             <select
               className="form-select-small year-selector"
@@ -457,7 +457,7 @@ const Dashboard: React.FC = () => {
               onChange={handleYearChange}
               style={{width: '150px'}}
             >
-              <option value="">Select Year</option>
+              <option value="">Jahr auswählen</option>
               {availableYears.map((year) => (
                 <option key={year} value={year}>
                   {year}
@@ -467,11 +467,16 @@ const Dashboard: React.FC = () => {
             <button 
               className="btn btn-primary"
               onClick={handleCreateNewYear}
-              style={{whiteSpace: 'nowrap'}}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              style={{
+                whiteSpace: 'nowrap',
+                backgroundColor: '#3d5a6d',
+                border: 'none',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d4a5d'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3d5a6d'}
             >
-              New Year
+              Neues Jahr
             </button>
           </div>
         </div>
@@ -499,7 +504,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="status-card primary">
             <div className="card-content">
-              <p>Total PLs</p>
+              <p>Gesamt PLs</p>
               <h3>{gsPlCount + msPlCount}</h3>
               <p className="card-subtext">GS + MS Betreuer</p>
             </div>
@@ -598,14 +603,14 @@ const Dashboard: React.FC = () => {
           {/* Constraint Violations */}
           <section className="section-container" id="constraint-violations">
             <div className="section-header">
-              <h2>⛔ Constraint Violations</h2>
+              <h2>⛔ Regelwerkverstöße</h2>
             </div>
             <div className="card-row">
               <div className="status-card warning">
                 <div className="card-header-row">
                   <span className="card-icon" style={{ fontSize: '22px' }}>❌</span>
                   <div className="card-content">
-                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Forbidden Combinations</h3>
+                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Verbotene Kombinationen</h3>
                     <p style={{ fontSize: '13px' }}>
                       {loadingActionItems ? (
                         <span style={{ opacity: 0.5 }}>Laden...</span>
@@ -621,7 +626,7 @@ const Dashboard: React.FC = () => {
                   disabled={loadingActionItems || forbiddenCombinationsCount === 0}
                   style={{ fontSize: '15px' }}
                 >
-                  Details
+                  Anzeigen
                 </button>
               </div>
 
@@ -629,7 +634,7 @@ const Dashboard: React.FC = () => {
                 <div className="card-header-row">
                   <span className="card-icon" style={{ fontSize: '22px' }}>🚫</span>
                   <div className="card-content">
-                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Zone Violations</h3>
+                    <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Zonen-Verstöße</h3>
                     <p style={{ fontSize: '13px' }}>
                       {loadingActionItems ? (
                         <span style={{ opacity: 0.5 }}>Laden...</span>
@@ -645,7 +650,7 @@ const Dashboard: React.FC = () => {
                   disabled={loadingActionItems || zoneViolationsCount === 0}
                   style={{ fontSize: '15px' }}
                 >
-                  Details
+                  Anzeigen
                 </button>
               </div>
             </div>
@@ -734,7 +739,7 @@ const Dashboard: React.FC = () => {
                             }}>
                               {total}
                               <span style={{ fontSize: '9px', fontWeight: '500', color: '#6b7280', marginTop: '0px' }}>
-                                Total
+                                Gesamt
                               </span>
                             </div>
                           </div>
@@ -1449,13 +1454,13 @@ const Dashboard: React.FC = () => {
       {showNewYearModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Create New Planning Year</h2>
-            <p>Enter the academic year (e.g., 2026)</p>
+            <h2>Neues Planungsjahr erstellen</h2>
+            <p>Geben Sie das akademische Jahr ein (z.B. 2026)</p>
             <div style={{marginBottom: '20px'}}>
               <input
                 type="text"
                 className="student-config-input"
-                placeholder="e.g., 2026"
+                placeholder="z.B. 2026"
                 value={newYearInput}
                 onChange={(e) => setNewYearInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -1474,14 +1479,24 @@ const Dashboard: React.FC = () => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
                 }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #d1d5db',
+                  color: '#374151'
+                }}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-primary"
                 onClick={handleConfirmNewYear}
+                style={{
+                  backgroundColor: '#3d5a6d',
+                  border: 'none',
+                  color: 'white'
+                }}
               >
-                Create Year
+                Jahr erstellen
               </button>
             </div>
           </div>

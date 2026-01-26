@@ -236,7 +236,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
 
     try {
       await studentConfigService.deleteConfig(deletingStudentConfigId);
-      setSuccess("Student configuration deleted successfully!");
+      setSuccess("Studentenkonfiguration erfolgreich gelöscht!");
       fetchStudentConfigsByYear();
       
       // Refresh years list in case the last config for a year was deleted
@@ -280,7 +280,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
   try {
     await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
-    setSuccess("Teacher configuration deleted successfully!");
+    setSuccess("Lehrerkonfiguration erfolgreich gelöscht!");
     await fetchInitialData(); // Refresh teachers with updated configs
     setTimeout(() => setSuccess(null), 3000);
   } catch (err) {
@@ -294,7 +294,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   // Phase 1 Optimization Handler
   const handlePhase1Assignment = async () => {
     if (!selectedYear) {
-      setError("Please select a school year first");
+      setError("Bitte wählen Sie zuerst ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -303,14 +303,14 @@ const handleConfirmDeleteTeacherConfig = async () => {
     
     try {
       const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
-      setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
+      setSuccess(`Phase 1 Optimierung abgeschlossen! ${result.assignedCount}/${result.totalPlannedInternships} Praktika zugewiesen.`);
       setTimeout(() => setSuccess(null), 5000);
       
       // Fetch saved results from database
       await fetchPlannedInternships();
       setShowTeacherAssignments(true);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Optimization failed";
+      const errorMsg = err instanceof Error ? err.message : "Optimierung fehlgeschlagen";
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
     } finally {
@@ -345,7 +345,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleDeleteAllAssignments = async () => {
     if (!selectedYear) return;
     
-    if (!confirm(`Delete all teacher assignments for ${selectedYear}?`)) {
+    if (!confirm(`Alle Lehrerzuweisungen für ${selectedYear} löschen?`)) {
       return;
     }
 
@@ -353,7 +353,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       await internshipAssignmentService.deleteAllPlannedInternships(selectedYear);
       setPhase1Result(null);
       setShowTeacherAssignments(false);
-      setSuccess("All assignments deleted successfully!");
+      setSuccess("Alle Zuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete assignments");
@@ -364,7 +364,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   // Phase 2: Student Assignment Optimization
   const handleAssignPhase2 = async () => {
     if (!selectedYear) {
-      setError("Please select a school year");
+      setError("Bitte wählen Sie ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -375,15 +375,15 @@ const handleConfirmDeleteTeacherConfig = async () => {
       const result = await internshipAssignmentService.optimizePhase2(selectedYear);
       setPhase2Result(result);
       setStudentAssignments(result.assignments);
-      setSuccess(`Phase 2 optimization complete! Assigned ${result.assignedStudents}/${result.totalStudents} students.`);
+      setSuccess(`Phase 2 Optimierung abgeschlossen! ${result.assignedStudents}/${result.totalStudents} Studierende zugewiesen.`);
       setTimeout(() => setSuccess(null), 5000);
       setShowStudentAssignments(true);
     } catch (err: any) {
       console.error("Phase 2 optimization error:", err);
-      let errorMsg = "Phase 2 optimization failed";
+      let errorMsg = "Phase 2 Optimierung fehlgeschlagen";
       
       if (err.status === 401 || err.status === 403) {
-        errorMsg = "Authentication error: Please log in again";
+        errorMsg = "Authentifizierungsfehler: Bitte erneut anmelden";
       } else if (err.message) {
         errorMsg = err.message;
       }
@@ -424,7 +424,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleDeleteAllStudentAssignments = async () => {
     if (!selectedYear) return;
     
-    if (!confirm(`Delete all student assignments for ${selectedYear}?`)) {
+    if (!confirm(`Alle Studentenzuweisungen für ${selectedYear} löschen?`)) {
       return;
     }
 
@@ -433,7 +433,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setPhase2Result(null);
       setStudentAssignments([]);
       setShowStudentAssignments(false);
-      setSuccess("All student assignments deleted successfully!");
+      setSuccess("Alle Studentenzuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete student assignments");
@@ -455,7 +455,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleSaveEditInternship = async () => {
     handleCloseEditInternshipModal();
     await fetchPlannedInternships();
-    setSuccess("Assignment updated successfully!");
+    setSuccess("Zuweisung erfolgreich aktualisiert!");
     setTimeout(() => setSuccess(null), 3000);
   };
 
@@ -508,11 +508,11 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setEditedAssignmentIds(newEditedIds);
 
       await fetchStudentAssignments();
-      setSuccess("Student assignment cancelled successfully!");
+      setSuccess("Studentenzuweisung erfolgreich abgesagt!");
       setTimeout(() => setSuccess(null), 3000);
       handleCloseEditAssignmentModal();
     } catch (err: any) {
-      setError(err?.message || "Failed to cancel assignment");
+      setError(err?.message || "Zuweisung konnte nicht abgesagt werden");
       setTimeout(() => setError(null), 3000);
     }
     return;
@@ -549,6 +549,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       originalAssignment.status !== editingAssignment.status;
 
     // 1) PATCH status first (reliable)
+    console.log("Updating status to:", editingAssignment.status);
     await internshipAssignmentService.updateAssignmentStatus(
       editingAssignment.id,
       editingAssignment.status
@@ -557,14 +558,15 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // 2) If teacher/school changed, attempt PUT update (backend might ignore teacher/school,
     //    but status was already updated via PATCH)
     if (originalAssignment && (teacherChanged || schoolChanged)) {
-      console.log("Teacher or school changed, attempting full update...");
+      const updatePayload = {
+        teacherId: editingAssignment.teacherId || null,
+        schoolId: editingAssignment.schoolId || null,
+        status: editingAssignment.status,
+      };
+      console.log("Teacher or school changed, attempting full update with payload:", updatePayload);
       await internshipAssignmentService.updateStudentAssignment(
         editingAssignment.id,
-        {
-          teacherId: editingAssignment.teacherId || null,
-          schoolId: editingAssignment.schoolId || null,
-          status: editingAssignment.status,
-        },
+        updatePayload,
         { force }
       );
     }
@@ -606,12 +608,20 @@ const handleConfirmDeleteTeacherConfig = async () => {
     await fetchStudentAssignments();
     console.log("Student assignments refreshed");
 
-    setSuccess("Student assignment updated successfully!");
+    setSuccess("Studentenzuweisung erfolgreich aktualisiert!");
     setTimeout(() => setSuccess(null), 3000);
     handleCloseEditAssignmentModal();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Update error:", err);
+    console.error("Error details:", {
+      status: err?.status,
+      message: err?.message,
+      response: err?.response,
+      data: err?.data,
+      hardViolations: err?.hardViolations,
+      softViolations: err?.softViolations
+    });
 
     // backend validation (AssignmentValidationException -> ValidationResult) comes here
     if (err?.status === 400 && err?.hardViolations) {
@@ -624,8 +634,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // fallback generic error
     setValidationResult(null);
     setShowForceSaveAssignment(false);
-    setError(err?.message || "Failed to update assignment");
-    setTimeout(() => setError(null), 3000);
+    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Failed to update assignment";
+    setError(errorMessage);
+    setTimeout(() => setError(null), 5000);
   }
 };
 
@@ -648,7 +659,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       console.log('Validation result:', result);
       await fetchStudentAssignments();
       console.log('Student assignments refreshed');
-      setSuccess("Assignment validated successfully!");
+      setSuccess("Zuweisung erfolgreich bestätigt!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Validation error:', err);
@@ -685,7 +696,7 @@ const handleConfirmNewYear = () => {
   
   setShowNewYearModal(false);
   setNewYearInput('');
-  setSuccess(`New planning year "${newYearInput.trim()}" created successfully!`);
+  setSuccess(`Neues Planungsjahr "${newYearInput.trim()}" erfolgreich erstellt!`);
   setTimeout(() => setSuccess(null), 3000);
 };
 
@@ -1045,7 +1056,7 @@ const handleConfirmNewYear = () => {
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
-            New Year
+            Neues Jahr
           </button>
         </div>
       </div>
@@ -1135,9 +1146,9 @@ const handleConfirmNewYear = () => {
                   {phase1Result && (
                     <div style={{marginBottom: '16px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px'}}>
                       <div style={{display: 'flex', gap: '24px', fontSize: '0.9em'}}>
-                        <span><strong>Total Internships:</strong> {phase1Result.totalPlannedInternships}</span>
-                        <span style={{color: '#15803d'}}><strong>Assigned:</strong> {phase1Result.assignedCount}</span>
-                        <span style={{color: '#dc2626'}}><strong>Unassigned:</strong> {phase1Result.unassignedCount}</span>
+                        <span><strong>Praktika insgesamt:</strong> {phase1Result.totalPlannedInternships}</span>
+                        <span style={{color: '#15803d'}}><strong>Zugewiesen:</strong> {phase1Result.assignedCount}</span>
+                        <span style={{color: '#dc2626'}}><strong>Nicht zugewiesen:</strong> {phase1Result.unassignedCount}</span>
                       </div>
                     </div>
                   )}
