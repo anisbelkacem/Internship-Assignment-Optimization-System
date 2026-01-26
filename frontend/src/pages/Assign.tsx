@@ -111,10 +111,12 @@ export default function InternshipAssignments() {
   // Reoptimization state
   const [reoptimizing, setReoptimizing] = useState(false);
   const [copyingConfigs, setCopyingConfigs] = useState(false);
+  const [showPreservedStudents, setShowPreservedStudents] = useState(false);
   const [reoptimizationResults, setReoptimizationResults] = useState<{
     studentsAssigned: number;
     totalDemands: number;
     assignmentsPreserved: number;
+    preservedStudentNames?: string[];
     winterBudgetUsed: number;
     initialBudget: number;
     finalBudget: number;
@@ -187,13 +189,14 @@ export default function InternshipAssignments() {
       ]);
       
       // Calculate preservation: how many unique students kept assignments
-      const preserved = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
       
       // Always set results to show preservation
       setReoptimizationResults({
         studentsAssigned: summerAssignments.length,
         totalDemands: summerAssignments.length,
         assignmentsPreserved: preserved,
+        preservedStudentNames: preservedStudentNames,
         winterBudgetUsed: 0,
         initialBudget: summerAssignments.length, // Use total summer assignments as denominator
         finalBudget: summerAssignments.length,
@@ -219,28 +222,41 @@ export default function InternshipAssignments() {
   const calculateStudentAssignmentPreservation = (
     winterAssignments: AssignmentDto[],
     summerAssignments: AssignmentDto[]
-  ): number => {
-    // Build set of winter assignments by key: student/teacher/course
-    const winterAssignmentKeys = new Set<string>();
+  ): { preserved: number; preservedStudentNames: string[] } => {
+    // Build map of winter assignments by key: student/teacher/course/praktikumType
+    const winterAssignmentKeys = new Map<string, AssignmentDto>();
     winterAssignments.forEach(assignment => {
-      if (assignment.studentName && assignment.teacherName && assignment.course) {
-        const key = `${assignment.studentName}/${assignment.teacherName}/${assignment.course}`;
-        winterAssignmentKeys.add(key);
+      if (assignment.studentName && assignment.teacherName) {
+        // Include praktikumType and handle cases where course might be null
+        const courseKey = assignment.course || assignment.praktikumType;
+        const key = `${assignment.studentName}/${assignment.teacherName}/${courseKey}`;
+        winterAssignmentKeys.set(key, assignment);
       }
     });
     
+    console.log('Winter assignments total:', winterAssignments.length);
+    console.log('Winter keys created:', winterAssignmentKeys.size);
+    console.log('Summer assignments total:', summerAssignments.length);
+    
     // For each summer assignment, check if exact match exists in winter
     let preserved = 0;
-    summerAssignments.forEach((assignment) => {
-      if (assignment.studentName && assignment.teacherName && assignment.course) {
-        const key = `${assignment.studentName}/${assignment.teacherName}/${assignment.course}`;
+    const preservedStudentNames: string[] = [];
+    summerAssignments.forEach((assignment, idx) => {
+      if (assignment.studentName && assignment.teacherName) {
+        const courseKey = assignment.course || assignment.praktikumType;
+        const key = `${assignment.studentName}/${assignment.teacherName}/${courseKey}`;
         if (winterAssignmentKeys.has(key)) {
           preserved++;
+          // Add student name with praktikum type in parentheses
+          preservedStudentNames.push(`${assignment.studentName} (${assignment.praktikumType})`);
+        } else if (idx < 5) {
+          console.log(`Not preserved [${idx}]:`, key);
         }
       }
     });
     
-    return preserved;
+    console.log('Preserved:', preserved, 'out of', summerAssignments.length);
+    return { preserved, preservedStudentNames };
   };
 
 const fetchInitialData = async () => {
@@ -856,13 +872,14 @@ const handleConfirmNewYear = () => {
       
       // Calculate preservation in frontend using student assignments
       const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
-      const preserved = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
       
       // Store results persistently with frontend-calculated preservation
       setReoptimizationResults({
         studentsAssigned: result.studentsAssigned,
         totalDemands: result.totalDemands,
         assignmentsPreserved: preserved,
+        preservedStudentNames: preservedStudentNames,
         winterBudgetUsed: result.winterBudgetUsed,
         initialBudget: summerAssignments.length, // Use total summer assignments as denominator
         finalBudget: summerAssignments.length,
@@ -1413,7 +1430,7 @@ const handleConfirmNewYear = () => {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      {reoptimizing ? "Reoptimierung läuft..." : "Reoptimieren"}
+                      {reoptimizing ? "Reoptimierung" : "Reoptimieren"}
                     </button>
                   )}
                 </div>
@@ -1443,11 +1460,55 @@ const handleConfirmNewYear = () => {
                   display: 'flex',
                   gap: '24px',
                   fontSize: '0.9em',
-                  flexWrap: 'wrap'
+                  flexWrap: 'wrap',
+                  alignItems: 'center'
                 }}>
-                  <span style={{color: '#3b82f6'}}>
-                    <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
-                  </span>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    {reoptimizationResults.preservedStudentNames && reoptimizationResults.preservedStudentNames.length > 0 && (
+                      <button
+                        onClick={() => setShowPreservedStudents(!showPreservedStudents)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#3b82f6',
+                          borderRadius: '3px',
+                          transition: 'all 0.2s',
+                          backgroundColor: showPreservedStudents ? '#dbeafe' : 'transparent'
+                        }}
+                        title={showPreservedStudents ? 'Ausblenden' : 'Anzeigen'}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = showPreservedStudents ? '#dbeafe' : 'transparent'}
+                      >
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 16 16" 
+                          fill="none" 
+                          style={{
+                            transition: 'transform 0.2s',
+                            transform: showPreservedStudents ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}
+                        >
+                          <path 
+                            d="M6 4L10 8L6 12" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                    <span style={{color: '#3b82f6'}}>
+                      <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
+                    </span>
+                  </div>
                   {reoptimizationResults.winterBudgetUsed > 0 && (
                     <>
                       <span style={{color: '#0ea5e9'}}>
@@ -1459,6 +1520,41 @@ const handleConfirmNewYear = () => {
                     </>
                   )}
                 </div>
+                {showPreservedStudents && reoptimizationResults.preservedStudentNames && reoptimizationResults.preservedStudentNames.length > 0 && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0f2fe',
+                    borderRadius: '6px',
+                    fontSize: '0.85em',
+                    animation: 'fadeIn 0.2s ease-in'
+                  }}>
+                    <strong style={{color: '#0369a1', marginBottom: '8px', display: 'block'}}>
+                      Erhaltene Studierende ({reoptimizationResults.preservedStudentNames.length}):
+                    </strong>
+                    <div style={{
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '6px'
+                    }}>
+                      {reoptimizationResults.preservedStudentNames.map((name, index) => (
+                        <span key={index} style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#e0f2fe',
+                          color: '#075985',
+                          borderRadius: '4px',
+                          fontSize: '0.85em',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

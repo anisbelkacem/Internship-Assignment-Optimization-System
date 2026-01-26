@@ -99,7 +99,7 @@ public class BaselineService {
                 .school(internship.getAssignedSchool())
                 .schoolYear(year)
                 .capturedAt(now)
-                .pinned(false) // Default to not pinned, can be updated later
+                .pinned(true) // Pin assignments to ensure 100% preservation when teachers available
                 .notes(request.getNotes())
                 .createdBy(createdBy)
                 .build();

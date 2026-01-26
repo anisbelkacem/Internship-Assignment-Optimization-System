@@ -360,18 +360,18 @@ public class Phase2OptimizationService {
                 continue;
             }
             
+            // Pin if marked as pinned in baseline (MUST be set first)
+            if (baseline.isPinned()) {
+                demand.setPinned(true);
+                pinnedCount++;
+            }
+            
             // Store baseline for score calculator to reward preservation
             demand.setBaselineInternship(internship);
             
             // Apply baseline: pre-assign internship to demand
             demand.setAssignedInternship(internship);
             appliedCount++;
-            
-            // Pin if marked as pinned in baseline
-            if (baseline.isPinned()) {
-                demand.setPinned(true);
-                pinnedCount++;
-            }
         }
         
         log.info("Applied {} baseline assignments ({} pinned)", appliedCount, pinnedCount);
