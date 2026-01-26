@@ -102,13 +102,6 @@ public class ReoptimizationController {
             .filter(d -> d.getAssignedInternship() != null)
             .count();
         
-        // Count preserved (assignments that match baseline)
-        long preserved = demands.stream()
-            .filter(d -> d.getAssignedInternship() != null)
-            .filter(d -> d.getBaselineInternship() != null)
-            .filter(d -> d.getAssignedInternship().equals(d.getBaselineInternship()))
-            .count();
-        
         // Count pinned
         long pinned = demands.stream()
             .filter(StudentInternshipDemand::isPinned)
@@ -131,12 +124,11 @@ public class ReoptimizationController {
         
         String message = String.format(
             "Re-optimization completed for %s %s. " +
-            "%d/%d students assigned. %d assignments preserved from baseline (%d pinned).",
+            "%d/%d students assigned (%d pinned).",
             semester,
             year,
             assigned,
             demands.size(),
-            preserved,
             pinned
         );
         
@@ -144,7 +136,6 @@ public class ReoptimizationController {
             .schoolYear(request.getSchoolYear())
             .score(solution.getScore() != null ? solution.getScore().toString() : "0hard/0soft")
             .studentsAssigned((int) assigned)
-            .assignmentsPreserved((int) preserved)
             .assignmentsPinned((int) pinned)
             .totalDemands(demands.size())
             .assignments(assignments)

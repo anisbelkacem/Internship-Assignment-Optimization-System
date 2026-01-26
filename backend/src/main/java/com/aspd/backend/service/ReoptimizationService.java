@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -158,9 +158,8 @@ public class ReoptimizationService {
     
     /**
      * Run Phase 1 for target semester.
-     * Deletes existing Phase 1 results and runs fresh optimization.
-     * Calculates budget as: timeBudget - winterBudgetUsed + uncompletedInternships
-     * where winterBudgetUsed = sum of (0.5 * number of unique internship types per teacher)
+     * NEW APPROACH: Copy winter PDP_II and SFP assignments as fixed, then optimize only for additional demand.
+     * This ensures teacher assignments are preserved from winter to summer.
      */
     private void runPhase1ForTargetSemester(String schoolYear, Integer timeBudget, Integer uncompletedInternships) {
         // Delete old baseline assignments first (foreign key constraint)
@@ -190,18 +189,7 @@ public class ReoptimizationService {
             plannedInternshipRepository.deleteAll(existing);
         }
         
-        // Load resources for Phase 1 (filter for active only)
-        List<Teacher> teachers = teacherRepository.findAllWithConfigs().stream()
-            .filter(Teacher::isActive)
-            .collect(Collectors.toList());
-        List<School> schools = schoolRepository.findByActiveTrue();
-        List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
-        
-        if (studentConfigs.isEmpty()) {
-            throw new IllegalStateException("No student configurations for " + schoolYear);
-        }
-        
-        // Calculate budget using formula: timeBudget - winterBudgetUsed + uncompletedInternships
+        // Get previous semester data
         String previousSemester = getPreviousSemester(schoolYear);
         List<PlannedInternship> previousInternships = plannedInternshipRepository.findBySchoolYear(previousSemester);
         
@@ -210,8 +198,7 @@ public class ReoptimizationService {
                 ". Bitte führen Sie zuerst Phase 1 Optimierung für " + previousSemester + " aus.");
         }
         
-        // Calculate winter budget used by counting unique internship types per teacher (0.5 per type)
-        // Group by teacher and count distinct internship types
+        // Calculate winter budget used (only PDP_I and ZSP)
         double winterBudgetUsed = previousInternships.stream()
             .filter(pi -> pi.getAssignedTeacher() != null)
             .filter(pi -> "PDP_I".equals(pi.getPraktikumType().name()) || "ZSP".equals(pi.getPraktikumType().name()))
@@ -224,12 +211,10 @@ public class ReoptimizationService {
             .mapToDouble(types -> types.size() * 0.5)
             .sum();
         
-        log.info("Winter budget used (PDP_I + ZSP): {} (counted as 0.5 per internship type per teacher)", winterBudgetUsed);
-        
-        // Store winter budget for response
+        log.info("Winter budget used (PDP_I + ZSP): {}", winterBudgetUsed);
         this.winterBudgetUsed.set(winterBudgetUsed);
         
-        // Apply formula: timeBudget - winterBudgetUsed + uncompletedInternships
+        // Calculate final budget
         Integer budget;
         if (timeBudget != null) {
             int uncompleted = (uncompletedInternships != null) ? uncompletedInternships : 0;
@@ -237,25 +222,215 @@ public class ReoptimizationService {
             log.info("Budget calculation: {} (initial) - {} (winter used) + {} (uncompleted) = {}",
                 timeBudget, winterBudgetUsed, uncompleted, budget);
         } else {
-            // Default to previous semester's total if no timeBudget provided
             budget = previousInternships.size();
-            log.info("Using default budget from {}: {} internship slots", previousSemester, budget);
+            log.info("Using default budget: {}", budget);
         }
-        
-        // Store final budget for response
         this.finalBudget.set(budget);
         
-        // Run Phase 1
-        InternshipSolution solution = phase1OptimizationService.optimize(
-            teachers,
+        // STEP 1: Load summer teacher configs to determine available teachers
+        List<Teacher> summerTeachers = teacherRepository.findAllWithConfigs().stream()
+            .filter(Teacher::isActive)
+            .filter(t -> t.getPlConfigs().stream()
+                .anyMatch(config -> config.getSchoolYear().equals(schoolYear) && config.isActive()))
+            .collect(Collectors.toList());
+        
+        Set<Long> summerTeacherIds = summerTeachers.stream()
+            .map(Teacher::getTeacherId)
+            .collect(Collectors.toSet());
+        
+        log.info("Found {} teachers configured for {}", summerTeacherIds.size(), schoolYear);
+        
+        // STEP 2: Copy winter PDP_II and SFP assignments as FIXED (only if teacher is available in summer)
+        List<PlannedInternship> fixedInternships = new ArrayList<>();
+        List<PlannedInternship> needReassignment = new ArrayList<>();
+        
+        previousInternships.stream()
+            .filter(pi -> pi.getPraktikumType() == PraktikumType.PDP_II || 
+                         pi.getPraktikumType() == PraktikumType.SFP)
+            .forEach(pi -> {
+                boolean teacherAvailable = pi.getAssignedTeacher() != null && 
+                    summerTeacherIds.contains(pi.getAssignedTeacher().getTeacherId());
+                
+                if (teacherAvailable) {
+                    // Teacher is available - keep as fixed
+                    fixedInternships.add(PlannedInternship.builder()
+                        .praktikumType(pi.getPraktikumType())
+                        .schoolType(pi.getSchoolType())
+                        .course(pi.getCourse())
+                        .originalCourse(pi.getOriginalCourse())
+                        .schoolYear(schoolYear)
+                        .maxCapacity(pi.getMaxCapacity())
+                        .currentAssignments(0)
+                        .active(true)
+                        .assignedTeacher(pi.getAssignedTeacher())
+                        .assignedSchool(pi.getAssignedSchool())
+                        .build());
+                } else {
+                    // Teacher not available - needs reassignment
+                    needReassignment.add(PlannedInternship.builder()
+                        .praktikumType(pi.getPraktikumType())
+                        .schoolType(pi.getSchoolType())
+                        .course(pi.getCourse())
+                        .originalCourse(pi.getOriginalCourse())
+                        .schoolYear(schoolYear)
+                        .maxCapacity(pi.getMaxCapacity())
+                        .currentAssignments(0)
+                        .active(false)  // Will be optimized
+                        .assignedTeacher(null)  // Will be reassigned
+                        .build());
+                }
+            });
+        
+        log.info("Copied {} FIXED internships (teachers available in summer)", fixedInternships.size());
+        log.info("Marked {} internships for reassignment (teachers unavailable)", needReassignment.size());
+        
+        // STEP 3: Load summer student configs to determine additional demand
+        List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
+        if (studentConfigs.isEmpty()) {
+            throw new IllegalStateException("No student configurations for " + schoolYear);
+        }
+        
+        // Count summer demand by type and school type
+        Map<String, Long> summerDemand = studentConfigs.stream()
+            .flatMap(config -> {
+                List<String> demands = new ArrayList<>();
+                if (config.isPdpII()) demands.add("PDP_II/" + config.getSchoolType());
+                if (config.isSfp()) demands.add("SFP/" + config.getSchoolType() + "/" + config.getMainCourse().getId());
+                return demands.stream();
+            })
+            .collect(Collectors.groupingBy(k -> k, Collectors.counting()));
+        
+        // Count fixed supply
+        Map<String, Long> fixedSupply = fixedInternships.stream()
+            .map(pi -> {
+                if (pi.getPraktikumType() == PraktikumType.SFP) {
+                    return pi.getPraktikumType() + "/" + pi.getSchoolType() + "/" + pi.getCourse().getId();
+                }
+                return pi.getPraktikumType() + "/" + pi.getSchoolType();
+            })
+            .collect(Collectors.groupingBy(k -> k, Collectors.counting()));
+        
+        // STEP 3: Create NEW slots for additional demand (these will be optimized)
+        List<PlannedInternship> newSlots = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : summerDemand.entrySet()) {
+            String key = entry.getKey();
+            long demand = entry.getValue();
+            long supply = fixedSupply.getOrDefault(key, 0L);
+            long additionalNeeded = Math.max(0, demand - supply);
+            
+            if (additionalNeeded > 0) {
+                String[] parts = key.split("/");
+                PraktikumType type = PraktikumType.valueOf(parts[0]);
+                SchoolType schoolType = SchoolType.valueOf(parts[1]);
+                Course course = null;
+                if (type == PraktikumType.SFP && parts.length > 2) {
+                    Long courseId = Long.parseLong(parts[2]);
+                    course = studentConfigs.stream()
+                        .map(StudentConfig::getMainCourse)
+                        .filter(c -> c != null && c.getId().equals(courseId))
+                        .findFirst()
+                        .orElse(null);
+                }
+                
+                for (int i = 0; i < additionalNeeded; i++) {
+                    newSlots.add(PlannedInternship.builder()
+                        .praktikumType(type)
+                        .schoolType(schoolType)
+                        .course(course)
+                        .originalCourse(type == PraktikumType.SFP ? course : null)
+                        .schoolYear(schoolYear)
+                        .maxCapacity(type == PraktikumType.PDP_II ? 2 : 4)
+                        .currentAssignments(0)
+                        .active(false)  // Will be decided by optimizer
+                        .assignedTeacher(null)  // Will be assigned by optimizer
+                        .build());
+                }
+            }
+        }
+        
+        log.info("Created {} NEW slots for additional demand", newSlots.size());
+        
+        // STEP 4: Combine fixed, reassignment, and new slots, then run optimization
+        List<PlannedInternship> allInternships = new ArrayList<>();
+        allInternships.addAll(fixedInternships);
+        allInternships.addAll(needReassignment);  // Include slots needing reassignment
+        allInternships.addAll(newSlots);
+        
+        // Load resources - use only summer-configured teachers
+        List<School> schools = schoolRepository.findByActiveTrue();
+        
+        // Run optimization with mixed fixed/optimizable internships
+        InternshipSolution solution = phase1OptimizationService.optimizeWithFixedInternships(
+            summerTeachers,  // Only summer-configured teachers
             schools,
+            allInternships,
             studentConfigs,
             schoolYear,
             budget
         );
         
-        log.info("Phase 1 completed: {} planned internships created", 
-            solution.getPlannedInternships().size());
+        log.info("Phase 1 completed: {} total internships ({} fixed + {} reassigned + {} new)", 
+            solution.getPlannedInternships().size(), fixedInternships.size(), 
+            needReassignment.size(), newSlots.size());
+    }
+    
+    /**
+     * Calculate how many teacher assignments were preserved from winter to summer.
+     * Compares winter PDP_II and SFP assignments with summer results.
+     * 
+     * Match criteria:
+     * - Same PraktikumType
+     * - Same SchoolType
+     * - Same Teacher
+     * - For SFP: Also same Course
+     * 
+     * @param winterInternships Winter semester internships (previous)
+     * @param summerInternships Summer semester internships (current)
+     * @return Number of preserved teacher assignments
+     */
+    private int calculateTeacherAssignmentsPreserved(
+            List<PlannedInternship> winterInternships,
+            List<PlannedInternship> summerInternships) {
+        
+        // Filter winter PDP_II and SFP assignments with teachers
+        Map<String, Teacher> winterAssignments = winterInternships.stream()
+            .filter(pi -> pi.isActive() && pi.getAssignedTeacher() != null)
+            .filter(pi -> pi.getPraktikumType() == PraktikumType.PDP_II || 
+                         pi.getPraktikumType() == PraktikumType.SFP)
+            .collect(Collectors.toMap(
+                pi -> buildAssignmentKey(pi),
+                PlannedInternship::getAssignedTeacher,
+                (existing, replacement) -> existing // Keep first if duplicate keys
+            ));
+        
+        // Count how many summer assignments match winter
+        int preserved = 0;
+        for (PlannedInternship summer : summerInternships) {
+            if (!summer.isActive() || summer.getAssignedTeacher() == null) {
+                continue;
+            }
+            
+            String key = buildAssignmentKey(summer);
+            Teacher winterTeacher = winterAssignments.get(key);
+            
+            if (winterTeacher != null && winterTeacher.equals(summer.getAssignedTeacher())) {
+                preserved++;
+            }
+        }
+        
+        return preserved;
+    }
+    
+    /**
+     * Build unique key for teacher assignment comparison.
+     * For PDP_II: "PDP_II/GS"
+     * For SFP: "SFP/GS/courseId"
+     */
+    private String buildAssignmentKey(PlannedInternship pi) {
+        if (pi.getPraktikumType() == PraktikumType.SFP && pi.getCourse() != null) {
+            return pi.getPraktikumType() + "/" + pi.getSchoolType() + "/" + pi.getCourse().getId();
+        }
+        return pi.getPraktikumType() + "/" + pi.getSchoolType();
     }
 
     /**

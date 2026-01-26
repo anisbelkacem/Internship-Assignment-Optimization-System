@@ -32,11 +32,6 @@ public class ReoptimizationResponse {
     private int studentsAssigned;
     
     /**
-     * Number of assignments preserved from baseline
-     */
-    private int assignmentsPreserved;
-    
-    /**
      * Number of assignments that were pinned (unchangeable)
      */
     private int assignmentsPinned;

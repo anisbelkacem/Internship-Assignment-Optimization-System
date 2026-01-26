@@ -240,7 +240,7 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         
         if (baselineInternship != null && baselineInternship.equals(internship)) {
             // Reward preserving the baseline assignment - HIGH PRIORITY
-            return 500;
+            return 1000;
         }
         
         // No penalty for changing - just no reward

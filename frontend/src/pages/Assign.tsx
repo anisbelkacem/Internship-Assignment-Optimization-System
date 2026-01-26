@@ -118,6 +118,8 @@ export default function InternshipAssignments() {
     winterBudgetUsed: number;
     initialBudget: number;
     finalBudget: number;
+    winterTotal?: number;
+    summerTotal?: number;
   } | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
@@ -153,10 +155,93 @@ export default function InternshipAssignments() {
       fetchStudentConfigsByYear();
       fetchPlannedInternships(); // Load saved teacher assignments
       fetchStudentAssignments(); // Load saved student assignments
-      // Clear reoptimization results when changing year
-      setReoptimizationResults(null);
+      
+      // Initialize reoptimization results for summer semester
+      if (selectedYear.startsWith('SoSe')) {
+        setReoptimizationResults({
+          studentsAssigned: 0,
+          totalDemands: 0,
+          assignmentsPreserved: 0,
+          winterBudgetUsed: 0,
+          initialBudget: 0,
+          finalBudget: 0
+        });
+      } else {
+        // Clear reoptimization results when changing to winter
+        setReoptimizationResults(null);
+      }
     }
   }, [selectedYear]);
+
+  // Calculate and display preservation for summer semester
+  const calculateAndDisplayPreservation = async () => {
+    if (!selectedYear || !selectedYear.startsWith('SoSe')) return;
+    
+    try {
+      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      
+      // Fetch STUDENT ASSIGNMENTS (Phase 2), not planned internships
+      const [winterAssignments, summerAssignments] = await Promise.all([
+        internshipAssignmentService.getStudentAssignments(winterYear),
+        internshipAssignmentService.getStudentAssignments(selectedYear)
+      ]);
+      
+      // Calculate preservation: how many unique students kept assignments
+      const { preserved, totalUnique } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      
+      // Always set results to show preservation
+      setReoptimizationResults({
+        studentsAssigned: summerAssignments.length,
+        totalDemands: summerAssignments.length,
+        assignmentsPreserved: preserved,
+        winterBudgetUsed: 0,
+        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        finalBudget: summerAssignments.length,
+        winterTotal: winterAssignments.length,
+        summerTotal: summerAssignments.length
+      });
+    } catch (err) {
+      // Set default values even on error
+      setReoptimizationResults({
+        studentsAssigned: 0,
+        totalDemands: 0,
+        assignmentsPreserved: 0,
+        winterBudgetUsed: 0,
+        initialBudget: 0,
+        finalBudget: 0,
+        winterTotal: 0,
+        summerTotal: 0
+      });
+    }
+  };
+  
+  // Calculate student assignment preservation between winter and summer
+  const calculateStudentAssignmentPreservation = (
+    winterAssignments: AssignmentDto[],
+    summerAssignments: AssignmentDto[]
+  ): { preserved: number; totalUnique: number } => {
+    // Build set of winter assignments by key: student/teacher/course
+    const winterAssignmentKeys = new Set<string>();
+    winterAssignments.forEach(assignment => {
+      if (assignment.studentName && assignment.teacherName && assignment.course) {
+        const key = `${assignment.studentName}/${assignment.teacherName}/${assignment.course}`;
+        winterAssignmentKeys.add(key);
+      }
+    });
+    
+    // For each summer assignment, check if exact match exists in winter
+    let preserved = 0;
+    summerAssignments.forEach((assignment) => {
+      if (assignment.studentName && assignment.teacherName && assignment.course) {
+        const key = `${assignment.studentName}/${assignment.teacherName}/${assignment.course}`;
+        if (winterAssignmentKeys.has(key)) {
+          preserved++;
+        }
+      }
+    });
+    
+    return { preserved, totalUnique: summerAssignments.length };
+  };
 
 const fetchInitialData = async () => {
   try {
@@ -338,8 +423,12 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const fetchPlannedInternships = async () => {
     if (!selectedYear) return;
     
+    console.log('Fetching planned internships for:', selectedYear);
+    
     try {
       const internships = await internshipAssignmentService.getPlannedInternships(selectedYear);
+      console.log('Fetched internships:', internships.length, internships);
+      
       const mockResult: TeacherAssignmentResult = {
         schoolYear: selectedYear,
         totalPlannedInternships: internships.length,
@@ -351,6 +440,12 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setPhase1Result(mockResult);
       if (internships.length > 0) {
         setShowTeacherAssignments(true);
+      }
+      
+      // Calculate preservation if this is a summer semester
+      if (selectedYear.startsWith('SoSe')) {
+        console.log('Summer semester detected, calculating preservation...');
+        await calculateAndDisplayPreservation();
       }
     } catch (err) {
       console.error("Failed to fetch planned internships:", err);
@@ -654,6 +749,11 @@ const handleConfirmNewYear = () => {
 
     try {
       setReoptimizing(true);
+      
+      // Fetch winter student assignments BEFORE reoptimization
+      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
+      
       const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
         method: 'POST',
         headers: {
@@ -674,22 +774,27 @@ const handleConfirmNewYear = () => {
 
       const result = await response.json();
       
-      // Store results persistently
-      setReoptimizationResults({
-        studentsAssigned: result.studentsAssigned,
-        totalDemands: result.totalDemands,
-        assignmentsPreserved: result.assignmentsPreserved,
-        winterBudgetUsed: result.winterBudgetUsed,
-        initialBudget: result.initialBudget,
-        finalBudget: result.finalBudget
-      });
-      
-      setSuccess('Reoptimization completed successfully!');
-      
       // Refresh Phase 1 and Phase 2 assignments
       await fetchPlannedInternships();
       await fetchStudentAssignments();
       
+      // Calculate preservation in frontend using student assignments
+      const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
+      const { preserved, totalUnique } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      
+      // Store results persistently with frontend-calculated preservation
+      setReoptimizationResults({
+        studentsAssigned: result.studentsAssigned,
+        totalDemands: result.totalDemands,
+        assignmentsPreserved: preserved,
+        winterBudgetUsed: result.winterBudgetUsed,
+        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        finalBudget: summerAssignments.length,
+        winterTotal: winterAssignments.length,
+        summerTotal: summerAssignments.length
+      });
+      
+      setSuccess(`Reoptimization completed successfully! Students: ${result.studentsAssigned}/${result.totalDemands}`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reoptimization failed");
@@ -698,6 +803,8 @@ const handleConfirmNewYear = () => {
       setReoptimizing(false);
     }
   };
+
+  // Calculate teacher assignment preservation between winter and summer
 
   // Copy Semester Configs Handler
   const handleCopySemesterConfigs = async () => {
@@ -1221,8 +1328,18 @@ const handleConfirmNewYear = () => {
               </div>
             </div>
 
+            {/* Reoptimization Progress Bar */}
+            {reoptimizing && (
+              <div className="optimization-progress-container">
+                <span className="optimization-progress-text">⚙️ Optimierung läuft...</span>
+                <div className="progress-bar-wrapper">
+                  <div className="progress-bar-animated"></div>
+                </div>
+              </div>
+            )}
+
             {/* Reoptimization Results Panel */}
-            {reoptimizationResults && (
+            {reoptimizationResults && selectedYear?.startsWith('SoSe') && (
               <div style={{
                 marginBottom: '16px',
                 padding: '12px 16px',
@@ -1236,21 +1353,19 @@ const handleConfirmNewYear = () => {
                   fontSize: '0.9em',
                   flexWrap: 'wrap'
                 }}>
-                  <span style={{color: '#15803d'}}>
-                    <strong>Students:</strong> {reoptimizationResults.studentsAssigned}/{reoptimizationResults.totalDemands}
-                  </span>
                   <span style={{color: '#3b82f6'}}>
-                    <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}
+                    <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
                   </span>
-                  <span style={{color: '#0ea5e9'}}>
-                    <strong>Initial Budget:</strong> {reoptimizationResults.initialBudget}
-                  </span>
-                  <span style={{color: '#f59e0b'}}>
-                    <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
-                  </span>
-                  <span style={{color: '#10b981'}}>
-                    <strong>Final Budget:</strong> {reoptimizationResults.finalBudget}
-                  </span>
+                  {reoptimizationResults.winterBudgetUsed > 0 && (
+                    <>
+                      <span style={{color: '#0ea5e9'}}>
+                        <strong>Winter Budget:</strong> {reoptimizationResults.initialBudget}
+                      </span>
+                      <span style={{color: '#f59e0b'}}>
+                        <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             )}

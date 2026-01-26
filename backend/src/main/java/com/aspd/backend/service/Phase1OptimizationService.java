@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -88,11 +89,26 @@ public class Phase1OptimizationService {
                 .filter(PlannedInternship::isActive)
                 .toList();
         
-        // Populate schools from assigned teachers (post-optimization step)
-        activeInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+        // Deduplicate based on type, schoolType, course, teacher, and school
+        Map<String, PlannedInternship> uniqueInternships = new LinkedHashMap<>();
+        for (PlannedInternship pi : activeInternships) {
+            String key = buildInternshipKey(pi);
+            if (!uniqueInternships.containsKey(key)) {
+                uniqueInternships.put(key, pi);
+            } else {
+                log.debug("Skipping duplicate internship: {}", key);
+            }
+        }
         
-        // Save only active internships to database
-        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(activeInternships);
+        List<PlannedInternship> deduplicatedInternships = new ArrayList<>(uniqueInternships.values());
+        log.info("Deduplicated internships: {} active -> {} unique", 
+                 activeInternships.size(), deduplicatedInternships.size());
+        
+        // Populate schools from assigned teachers (post-optimization step)
+        deduplicatedInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+        
+        // Save only unique active internships to database
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(deduplicatedInternships);
         
         phase1Result.setPlannedInternships(savedInternships);
         
@@ -102,6 +118,189 @@ public class Phase1OptimizationService {
         
         log.info("========== PHASE 1 COMPLETE ==========");
         log.info("Active internships: {}/{}", activeCount, savedInternships.size());
+        log.info("Score: {}\n", phase1Result.getScore());
+        
+        return phase1Result;
+    }
+    
+    /**
+     * Run Phase 1 optimization with previous semester data for teacher preservation.
+     * Used during reoptimization (e.g., WiSe → SoSe) to prefer keeping the same teachers.
+     * 
+     * @param teachers Available teachers with their configurations
+     * @param schools Available schools
+     * @param studentConfigs Student configurations (to determine demand)
+     * @param schoolYear Academic year (e.g., "SoSe2025")
+     * @param timeBudget Total internship slots budget
+     * @param previousSemesterInternships Previous semester's teacher assignments for preservation
+     * @return Phase 1 solution with active internship assignments
+     */
+    @Transactional
+    public InternshipSolution optimizeWithPreviousSemester(
+            List<Teacher> teachers,
+            List<School> schools,
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget,
+            List<PlannedInternship> previousSemesterInternships) {
+        
+        log.info("\n========== PHASE 1: Teacher & School Assignment (with preservation) ==========");
+        log.info("Input: {} teachers, {} schools, {} students", 
+                 teachers.size(), schools.size(), studentConfigs.size());
+        log.info("Previous semester assignments: {}", 
+                 previousSemesterInternships != null ? previousSemesterInternships.size() : 0);
+        log.info("Total internship slots budget: {}\n", timeBudget);
+        
+        // Create internship slots
+        List<PlannedInternship> plannedInternships = createPlannedInternshipsFromDemand(
+                studentConfigs, schoolYear);
+        
+        // Build distributions and coordinates
+        ZspCourseDistribution zspDistribution = buildZspCourseDistribution(studentConfigs);
+        List<CoordinatesDto> pdpGsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.GS);
+        List<CoordinatesDto> pdpMsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.MS);
+        
+        log.info("Created {} internship slots\n", plannedInternships.size());
+        
+        // Fetch all active courses
+        List<Course> courses = courseRepository.findByActiveTrue();
+        
+        // Run Phase 1 with previous semester data
+        InternshipSolution phase1Result = runPhase1WithPreservation(
+            teachers, schools, courses, plannedInternships, schoolYear, timeBudget, 
+            zspDistribution, pdpGsStudentCoords, pdpMsStudentCoords, 
+            previousSemesterInternships);
+        
+        // Remove inactive internships
+        List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
+                .filter(PlannedInternship::isActive)
+                .toList();
+        
+        // Deduplicate based on type, schoolType, course, teacher, and school
+        Map<String, PlannedInternship> uniqueInternships = new LinkedHashMap<>();
+        for (PlannedInternship pi : activeInternships) {
+            String key = buildInternshipKey(pi);
+            if (!uniqueInternships.containsKey(key)) {
+                uniqueInternships.put(key, pi);
+            } else {
+                log.debug("Skipping duplicate internship: {}", key);
+            }
+        }
+        
+        List<PlannedInternship> deduplicatedInternships = new ArrayList<>(uniqueInternships.values());
+        log.info("Deduplicated internships: {} active -> {} unique", 
+                 activeInternships.size(), deduplicatedInternships.size());
+        
+        // Populate schools from assigned teachers
+        deduplicatedInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+        
+        // Save unique active internships
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(deduplicatedInternships);
+        phase1Result.setPlannedInternships(savedInternships);
+        
+        long activeCount = savedInternships.stream()
+                .filter(PlannedInternship::isActive)
+                .count();
+        
+        log.info("========== PHASE 1 COMPLETE (with preservation) ==========");
+        log.info("Active internships: {}/{}", activeCount, savedInternships.size());
+        log.info("Score: {}\n", phase1Result.getScore());
+        
+        return phase1Result;
+    }
+
+    /**
+     * Run Phase 1 optimization with some internships already assigned (fixed) and others to be optimized.
+     * Used during reoptimization when we want to preserve existing assignments and only optimize for additional demand.
+     * 
+     * @param teachers Available teachers with their configurations
+     * @param schools Available schools
+     * @param allInternships Combined list of fixed internships (with teachers assigned) and new slots (teacher=null)
+     * @param studentConfigs Student configurations (to determine demand)
+     * @param schoolYear Academic year (e.g., "SoSe2025")
+     * @param timeBudget Total internship slots budget
+     * @return Phase 1 solution with all internships (fixed + optimized)
+     */
+    @Transactional
+    public InternshipSolution optimizeWithFixedInternships(
+            List<Teacher> teachers,
+            List<School> schools,
+            List<PlannedInternship> allInternships,
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget) {
+        
+        log.info("\n========== PHASE 1: Teacher & School Assignment (with fixed assignments) ==========");
+        log.info("Input: {} teachers, {} schools, {} students", 
+                 teachers.size(), schools.size(), studentConfigs.size());
+        
+        // Separate fixed and new internships
+        List<PlannedInternship> fixedInternships = allInternships.stream()
+                .filter(pi -> pi.getAssignedTeacher() != null)
+                .toList();
+        List<PlannedInternship> newInternships = allInternships.stream()
+                .filter(pi -> pi.getAssignedTeacher() == null)
+                .toList();
+        
+        log.info("Fixed internships (already assigned): {}", fixedInternships.size());
+        log.info("New internships (to be optimized): {}", newInternships.size());
+        log.info("Total internship slots budget: {}\n", timeBudget);
+        
+        // Build distributions and coordinates
+        ZspCourseDistribution zspDistribution = buildZspCourseDistribution(studentConfigs);
+        List<CoordinatesDto> pdpGsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.GS);
+        List<CoordinatesDto> pdpMsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.MS);
+        
+        // Fetch all active courses
+        List<Course> courses = courseRepository.findByActiveTrue();
+        
+        // Run Phase 1 only on new internships
+        InternshipSolution phase1Result = runPhase1WithFixed(
+            teachers, schools, courses, newInternships, fixedInternships, schoolYear, timeBudget, 
+            zspDistribution, pdpGsStudentCoords, pdpMsStudentCoords);
+        
+        // Combine fixed and newly assigned internships
+        List<PlannedInternship> allOptimizedInternships = new ArrayList<>();
+        allOptimizedInternships.addAll(fixedInternships);
+        allOptimizedInternships.addAll(phase1Result.getPlannedInternships());
+        
+        // Filter to active internships
+        List<PlannedInternship> activeInternships = allOptimizedInternships.stream()
+                .filter(PlannedInternship::isActive)
+                .toList();
+        
+        // Deduplicate based on type, schoolType, course, teacher, and school
+        Map<String, PlannedInternship> uniqueInternships = new LinkedHashMap<>();
+        for (PlannedInternship pi : activeInternships) {
+            String key = buildInternshipKey(pi);
+            if (!uniqueInternships.containsKey(key)) {
+                uniqueInternships.put(key, pi);
+            } else {
+                log.debug("Skipping duplicate internship: {}", key);
+            }
+        }
+        
+        List<PlannedInternship> deduplicatedInternships = new ArrayList<>(uniqueInternships.values());
+        log.info("Deduplicated internships: {} active -> {} unique", 
+                 activeInternships.size(), deduplicatedInternships.size());
+        
+        // Populate schools from assigned teachers
+        deduplicatedInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+        
+        // Save all unique active internships
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(deduplicatedInternships);
+        phase1Result.setPlannedInternships(savedInternships);
+        
+        long activeCount = savedInternships.stream()
+                .filter(PlannedInternship::isActive)
+                .count();
+        
+        log.info("========== PHASE 1 COMPLETE (with fixed assignments) ==========");
+        log.info("Fixed internships: {}", fixedInternships.size());
+        log.info("Newly optimized internships: {}/{}", 
+                 newInternships.stream().filter(PlannedInternship::isActive).count(), 
+                 newInternships.size());
+        log.info("Total active internships: {}/{}", activeCount, savedInternships.size());
         log.info("Score: {}\n", phase1Result.getScore());
         
         return phase1Result;
@@ -137,6 +336,94 @@ public class Phase1OptimizationService {
         unsolvedProblem.setZspCourseDistribution(zspDistribution);
         unsolvedProblem.setPdpGsStudentCoords(pdpGsStudentCoords);
         unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
+        unsolvedProblem.setPreviousSemesterInternships(new ArrayList<>()); // Initialize to empty list
+        
+        // Solve
+        InternshipSolution solution = solver.solve(unsolvedProblem);
+
+        // Post-solve diagnostic
+        logMinimumActivationStatus(solution.getPlannedInternships());
+        
+        return solution;
+    }
+    
+    /**
+     * PHASE 1 with fixed internships: Only optimize new internships, keeping fixed ones unchanged.
+     */
+    private InternshipSolution runPhase1WithFixed(
+            List<Teacher> teachers,
+            List<School> schools,
+            List<Course> courses,
+            List<PlannedInternship> newInternships,
+            List<PlannedInternship> fixedInternships,
+            String schoolYear,
+            Integer timeBudget,
+            ZspCourseDistribution zspDistribution,
+            List<CoordinatesDto> pdpGsStudentCoords,
+            List<CoordinatesDto> pdpMsStudentCoords) {
+        
+        // Create solver for Phase 1
+        SolverFactory<InternshipSolution> solverFactory = 
+                SolverFactory.createFromXmlResource("solverConfig.xml");
+        Solver<InternshipSolution> solver = solverFactory.buildSolver();
+        
+        // Prepare problem - only optimize new internships
+        InternshipSolution unsolvedProblem = new InternshipSolution();
+        unsolvedProblem.setAvailableTeachers(teachers);
+        unsolvedProblem.setAvailableCourses(courses);
+        unsolvedProblem.setPlannedInternships(newInternships); // Only new internships to optimize
+        unsolvedProblem.setSchoolYear(schoolYear);
+        unsolvedProblem.setTimeBudget(timeBudget);
+        unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
+        unsolvedProblem.setZspCourseDistribution(zspDistribution);
+        unsolvedProblem.setPdpGsStudentCoords(pdpGsStudentCoords);
+        unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
+        
+        // Add fixed internships as previous semester data for teacher tracking (budget calculation)
+        unsolvedProblem.setPreviousSemesterInternships(fixedInternships);
+        
+        // Solve
+        InternshipSolution solution = solver.solve(unsolvedProblem);
+
+        // Post-solve diagnostic
+        logMinimumActivationStatus(solution.getPlannedInternships());
+        
+        return solution;
+    }
+    
+    /**
+     * PHASE 1 with teacher preservation: Activate internship slots and assign teachers/schools.
+     * Includes previous semester data to reward preserving teacher assignments.
+     */
+    private InternshipSolution runPhase1WithPreservation(
+            List<Teacher> teachers,
+            List<School> schools,
+            List<Course> courses,
+            List<PlannedInternship> plannedInternships,
+            String schoolYear,
+            Integer timeBudget,
+            ZspCourseDistribution zspDistribution,
+            List<CoordinatesDto> pdpGsStudentCoords,
+            List<CoordinatesDto> pdpMsStudentCoords,
+            List<PlannedInternship> previousSemesterInternships) {
+        
+        // Create solver for Phase 1
+        SolverFactory<InternshipSolution> solverFactory = 
+                SolverFactory.createFromXmlResource("solverConfig.xml");
+        Solver<InternshipSolution> solver = solverFactory.buildSolver();
+        
+        // Prepare problem with previous semester data
+        InternshipSolution unsolvedProblem = new InternshipSolution();
+        unsolvedProblem.setAvailableTeachers(teachers);
+        unsolvedProblem.setAvailableCourses(courses);
+        unsolvedProblem.setPlannedInternships(plannedInternships);
+        unsolvedProblem.setSchoolYear(schoolYear);
+        unsolvedProblem.setTimeBudget(timeBudget);
+        unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
+        unsolvedProblem.setZspCourseDistribution(zspDistribution);
+        unsolvedProblem.setPdpGsStudentCoords(pdpGsStudentCoords);
+        unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
+        unsolvedProblem.setPreviousSemesterInternships(previousSemesterInternships); // ADD PRESERVATION DATA
         
         // Solve
         InternshipSolution solution = solver.solve(unsolvedProblem);
@@ -366,5 +653,29 @@ public class Phase1OptimizationService {
         });
         
         log.info("====================================================\n");
+    }
+    
+    /**
+     * Build unique key for deduplication.
+     * Key includes: type, schoolType, course (if SFP), teacher, and school
+     */
+    private String buildInternshipKey(PlannedInternship pi) {
+        StringBuilder key = new StringBuilder();
+        key.append(pi.getPraktikumType());
+        key.append("/").append(pi.getSchoolType());
+        
+        if (pi.getPraktikumType() == PraktikumType.SFP && pi.getCourse() != null) {
+            key.append("/").append(pi.getCourse().getId());
+        }
+        
+        if (pi.getAssignedTeacher() != null) {
+            key.append("/T").append(pi.getAssignedTeacher().getTeacherId());
+        }
+        
+        if (pi.getAssignedSchool() != null) {
+            key.append("/S").append(pi.getAssignedSchool().getId());
+        }
+        
+        return key.toString();
     }
 }
