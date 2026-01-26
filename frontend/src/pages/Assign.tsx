@@ -102,10 +102,28 @@ export default function InternshipAssignments() {
   });
   const [plConfigSearchTerm, setPlConfigSearchTerm] = useState('');
   const [timeBudget, setTimeBudget] = useState<number>(210);
+  const [uncompletedInternships, setUncompletedInternships] = useState<number>(0);
 
   // New Year Modal State
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
+  const [newSemesterType, setNewSemesterType] = useState('WiSe');
+
+  // Reoptimization state
+  const [reoptimizing, setReoptimizing] = useState(false);
+  const [copyingConfigs, setCopyingConfigs] = useState(false);
+  const [showPreservedStudents, setShowPreservedStudents] = useState(false);
+  const [reoptimizationResults, setReoptimizationResults] = useState<{
+    studentsAssigned: number;
+    totalDemands: number;
+    assignmentsPreserved: number;
+    preservedStudentNames?: string[];
+    winterBudgetUsed: number;
+    initialBudget: number;
+    finalBudget: number;
+    winterTotal?: number;
+    summerTotal?: number;
+  } | null>(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const [validationResult, setValidationResult] = useState<any>(null);
@@ -140,8 +158,107 @@ export default function InternshipAssignments() {
       fetchStudentConfigsByYear();
       fetchPlannedInternships(); // Load saved teacher assignments
       fetchStudentAssignments(); // Load saved student assignments
+      
+      // Initialize reoptimization results for summer semester
+      if (selectedYear.startsWith('SoSe')) {
+        setReoptimizationResults({
+          studentsAssigned: 0,
+          totalDemands: 0,
+          assignmentsPreserved: 0,
+          winterBudgetUsed: 0,
+          initialBudget: 0,
+          finalBudget: 0
+        });
+      } else {
+        // Clear reoptimization results when changing to winter
+        setReoptimizationResults(null);
+      }
     }
   }, [selectedYear]);
+
+  // Calculate and display preservation for summer semester
+  const calculateAndDisplayPreservation = async () => {
+    if (!selectedYear || !selectedYear.startsWith('SoSe')) return;
+    
+    try {
+      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      
+      // Fetch STUDENT ASSIGNMENTS (Phase 2), not planned internships
+      const [winterAssignments, summerAssignments] = await Promise.all([
+        internshipAssignmentService.getStudentAssignments(winterYear),
+        internshipAssignmentService.getStudentAssignments(selectedYear)
+      ]);
+      
+      // Calculate preservation: how many unique students kept assignments
+      const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      
+      // Always set results to show preservation
+      setReoptimizationResults({
+        studentsAssigned: summerAssignments.length,
+        totalDemands: summerAssignments.length,
+        assignmentsPreserved: preserved,
+        preservedStudentNames: preservedStudentNames,
+        winterBudgetUsed: 0,
+        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        finalBudget: summerAssignments.length,
+        winterTotal: winterAssignments.length,
+        summerTotal: summerAssignments.length
+      });
+    } catch (err) {
+      // Set default values even on error
+      setReoptimizationResults({
+        studentsAssigned: 0,
+        totalDemands: 0,
+        assignmentsPreserved: 0,
+        winterBudgetUsed: 0,
+        initialBudget: 0,
+        finalBudget: 0,
+        winterTotal: 0,
+        summerTotal: 0
+      });
+    }
+  };
+  
+  // Calculate student assignment preservation between winter and summer
+  const calculateStudentAssignmentPreservation = (
+    winterAssignments: AssignmentDto[],
+    summerAssignments: AssignmentDto[]
+  ): { preserved: number; preservedStudentNames: string[] } => {
+    // Build map of winter assignments by key: student/teacher/course/praktikumType
+    const winterAssignmentKeys = new Map<string, AssignmentDto>();
+    winterAssignments.forEach(assignment => {
+      if (assignment.studentName && assignment.teacherName) {
+        // Include praktikumType and handle cases where course might be null
+        const courseKey = assignment.course || assignment.praktikumType;
+        const key = `${assignment.studentName}/${assignment.teacherName}/${courseKey}`;
+        winterAssignmentKeys.set(key, assignment);
+      }
+    });
+    
+    console.log('Winter assignments total:', winterAssignments.length);
+    console.log('Winter keys created:', winterAssignmentKeys.size);
+    console.log('Summer assignments total:', summerAssignments.length);
+    
+    // For each summer assignment, check if exact match exists in winter
+    let preserved = 0;
+    const preservedStudentNames: string[] = [];
+    summerAssignments.forEach((assignment, idx) => {
+      if (assignment.studentName && assignment.teacherName) {
+        const courseKey = assignment.course || assignment.praktikumType;
+        const key = `${assignment.studentName}/${assignment.teacherName}/${courseKey}`;
+        if (winterAssignmentKeys.has(key)) {
+          preserved++;
+          // Add student name with praktikum type in parentheses
+          preservedStudentNames.push(`${assignment.studentName} (${assignment.praktikumType})`);
+        } else if (idx < 5) {
+          console.log(`Not preserved [${idx}]:`, key);
+        }
+      }
+    });
+    
+    console.log('Preserved:', preserved, 'out of', summerAssignments.length);
+    return { preserved, preservedStudentNames };
+  };
 
 const fetchInitialData = async () => {
   try {
@@ -323,8 +440,12 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const fetchPlannedInternships = async () => {
     if (!selectedYear) return;
     
+    console.log('Fetching planned internships for:', selectedYear);
+    
     try {
       const internships = await internshipAssignmentService.getPlannedInternships(selectedYear);
+      console.log('Fetched internships:', internships.length, internships);
+      
       const mockResult: TeacherAssignmentResult = {
         schoolYear: selectedYear,
         totalPlannedInternships: internships.length,
@@ -336,6 +457,12 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setPhase1Result(mockResult);
       if (internships.length > 0) {
         setShowTeacherAssignments(true);
+      }
+      
+      // Calculate preservation if this is a summer semester
+      if (selectedYear.startsWith('SoSe')) {
+        console.log('Summer semester detected, calculating preservation...');
+        await calculateAndDisplayPreservation();
       }
     } catch (err) {
       console.error("Failed to fetch planned internships:", err);
@@ -683,23 +810,153 @@ const handleConfirmNewYear = () => {
     return;
   }
 
-  if (availableYears.includes(newYearInput.trim())) {
+  // Create year format with selected semester type
+  const fullYear = `${newSemesterType}${newYearInput.trim()}`;
+
+  if (availableYears.includes(fullYear)) {
     setError("This year already exists");
     setTimeout(() => setError(null), 3000);
     return;
   }
 
   // Add the new year to the list and select it
-  const updatedYears = [...availableYears, newYearInput.trim()].sort();
+  const updatedYears = [...availableYears, fullYear].sort();
   setAvailableYears(updatedYears);
-  setSelectedYear(newYearInput.trim());
+  setSelectedYear(fullYear);
   setStudentConfigs([]); // Clear configs for new year
   
   setShowNewYearModal(false);
   setNewYearInput('');
+  setNewSemesterType('WiSe');
   setSuccess(`Neues Planungsjahr "${newYearInput.trim()}" erfolgreich erstellt!`);
   setTimeout(() => setSuccess(null), 3000);
 };
+
+  // Reoptimization Handler
+  const handleReoptimization = async () => {
+    if (!selectedYear) {
+      setError("Please select a year first");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      setReoptimizing(true);
+      
+      // Fetch winter student assignments BEFORE reoptimization
+      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
+      
+      const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          schoolYear: selectedYear,
+          timeBudget: timeBudget,
+          uncompletedInternships: uncompletedInternships
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Reoptimization failed' }));
+        throw new Error(errorData.message || 'Reoptimization failed');
+      }
+
+      const result = await response.json();
+      
+      // Refresh Phase 1 and Phase 2 assignments
+      await fetchPlannedInternships();
+      await fetchStudentAssignments();
+      
+      // Calculate preservation in frontend using student assignments
+      const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
+      const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      
+      // Store results persistently with frontend-calculated preservation
+      setReoptimizationResults({
+        studentsAssigned: result.studentsAssigned,
+        totalDemands: result.totalDemands,
+        assignmentsPreserved: preserved,
+        preservedStudentNames: preservedStudentNames,
+        winterBudgetUsed: result.winterBudgetUsed,
+        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        finalBudget: summerAssignments.length,
+        winterTotal: winterAssignments.length,
+        summerTotal: summerAssignments.length
+      });
+      
+      setSuccess(`Reoptimization completed successfully! Students: ${result.studentsAssigned}/${result.totalDemands}`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reoptimization failed");
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setReoptimizing(false);
+    }
+  };
+
+  // Calculate teacher assignment preservation between winter and summer
+
+  // Copy Semester Configs Handler
+  const handleCopySemesterConfigs = async () => {
+    if (!selectedYear) {
+      setError("Please select a year first");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    // Determine source and target years
+    let sourceYear = '';
+    let targetYear = '';
+    
+    if (selectedYear.startsWith('SoSe')) {
+      // If summer semester is selected, copy from previous winter
+      const year = selectedYear.replace('SoSe', '');
+      sourceYear = `WiSe${year}`;
+      targetYear = selectedYear;
+    } else {
+      setError("Semester config copy is only available for summer semesters (SoSe)");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      setCopyingConfigs(true);
+      const response = await fetch(
+        `http://localhost:8080/api/semester-config/copy-to-next-semester?sourceYear=${sourceYear}&targetYear=${targetYear}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to copy semester configs');
+      }
+
+      const result = await response.json();
+      setSuccess(
+        `Configs copied successfully! Teachers: ${result.teacherConfigsCopied}, Students: ${result.studentConfigsCopied}`
+      );
+      
+      // Refresh student configs and teacher data without changing selected year
+      await fetchStudentConfigsByYear();
+      const teachersData = await plService.getAllPls();
+      setTeachers(teachersData.filter(t => t.active !== false));
+      
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to copy semester configs");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setCopyingConfigs(false);
+    }
+  };
 
   // Teacher assignments filter configuration
   const filteredTeacherAssignments = phase1Result?.plannedInternships.filter(pi => {
@@ -1052,6 +1309,16 @@ const handleConfirmNewYear = () => {
               </option>
             ))}
           </select>
+          {selectedYear?.startsWith('SoSe') && (
+            <button 
+              className="btn-primary-filled"
+              onClick={handleCopySemesterConfigs}
+              disabled={copyingConfigs}
+              style={{whiteSpace: 'nowrap'}}
+            >
+              {copyingConfigs ? "Kopieren läuft..." : "kopieren"}
+            </button>
+          )}
           <button 
             className="btn-primary-filled"
             onClick={handleCreateNewYear}
@@ -1113,18 +1380,181 @@ const handleConfirmNewYear = () => {
                     }}
                   />
                 </div>
-                <button 
-                  className="btn-primary"
-                  onClick={handlePhase1Assignment}
-                  disabled={!selectedYear || assigningPhase1}
-                  style={{marginTop: '20px'}}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
-                </button>
+                {selectedYear?.startsWith('SoSe') && (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Uncompleted</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      value={uncompletedInternships}
+                      onChange={(e) => setUncompletedInternships(parseInt(e.target.value) || 0)}
+                      style={{
+                        width: '100px',
+                        padding: '8px 12px',
+                        fontSize: '0.875rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        color: '#111827',
+                        textAlign: 'center'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3b82f6';
+                        e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.outline = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                <div style={{display: 'flex', gap: '12px', marginTop: '20px'}}>
+                  {!selectedYear?.startsWith('SoSe') && (
+                    <button 
+                      className="btn-primary"
+                      onClick={handlePhase1Assignment}
+                      disabled={!selectedYear || assigningPhase1}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
+                    </button>
+                  )}
+                  {selectedYear?.startsWith('SoSe') && (
+                    <button 
+                      className="btn-primary"
+                      onClick={handleReoptimization}
+                      disabled={!selectedYear || reoptimizing}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {reoptimizing ? "Reoptimierung" : "Reoptimieren"}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Reoptimization Progress Bar */}
+            {reoptimizing && (
+              <div className="optimization-progress-container">
+                <span className="optimization-progress-text">⚙️ Optimierung läuft...</span>
+                <div className="progress-bar-wrapper">
+                  <div className="progress-bar-animated"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Reoptimization Results Panel */}
+            {reoptimizationResults && selectedYear?.startsWith('SoSe') && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px 16px',
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '24px',
+                  fontSize: '0.9em',
+                  flexWrap: 'wrap',
+                  alignItems: 'center'
+                }}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    {reoptimizationResults.preservedStudentNames && reoptimizationResults.preservedStudentNames.length > 0 && (
+                      <button
+                        onClick={() => setShowPreservedStudents(!showPreservedStudents)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#3b82f6',
+                          borderRadius: '3px',
+                          transition: 'all 0.2s',
+                          backgroundColor: showPreservedStudents ? '#dbeafe' : 'transparent'
+                        }}
+                        title={showPreservedStudents ? 'Ausblenden' : 'Anzeigen'}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = showPreservedStudents ? '#dbeafe' : 'transparent'}
+                      >
+                        <svg 
+                          width="16" 
+                          height="16" 
+                          viewBox="0 0 16 16" 
+                          fill="none" 
+                          style={{
+                            transition: 'transform 0.2s',
+                            transform: showPreservedStudents ? 'rotate(90deg)' : 'rotate(0deg)'
+                          }}
+                        >
+                          <path 
+                            d="M6 4L10 8L6 12" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                    <span style={{color: '#3b82f6'}}>
+                      <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
+                    </span>
+                  </div>
+                  {reoptimizationResults.winterBudgetUsed > 0 && (
+                    <>
+                      <span style={{color: '#f59e0b'}}>
+                        <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {showPreservedStudents && reoptimizationResults.preservedStudentNames && reoptimizationResults.preservedStudentNames.length > 0 && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e0f2fe',
+                    borderRadius: '6px',
+                    fontSize: '0.85em',
+                    animation: 'fadeIn 0.2s ease-in'
+                  }}>
+                    <strong style={{color: '#0369a1', marginBottom: '8px', display: 'block'}}>
+                      Erhaltene Studierende ({reoptimizationResults.preservedStudentNames.length}):
+                    </strong>
+                    <div style={{
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '6px'
+                    }}>
+                      {reoptimizationResults.preservedStudentNames.map((name, index) => (
+                        <span key={index} style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#e0f2fe',
+                          color: '#075985',
+                          borderRadius: '4px',
+                          fontSize: '0.85em',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Optimization Progress Bar */}
             {assigningPhase1 && (
@@ -1244,15 +1674,17 @@ const handleConfirmNewYear = () => {
                 <h1 style={{fontSize: '20px'}}>Studentenzuweisungen</h1>
               </div>
               <div className="header-actions">
-                <button 
-                  className="btn-primary"
-                  onClick={handleAssignPhase2}
-                  disabled={assigningPhase2 || !phase1Result}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  {assigningPhase2 ? "Läuft..." : "Zuweisen"}
-                </button>
+                {!selectedYear?.startsWith('SoSe') && (
+                  <button 
+                    className="btn-primary"
+                    onClick={handleAssignPhase2}
+                    disabled={assigningPhase2 || !phase1Result}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    {assigningPhase2 ? "Läuft..." : "Zuweisen"}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1702,12 +2134,21 @@ const handleConfirmNewYear = () => {
         <div className="modal-overlay">
           <div className="modal-content modal-small">
             <h2>Create New Planning Year</h2>
-            <p>Enter the academic year (e.g., 2026)</p>
-            <div style={{marginBottom: '20px'}}>
+            <p>Select semester type and enter the year (e.g., WiSe2026 or SoSe2025)</p>
+            <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <select
+                className="form-select-small"
+                value={newSemesterType}
+                onChange={(e) => setNewSemesterType(e.target.value)}
+                style={{padding: '10px', fontSize: '1rem', width: '120px'}}
+              >
+                <option value="WiSe">WiSe</option>
+                <option value="SoSe">SoSe</option>
+              </select>
               <input
                 type="text"
                 className="student-config-input"
-                placeholder="e.g., 2026"
+                placeholder="2026"
                 value={newYearInput}
                 onChange={(e) => setNewYearInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -1716,7 +2157,7 @@ const handleConfirmNewYear = () => {
                   }
                 }}
                 autoFocus
-                style={{width: '100%', padding: '10px', fontSize: '1rem'}}
+                style={{flex: 1, padding: '10px', fontSize: '1rem', minWidth: '150px'}}
               />
             </div>
             <div className="modal-actions">
@@ -1725,6 +2166,7 @@ const handleConfirmNewYear = () => {
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
+                  setNewSemesterType('WiSe');
                 }}
               >
                 Cancel

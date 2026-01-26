@@ -1,12 +1,14 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.AssignmentStatus;
+import com.aspd.backend.model.BaselineAssignment;
 import com.aspd.backend.model.Course;
 import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.PraktikumType;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.model.StudentInternshipDemand;
+import com.aspd.backend.repository.BaselineAssignmentRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.solver.StudentAssignmentSolution;
@@ -19,7 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +36,7 @@ public class Phase2OptimizationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
+    private final BaselineAssignmentRepository baselineAssignmentRepository;
 
     /**
      * Optimize Phase 2: Student assignment.
@@ -47,8 +52,29 @@ public class Phase2OptimizationService {
             List<StudentConfig> studentConfigs,
             String schoolYear,
             Integer timeBudget) {
+        return optimize(studentConfigs, schoolYear, timeBudget, null);
+    }
+
+    /**
+     * Optimize Phase 2 with optional baseline preservation.
+     * 
+     * @param studentConfigs Student configurations
+     * @param schoolYear Academic year
+     * @param timeBudget Total hours budget
+     * @param semester Semester for baseline lookup (null = no baseline)
+     * @return Phase 2 solution with optimized student assignments
+     */
+    @Transactional
+    public StudentAssignmentSolution optimize(
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget,
+            String semester) {
         
         log.info("\n========== PHASE 2: Student Assignment ==========");
+        if (semester != null) {
+            log.info("Re-optimization mode: using baseline from semester={}", semester);
+        }
         
         // Load and validate planned internships from Phase 1
         List<PlannedInternship> plannedInternships = loadAndValidatePlannedInternships(schoolYear);
@@ -59,6 +85,11 @@ public class Phase2OptimizationService {
         // Create student demands
         List<StudentInternshipDemand> studentDemands = createStudentDemandsFromConfigs(
                 studentConfigs, schoolYear);
+        
+        // Apply baseline if semester is specified
+        if (semester != null) {
+            applyBaselineToDemandsInternships(studentDemands, plannedInternships, schoolYear, semester);
+        }
         
         // Run Phase 2
         StudentAssignmentSolution phase2Result = runPhase2(
@@ -235,5 +266,115 @@ public class Phase2OptimizationService {
                 .schoolYear(schoolYear)
                 .status(AssignmentStatus.PROPOSED)
                 .build();
+    }
+
+    /**
+     * Applies baseline assignments to student demands and internships for re-optimization.
+     * This pre-populates the solution with existing valid assignments and pins them
+     * so OptaPlanner preserves them unless necessary to change.
+     * 
+     * For summer re-optimization: loads winter baseline from same year
+     */
+    private void applyBaselineToDemandsInternships(
+            List<StudentInternshipDemand> demands,
+            List<PlannedInternship> internships,
+            String schoolYear,
+            String semester) {
+        
+        // Determine baseline semester to load
+        // For summer (SoSe), load winter (WiSe) baseline from same year
+        // For winter (WiSe), load summer (SoSe) baseline from previous year
+        String baselineYear;
+        if ("summer".equalsIgnoreCase(semester)) {
+            // Loading for summer -> use winter baseline from same calendar year
+            baselineYear = schoolYear.replace("SoSe", "WiSe");
+        } else {
+            // Loading for winter -> use summer baseline from previous calendar year
+            if (schoolYear.startsWith("WiSe")) {
+                String year = schoolYear.substring(4);
+                int yearNum = Integer.parseInt(year);
+                baselineYear = "SoSe" + (yearNum - 1);
+            } else {
+                baselineYear = schoolYear;  // fallback
+            }
+        }
+        
+        // Get baseline from previous semester
+        List<BaselineAssignment> baselines = baselineAssignmentRepository
+                .findBySchoolYear(baselineYear);
+        
+        if (baselines.isEmpty()) {
+            log.warn("No baseline found for year={}. Running fresh optimization.", baselineYear);
+            return;
+        }
+        
+        log.info("Found {} baseline assignments from year={}", baselines.size(), baselineYear);
+        
+        // Create maps for quick lookup by student matriculation number + praktikum type
+        Map<String, StudentInternshipDemand> demandMap = new HashMap<>();
+        for (StudentInternshipDemand demand : demands) {
+            int matricNbr = demand.getStudentConfig().getStudent().getMatriculationNbr();
+            String key = matricNbr + "_" + demand.getPraktikumType();
+            demandMap.put(key, demand);
+        }
+        
+        // Create map for quick lookup by teacher + school + praktikum type + course
+        Map<String, PlannedInternship> internshipMap = new HashMap<>();
+        for (PlannedInternship internship : internships) {
+            if (internship.getAssignedTeacher() != null && internship.getSchool() != null) {
+                String key = internship.getAssignedTeacher().getTeacherId() + "_" + 
+                            internship.getSchool().getId() + "_" +
+                            internship.getPraktikumType() + "_" +
+                            (internship.getCourse() != null ? internship.getCourse().getId() : "NULL");
+                internshipMap.put(key, internship);
+            }
+        }
+        
+        int appliedCount = 0;
+        int pinnedCount = 0;
+        
+        // Apply baseline assignments
+        for (BaselineAssignment baseline : baselines) {
+            int matricNbr = baseline.getStudentDemand().getStudentConfig().getStudent().getMatriculationNbr();
+            PraktikumType praktikumType = baseline.getStudentDemand().getPraktikumType();
+            
+            // Find matching demand in current demands (same student + same praktikum type)
+            String demandKey = matricNbr + "_" + praktikumType;
+            StudentInternshipDemand demand = demandMap.get(demandKey);
+            if (demand == null) {
+                log.debug("No matching demand for student {} praktikum {}", matricNbr, praktikumType);
+                continue;
+            }
+            
+            // Find matching internship by teacher-school combination
+            Long teacherId = baseline.getTeacher().getTeacherId();
+            Long schoolId = baseline.getSchool().getId();
+            Course course = baseline.getStudentDemand().getPreferredCourse();
+            
+            String internshipKey = teacherId + "_" + schoolId + "_" + praktikumType + "_" +
+                                  (course != null ? course.getId() : "NULL");
+            PlannedInternship internship = internshipMap.get(internshipKey);
+            if (internship == null) {
+                log.debug("No matching internship for teacher {} school {} praktikum {} course {}", 
+                         teacherId, schoolId, praktikumType, course);
+                continue;
+            }
+            
+            // Pin if marked as pinned in baseline (MUST be set first)
+            if (baseline.isPinned()) {
+                demand.setPinned(true);
+                pinnedCount++;
+            }
+            
+            // Store baseline for score calculator to reward preservation
+            demand.setBaselineInternship(internship);
+            
+            // Apply baseline: pre-assign internship to demand
+            demand.setAssignedInternship(internship);
+            appliedCount++;
+        }
+        
+        log.info("Applied {} baseline assignments ({} pinned)", appliedCount, pinnedCount);
+        log.info("OptaPlanner will preserve pinned assignments and prefer keeping others via soft constraint");
     }
 }

@@ -122,6 +122,9 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
             reward += evaluateZspCourseMatch(demand, internship.getCourse());
         }
         
+        // Baseline preservation: reward keeping existing assignments
+        reward += evaluateBaselinePreservation(demand, internship);
+        
         return reward;
     }
 
@@ -210,5 +213,38 @@ public class StudentAssignmentEasyScoreCalculator implements EasyScoreCalculator
         
         // Soft penalty: negative of total kilometers
         return (int) Math.round(-totalDistance);
+    }
+
+    /**
+     * Evaluates baseline preservation during re-optimization.
+     * When a demand has a baseline assignment (from previous semester):
+     * - Rewards keeping the same internship (+500) - HIGHEST PRIORITY
+     * - No penalty for changes (allows flexibility when needed)
+     * 
+     * This creates a soft preference to maintain existing assignments
+     * while still allowing changes when better solutions exist or when
+     * constraints require it. Works in conjunction with @PlanningPin
+     * which hard-locks critical assignments.
+     * 
+     * Weight increased from 50 to 500 to prioritize preservation over course matching.
+     * This ensures existing assignments are only changed when absolutely necessary
+     * (e.g., teacher unavailable, hard constraints violated).
+     * 
+     * @param demand The student demand being evaluated
+     * @param internship The internship being assigned
+     * @return +500 if assignment matches baseline, 0 otherwise
+     */
+    private int evaluateBaselinePreservation(StudentInternshipDemand demand, PlannedInternship internship) {
+        // Check if this demand has a baseline assignment stored
+        PlannedInternship baselineInternship = demand.getBaselineInternship();
+        
+        if (baselineInternship != null && baselineInternship.equals(internship)) {
+            // Reward preserving the baseline assignment - HIGH PRIORITY
+            return 1000;
+        }
+        
+        // No penalty for changing - just no reward
+        // This allows OptaPlanner flexibility when better assignments exist
+        return 0;
     }
 }
