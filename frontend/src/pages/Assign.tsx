@@ -19,6 +19,7 @@ import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentRe
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
 import ForceSaveModal from "../components/ForceSaveModal";
+import ValidationFeedback from "../components/ValidationFeedback";
 
 type TabType = "assignments" | "pl-config" | "student-config";
 
@@ -2401,16 +2402,16 @@ const handleConfirmNewYear = () => {
                   <option value="PROPOSED">Vorgeschlagen</option>
                   <option value="CANCELLED">Abgesagt</option>
                 </select>
-                  {validationResult && validationResult.hardValid === false && (
-    <div className="error-container" style={{ marginBottom: "12px" }}>
-      <strong>Nicht speicherbar:</strong>
-      <ul style={{ margin: "8px 0 0 18px" }}>
-        {validationResult.hardViolations?.map((v: any, i: number) => (
-          <li key={i}>{v.message}</li>
-        ))}
-      </ul>
-    </div>
-  )}
+                  <ValidationFeedback
+                    hardViolations={validationResult?.hardViolations}
+                    warnings={validationResult?.warnings}
+                    hardTitle="Nicht speicherbar"
+                    warningTitle="Warnungen"
+                    openHard={true}
+                    openWarnings={false}
+                    compact
+                  />
+
               </div>
               
             </div>

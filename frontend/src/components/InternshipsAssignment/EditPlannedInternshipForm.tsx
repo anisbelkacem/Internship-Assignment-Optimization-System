@@ -6,6 +6,7 @@ import schoolService from "../../services/schoolService";
 import type { School } from "../../services/schoolService";
 import internshipAssignmentService from "../../services/internshipAssignmentService";
 import ForceSaveModal from "../ForceSaveModal";
+import ValidationFeedback from "../ValidationFeedback";
 
 interface EditPlannedInternshipFormProps {
   internship: PlannedInternshipDto;
@@ -243,16 +244,15 @@ const validate = async (tId: number | null, sId: number | null) => {
           </div>
         </div>
       </div>
-      {validation && !validation.hardValid && (
-  <div className="error-message">
-    <strong>Nicht speicherbar:</strong>
-    <ul>
-      {validation.hardViolations.map((v, idx) => (
-            <li key={idx}>{v.message}</li>
-            ))}
-            </ul>
-          </div>
-        )}
+      <ValidationFeedback
+  hardViolations={validation?.hardViolations}
+  warnings={validation?.warnings}
+  hardTitle="Nicht speicherbar"
+  warningTitle="Warnungen"
+  openHard={true}
+  openWarnings={false}
+/>
+
 
       <div className="modal-form-actions">
         <button
