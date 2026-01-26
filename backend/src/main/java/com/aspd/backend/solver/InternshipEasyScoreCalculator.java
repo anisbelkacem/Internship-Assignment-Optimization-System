@@ -175,7 +175,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         long activeCount = internships.stream().filter(PlannedInternship::isActive).count();
         int budget = solution.getBudget().getMaxActiveInternships();
         int deviation = (int) Math.abs(activeCount - budget);
-        int score = -deviation * 1000;
+        int score = -deviation * 2000;
         return score;
     }
 
@@ -205,7 +205,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             int deficit = Math.max(0, required - (int) active);
 
             if (deficit > 0) {
-                hardScore -= deficit * 200; // Penalize each missing active slot
+                hardScore -= deficit * 500; // Penalize each missing active slot
             }
         }
 
@@ -237,7 +237,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // Teachers can take 0, 1, 2, or 4 internships - not 3 or 5+
         for (long count : teacherCounts.values()) {
             if (count == 3 || count > 4) {
-                hardScore -= count; // Penalize invalid workload
+                hardScore -= 50; // Penalize invalid workload (teacher preference)
             }
         }
 
@@ -255,13 +255,13 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // If teacher takes 2 or 4 internships, they must all be different types
         for (List<PlannedInternship> assignments : byTeacher.values()) {
             int count = assignments.size();
-            if (count == 2 || count == 4) {
+            if (count != 1) {
                 long uniqueTypes = assignments.stream()
                     .map(PlannedInternship::getPraktikumType)
                     .distinct()
                     .count();
                 if (uniqueTypes != count) {
-                    hardScore -= 20; // Penalize if not all different
+                    hardScore -= 500; // Penalize if not all different
                 }
             }
         }
@@ -296,7 +296,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                 int actualCount = assignments.size();
                 
                 if (actualCount > maxAllowed) {
-                    hardScore -= (actualCount - maxAllowed) * 100; // Heavy penalty per excess
+                    hardScore -= (actualCount - maxAllowed) * 40; // Teacher preference per excess
                 }
             }
         }
@@ -323,7 +323,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
             // Teacher must support the internship type
             if (config == null || !config.getInternshipPreferences().contains(type)) {
-                hardScore -= 1;
+                hardScore -= 50; // Teacher preference, not eligibility
             }
         }
 
@@ -357,7 +357,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                     .orElse(null);
 
                 if (config == null || !config.getSubjectSpecializations().contains(requiredCourse)) {
-                    hardScore -= 1; // Teacher doesn't support this course
+                    hardScore -= 50; // Teacher preference, not eligibility
                 }
             }
         }
@@ -395,7 +395,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         for (PlannedInternship i : internships) {
             // Active ZSP internships must have a course assigned
             if (i.isActive() && i.getPraktikumType() == PraktikumType.ZSP && i.getCourse() == null) {
-                hardScore -= 50; // Penalty for ZSP without course
+                hardScore -= 150; // Penalty for ZSP without course
             }
         }
 
@@ -409,11 +409,11 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             if (i.isActive() && i.getSchool() != null) {
                 // Penalize if school is inactive
                 if (!Boolean.TRUE.equals(i.getSchool().getActive())) {
-                    hardScore -= 100; // Cannot assign inactive school
+                    hardScore -= 300; // Cannot assign inactive school
                 }
                 // Check type match
                 else if (i.getSchool().getType() != i.getSchoolType()) {
-                    hardScore -= 100; // School type doesn't match requirement
+                    hardScore -= 300; // School type doesn't match requirement
                 }
             }
         }
@@ -426,11 +426,11 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
         for (PlannedInternship i : internships) {
             if (i.isActive() && i.getAssignedTeacher() == null) {
-                hardScore -= 100; // Active internship without assigned teacher
+                hardScore -= 300; // Active internship without assigned teacher
             }
             // Penalize if assigned teacher is inactive
             if (i.isActive() && i.getAssignedTeacher() != null && !i.getAssignedTeacher().isActive()) {
-                hardScore -= 100; // Cannot assign inactive teacher
+                hardScore -= 300; // Cannot assign inactive teacher
             }
         }
 
@@ -489,7 +489,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             }
 
             if (isViolation) {
-                hardScore -= 4;
+                hardScore -= 200;
             }
         }
 
@@ -521,16 +521,16 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
                 // Prefer Zone 1 for ZSP & SFP
                 if ("1".equals(zone)) {
-                    softScore += 5; // Bonus for preferred zone
+                    softScore += 10; // Bonus for preferred zone
                 } else if ("2".equals(zone)) {
-                    softScore -= 3; // Penalty for "if necessary" zone
+                    softScore -= 5; // Penalty for "if necessary" zone
                 }
             } else if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
                 // Prefer Zone 3 for PDP
                 if ("3".equals(zone)) {
-                    softScore += 5; // Bonus for preferred zone
+                    softScore += 10; // Bonus for preferred zone
                 } else if ("2".equals(zone)) {
-                    softScore -= 3; // Penalty for "if necessary" zone
+                    softScore -= 5; // Penalty for "if necessary" zone
                 }
             }
         }
@@ -548,7 +548,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // Reward teachers with exactly 2 internships
         for (long count : teacherCounts.values()) {
             if (count == 2) {
-                softScore += 10; // Bonus points for ideal workload
+                softScore += 20; // Bonus points for ideal workload
             }
         }
 
