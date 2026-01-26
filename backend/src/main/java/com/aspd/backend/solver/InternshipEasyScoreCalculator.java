@@ -30,7 +30,8 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         hardScore += calculateMinimumActivationConstraints(internships);
         hardScore += calculateTeacherWorkloadConstraint(internships);
         hardScore += calculateTeacherDiversityConstraint(internships);
-        hardScore += calculateTeacherMaxPraktikaConstraint(internships);
+        hardScore += calculateTeacherMaxPraktikaConstraint(solution, internships);
+        hardScore += calculateTeacherMaxTypesConstraint(internships);
         hardScore += calculateTeacherPraktikumTypeConstraint(internships);
         hardScore += calculateTeacherCourseMatchConstraint(internships);
         hardScore += calculateCoursePinningConstraint(internships);
@@ -45,6 +46,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         softScore += calculateZspCourseDistributionPreference(solution, internships);
         softScore += calculatePdpDistancePreference(solution, internships);
         softScore += calculateZonePreference(internships);
+        softScore += calculateTeacherPreservationPreference(solution, internships);
 
         return HardSoftScore.of(hardScore, softScore);
     }
@@ -175,7 +177,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         long activeCount = internships.stream().filter(PlannedInternship::isActive).count();
         int budget = solution.getBudget().getMaxActiveInternships();
         int deviation = (int) Math.abs(activeCount - budget);
-        int score = -deviation * 1000;
+        int score = -deviation * 2000;
         return score;
     }
 
@@ -205,7 +207,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             int deficit = Math.max(0, required - (int) active);
 
             if (deficit > 0) {
-                hardScore -= deficit * 200; // Penalize each missing active slot
+                hardScore -= deficit * 500; // Penalize each missing active slot
             }
         }
 
@@ -237,7 +239,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // Teachers can take 0, 1, 2, or 4 internships - not 3 or 5+
         for (long count : teacherCounts.values()) {
             if (count == 3 || count > 4) {
-                hardScore -= count; // Penalize invalid workload
+                hardScore -= 50; // Penalize invalid workload (teacher preference)
             }
         }
 
@@ -255,13 +257,13 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // If teacher takes 2 or 4 internships, they must all be different types
         for (List<PlannedInternship> assignments : byTeacher.values()) {
             int count = assignments.size();
-            if (count == 2 || count == 4) {
+            if (count != 1) {
                 long uniqueTypes = assignments.stream()
                     .map(PlannedInternship::getPraktikumType)
                     .distinct()
                     .count();
                 if (uniqueTypes != count) {
-                    hardScore -= 20; // Penalize if not all different
+                    hardScore -= 500; // Penalize if not all different
                 }
             }
         }
@@ -269,22 +271,37 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         return hardScore;
     }
 
-    private int calculateTeacherMaxPraktikaConstraint(List<PlannedInternship> internships) {
+    /**
+     * Enforce max internships per YEAR (not semester).
+     * For summer semester, this includes internships from winter semester.
+     */
+    private int calculateTeacherMaxPraktikaConstraint(InternshipSolution solution, List<PlannedInternship> internships) {
         int hardScore = 0;
 
-        // Group by teacher (all internships in this run are for the same school year)
+        // Get previous semester internships (winter internships when optimizing summer)
+        List<PlannedInternship> previousInternships = solution.getPreviousSemesterInternships();
+        if (previousInternships == null) {
+            previousInternships = new ArrayList<>();
+        }
+
+        // Group current semester by teacher
         Map<Teacher, List<PlannedInternship>> byTeacher = internships.stream()
             .filter(i -> i.isActive() && i.getAssignedTeacher() != null)
             .collect(Collectors.groupingBy(PlannedInternship::getAssignedTeacher));
 
-        // Check each teacher's workload
+        // Count previous semester internships by teacher
+        Map<Teacher, Long> previousCounts = previousInternships.stream()
+            .filter(i -> i.isActive() && i.getAssignedTeacher() != null)
+            .collect(Collectors.groupingBy(PlannedInternship::getAssignedTeacher, Collectors.counting()));
+
+        // Check each teacher's TOTAL workload (current + previous semester)
         for (Map.Entry<Teacher, List<PlannedInternship>> entry : byTeacher.entrySet()) {
             Teacher teacher = entry.getKey();
-            List<PlannedInternship> assignments = entry.getValue();
+            List<PlannedInternship> currentAssignments = entry.getValue();
             
-            if (assignments.isEmpty()) continue;
+            if (currentAssignments.isEmpty()) continue;
             
-            String schoolYear = assignments.get(0).getSchoolYear();
+            String schoolYear = currentAssignments.get(0).getSchoolYear();
             
             TeacherPlConfig config = teacher.getPlConfigs().stream()
                 .filter(c -> c.getSchoolYear().equals(schoolYear))
@@ -293,11 +310,43 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
             if (config != null && config.getMaxPraktikaPerYear() != null) {
                 int maxAllowed = config.getMaxPraktikaPerYear();
-                int actualCount = assignments.size();
+                int currentCount = currentAssignments.size();
+                int previousCount = previousCounts.getOrDefault(teacher, 0L).intValue();
+                int totalCount = currentCount + previousCount;
                 
-                if (actualCount > maxAllowed) {
-                    hardScore -= (actualCount - maxAllowed) * 100; // Heavy penalty per excess
+                if (totalCount > maxAllowed) {
+                    hardScore -= (totalCount - maxAllowed) * 40; // Teacher preference per excess
                 }
+            }
+        }
+
+        return hardScore;
+    }
+
+    /**
+     * Enforce max 2 TYPES of internships per teacher per semester.
+     * Example: A teacher can have 1 PDP_I + 1 SFP, but NOT 2 PDP_II + 1 SFP.
+     */
+    private int calculateTeacherMaxTypesConstraint(List<PlannedInternship> internships) {
+        int hardScore = 0;
+
+        // Group by teacher
+        Map<Teacher, List<PlannedInternship>> byTeacher = internships.stream()
+            .filter(i -> i.isActive() && i.getAssignedTeacher() != null)
+            .collect(Collectors.groupingBy(PlannedInternship::getAssignedTeacher));
+
+        // Check each teacher has max 2 types
+        for (Map.Entry<Teacher, List<PlannedInternship>> entry : byTeacher.entrySet()) {
+            List<PlannedInternship> assignments = entry.getValue();
+            
+            // Count unique types
+            long uniqueTypes = assignments.stream()
+                .map(PlannedInternship::getPraktikumType)
+                .distinct()
+                .count();
+            
+            if (uniqueTypes > 2) {
+                hardScore -= (int)(uniqueTypes - 2) * 100; // Heavy penalty for exceeding 2 types
             }
         }
 
@@ -323,7 +372,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
             // Teacher must support the internship type
             if (config == null || !config.getInternshipPreferences().contains(type)) {
-                hardScore -= 1;
+                hardScore -= 50; // Teacher preference, not eligibility
             }
         }
 
@@ -357,7 +406,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                     .orElse(null);
 
                 if (config == null || !config.getSubjectSpecializations().contains(requiredCourse)) {
-                    hardScore -= 1; // Teacher doesn't support this course
+                    hardScore -= 50; // Teacher preference, not eligibility
                 }
             }
         }
@@ -395,7 +444,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         for (PlannedInternship i : internships) {
             // Active ZSP internships must have a course assigned
             if (i.isActive() && i.getPraktikumType() == PraktikumType.ZSP && i.getCourse() == null) {
-                hardScore -= 50; // Penalty for ZSP without course
+                hardScore -= 150; // Penalty for ZSP without course
             }
         }
 
@@ -409,11 +458,11 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             if (i.isActive() && i.getSchool() != null) {
                 // Penalize if school is inactive
                 if (!Boolean.TRUE.equals(i.getSchool().getActive())) {
-                    hardScore -= 100; // Cannot assign inactive school
+                    hardScore -= 300; // Cannot assign inactive school
                 }
                 // Check type match
                 else if (i.getSchool().getType() != i.getSchoolType()) {
-                    hardScore -= 100; // School type doesn't match requirement
+                    hardScore -= 300; // School type doesn't match requirement
                 }
             }
         }
@@ -426,11 +475,11 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
         for (PlannedInternship i : internships) {
             if (i.isActive() && i.getAssignedTeacher() == null) {
-                hardScore -= 100; // Active internship without assigned teacher
+                hardScore -= 300; // Active internship without assigned teacher
             }
             // Penalize if assigned teacher is inactive
             if (i.isActive() && i.getAssignedTeacher() != null && !i.getAssignedTeacher().isActive()) {
-                hardScore -= 100; // Cannot assign inactive teacher
+                hardScore -= 300; // Cannot assign inactive teacher
             }
         }
 
@@ -489,7 +538,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             }
 
             if (isViolation) {
-                hardScore -= 4;
+                hardScore -= 200;
             }
         }
 
@@ -521,16 +570,16 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
                 // Prefer Zone 1 for ZSP & SFP
                 if ("1".equals(zone)) {
-                    softScore += 5; // Bonus for preferred zone
+                    softScore += 10; // Bonus for preferred zone
                 } else if ("2".equals(zone)) {
-                    softScore -= 3; // Penalty for "if necessary" zone
+                    softScore -= 5; // Penalty for "if necessary" zone
                 }
             } else if (type == PraktikumType.PDP_I || type == PraktikumType.PDP_II) {
                 // Prefer Zone 3 for PDP
                 if ("3".equals(zone)) {
-                    softScore += 5; // Bonus for preferred zone
+                    softScore += 10; // Bonus for preferred zone
                 } else if ("2".equals(zone)) {
-                    softScore -= 3; // Penalty for "if necessary" zone
+                    softScore -= 5; // Penalty for "if necessary" zone
                 }
             }
         }
@@ -548,7 +597,7 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         // Reward teachers with exactly 2 internships
         for (long count : teacherCounts.values()) {
             if (count == 2) {
-                softScore += 10; // Bonus points for ideal workload
+                softScore += 20; // Bonus points for ideal workload
             }
         }
 
@@ -659,5 +708,79 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
 
     private boolean hasOepnv(OepnvStatus status) {
         return status != null && status.isAvailable();
+    }
+    
+    /**
+     * SOFT constraint: Reward preserving teacher assignments from previous semester.
+     * 
+     * During reoptimization (e.g., WiSe → SoSe), prefer keeping the same teachers
+     * assigned to the same internship types/courses where possible.
+     * 
+     * Matching logic:
+     * - For PDP (no course): Match by praktikumType + schoolType + teacher
+     * - For ZSP/SFP (has course): Match by praktikumType + schoolType + course + teacher
+     * 
+     * Reward: +500 per preserved teacher assignment (same priority as Phase 2 preservation)
+     * 
+     * This creates a soft preference to maintain teaching continuity while still
+     * allowing changes when constraints require it (e.g., teacher unavailable, workload limits).
+     * 
+     * @param solution The optimization problem with previous semester data
+     * @param internships Current semester's planned internships
+     * @return Soft score bonus for preserved assignments
+     */
+    private int calculateTeacherPreservationPreference(InternshipSolution solution, List<PlannedInternship> internships) {
+        List<PlannedInternship> previousInternships = solution.getPreviousSemesterInternships();
+        
+        if (previousInternships == null || previousInternships.isEmpty()) {
+            return 0; // No previous data, skip preservation
+        }
+        
+        int softScore = 0;
+        
+        // Build lookup map: key = type/schoolType/course -> teacher
+        Map<String, Teacher> previousAssignments = new HashMap<>();
+        for (PlannedInternship prev : previousInternships) {
+            if (!prev.isActive() || prev.getAssignedTeacher() == null) {
+                continue;
+            }
+            
+            String key = buildPreservationKey(prev);
+            previousAssignments.put(key, prev.getAssignedTeacher());
+        }
+        
+        // Check current assignments against previous
+        for (PlannedInternship current : internships) {
+            if (!current.isActive() || current.getAssignedTeacher() == null) {
+                continue;
+            }
+            
+            String key = buildPreservationKey(current);
+            Teacher previousTeacher = previousAssignments.get(key);
+            
+            if (previousTeacher != null && previousTeacher.equals(current.getAssignedTeacher())) {
+                // Same teacher assigned to same type of internship - HIGH REWARD
+                softScore += 1000;
+            }
+        }
+        
+        return softScore;
+    }
+    
+    /**
+     * Build a key for matching internships between semesters.
+     * Key format: "praktikumType/schoolType" or "praktikumType/schoolType/courseId"
+     */
+    private String buildPreservationKey(PlannedInternship internship) {
+        String baseKey = internship.getPraktikumType() + "/" + internship.getSchoolType();
+        
+        // For ZSP and SFP, include course in the key
+        if (internship.getCourse() != null && 
+            (internship.getPraktikumType() == PraktikumType.ZSP || 
+             internship.getPraktikumType() == PraktikumType.SFP)) {
+            return baseKey + "/" + internship.getCourse().getId();
+        }
+        
+        return baseKey;
     }
 }

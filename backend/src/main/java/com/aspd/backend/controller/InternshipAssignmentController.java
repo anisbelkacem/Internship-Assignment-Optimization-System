@@ -85,13 +85,15 @@ public class InternshipAssignmentController {
     @PutMapping("/{id}")
     public ResponseEntity<AssignmentDto> updateAssignment(
             @PathVariable Long id,
+            @RequestParam(name = "force", defaultValue = "false") boolean force,
             @RequestBody InternshipAssignmentUpdateRequest req) {
 
-        return assignmentService.updateByIds(id, req)
+        return assignmentService.updateByIds(id, req, force)
                 .map(assignmentMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
 
     /**
      * Partially update an internship assignment (e.g., change status only).

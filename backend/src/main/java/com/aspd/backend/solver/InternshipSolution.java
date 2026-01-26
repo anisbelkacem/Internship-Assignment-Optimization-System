@@ -84,4 +84,12 @@ public class InternshipSolution {
     
     @ProblemFactProperty
     private ZspCourseDistribution zspCourseDistribution; // Weighted ZSP course preferences
+    
+    /**
+     * Previous semester's teacher assignments for preservation during reoptimization.
+     * Key: praktikumType/schoolType/course -> Teacher
+     * Used to reward keeping the same teacher assignments when possible.
+     */
+    @ProblemFactCollectionProperty
+    private List<PlannedInternship> previousSemesterInternships;
 }

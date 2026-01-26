@@ -624,6 +624,11 @@
   color: #1e40af;
 }
 
+.status-badge.status-cancelled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
 .status-badge.status-other {
   background-color: #f3f4f6;
   color: #6b7280;

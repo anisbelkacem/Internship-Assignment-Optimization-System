@@ -61,13 +61,14 @@ public class PlannedInternshipController {
     @PutMapping("/{id}")
     public ResponseEntity<PlannedInternshipDto> update(
             @PathVariable Long id,
+            @RequestParam(name = "force", defaultValue = "false") boolean force,
             @RequestBody UpdatePlannedInternshipRequest request) {
 
         log.info("PUT /api/planned-internships/{} with teacher={} school={}",
                 id, request.teacherId, request.schoolId);
 
         PlannedInternship updated = plannedInternshipService.update(
-                id, request.teacherId, request.schoolId);
+                id, request.teacherId, request.schoolId, force);
 
         return ResponseEntity.ok(toDto(updated));
     }
