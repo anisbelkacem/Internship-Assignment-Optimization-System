@@ -21,7 +21,7 @@ public class AssignmentExcelExporter {
             CellStyle headerStyle = createHeaderCellStyle(workbook);
             
             String[] headers = {
-                "Assignment ID",
+                "No.",
                 "Student Name",
                 "Student Matriculation",
                 "Student Email",
@@ -31,8 +31,6 @@ public class AssignmentExcelExporter {
                 "Teacher Name",
                 "Teacher Email",
                 "School Name",
-                "Start Date",
-                "End Date",
                 "Status",
                 "School Year"
             };
@@ -48,7 +46,8 @@ public class AssignmentExcelExporter {
             for (InternshipAssignment assignment : assignments) {
                 Row dataRow = sheet.createRow(rowNum++);
                 
-                dataRow.createCell(0).setCellValue(assignment.getId());
+                // Add counter starting from 1
+                dataRow.createCell(0).setCellValue(rowNum - 1);
                 
                 String studentName = assignment.getStudentConfig().getStudent().getFirstName() + " " +
                         assignment.getStudentConfig().getStudent().getLastName();
@@ -88,21 +87,9 @@ public class AssignmentExcelExporter {
                 } else {
                     dataRow.createCell(9).setCellValue("");
                 }
-                
-                if (assignment.getStartDate() != null) {
-                    dataRow.createCell(10).setCellValue(assignment.getStartDate().toString());
-                } else {
-                    dataRow.createCell(10).setCellValue("");
-                }
-                
-                if (assignment.getEndDate() != null) {
-                    dataRow.createCell(11).setCellValue(assignment.getEndDate().toString());
-                } else {
-                    dataRow.createCell(11).setCellValue("");
-                }
-                
-                dataRow.createCell(12).setCellValue(assignment.getStatus().toString());
-                dataRow.createCell(13).setCellValue(assignment.getSchoolYear() != null ? 
+
+                dataRow.createCell(10).setCellValue(assignment.getStatus().toString());
+                dataRow.createCell(11).setCellValue(assignment.getSchoolYear() != null ? 
                         assignment.getSchoolYear() : "");
             }
             

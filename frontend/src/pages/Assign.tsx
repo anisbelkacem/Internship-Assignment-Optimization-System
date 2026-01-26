@@ -16,6 +16,7 @@ import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import { PraktikumType } from "../services/plService";
 import type { Student } from "../services/studentService";
 import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentResult, AssignmentDto } from "../services/internshipAssignmentService";
+import API_BASE_URL from "../config/api";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
 import ForceSaveModal from "../components/ForceSaveModal";
@@ -520,6 +521,51 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setTimeout(() => setError(null), 5000);
     } finally {
       setAssigningPhase2(false);
+    }
+  };
+
+  const handleExportAssignments = async () => {
+    if (!selectedYear) {
+      setError("Bitte wählen Sie ein Schuljahr aus");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({ schoolYear: selectedYear });
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/internship-assignments/export?${params.toString()}`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        let message = "Export fehlgeschlagen";
+        try {
+          const errorBody = await response.json();
+          message = errorBody?.message || message;
+        } catch (err) {
+          console.error("Export response parse error", err);
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `student-assignments-${selectedYear}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSuccess("Export gestartet - Download sollte beginnen");
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err?.message || "Export fehlgeschlagen");
+      setTimeout(() => setError(null), 4000);
     }
   };
 
@@ -1855,8 +1901,8 @@ const handleConfirmNewYear = () => {
                     </tbody>
                   </table>
                   
-                  {/* Delete All Button at Bottom */}
-                  <div className="table-footer-actions">
+                  {/* Delete All & Export Buttons at Bottom */}
+                  <div className="table-footer-actions" style={{display: 'flex', gap: '12px'}}>
                     <button 
                       className="btn-delete-all" 
                       onClick={handleDeleteAllStudentAssignments}
@@ -1867,6 +1913,14 @@ const handleConfirmNewYear = () => {
                         </svg>
                       </span>
                       Alle Löschen
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={handleExportAssignments}
+                      disabled={!phase1Result}
+                      style={{border: '1px solid #1e293b', backgroundColor: 'white', color: '#1e293b'}}
+                    >
+                      Export (.xlsx)
                     </button>
                   </div>
                 </>
