@@ -337,7 +337,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
 
     try {
       await studentConfigService.deleteConfig(deletingStudentConfigId);
-      setSuccess("Student configuration deleted successfully!");
+      setSuccess("Studentenkonfiguration erfolgreich gelöscht!");
       fetchStudentConfigsByYear();
       
       // Refresh years list in case the last config for a year was deleted
@@ -381,7 +381,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
   try {
     await plService.deleteConfig(deletingTeacherConfig.teacherId, deletingTeacherConfig.configId);
-    setSuccess("Teacher configuration deleted successfully!");
+    setSuccess("Lehrerkonfiguration erfolgreich gelöscht!");
     await fetchInitialData(); // Refresh teachers with updated configs
     setTimeout(() => setSuccess(null), 3000);
   } catch (err) {
@@ -395,7 +395,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   // Phase 1 Optimization Handler
   const handlePhase1Assignment = async () => {
     if (!selectedYear) {
-      setError("Please select a school year first");
+      setError("Bitte wählen Sie zuerst ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -404,14 +404,14 @@ const handleConfirmDeleteTeacherConfig = async () => {
     
     try {
       const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
-      setSuccess(`Phase 1 optimization complete! Assigned ${result.assignedCount}/${result.totalPlannedInternships} internships.`);
+      setSuccess(`Phase 1 Optimierung abgeschlossen! ${result.assignedCount}/${result.totalPlannedInternships} Praktika zugewiesen.`);
       setTimeout(() => setSuccess(null), 5000);
       
       // Fetch saved results from database
       await fetchPlannedInternships();
       setShowTeacherAssignments(true);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Optimization failed";
+      const errorMsg = err instanceof Error ? err.message : "Optimierung fehlgeschlagen";
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
     } finally {
@@ -456,7 +456,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleDeleteAllAssignments = async () => {
     if (!selectedYear) return;
     
-    if (!confirm(`Delete all teacher assignments for ${selectedYear}?`)) {
+    if (!confirm(`Alle Lehrerzuweisungen für ${selectedYear} löschen?`)) {
       return;
     }
 
@@ -464,7 +464,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       await internshipAssignmentService.deleteAllPlannedInternships(selectedYear);
       setPhase1Result(null);
       setShowTeacherAssignments(false);
-      setSuccess("All assignments deleted successfully!");
+      setSuccess("Alle Zuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete assignments");
@@ -475,7 +475,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   // Phase 2: Student Assignment Optimization
   const handleAssignPhase2 = async () => {
     if (!selectedYear) {
-      setError("Please select a school year");
+      setError("Bitte wählen Sie ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -486,15 +486,15 @@ const handleConfirmDeleteTeacherConfig = async () => {
       const result = await internshipAssignmentService.optimizePhase2(selectedYear);
       setPhase2Result(result);
       setStudentAssignments(result.assignments);
-      setSuccess(`Phase 2 optimization complete! Assigned ${result.assignedStudents}/${result.totalStudents} students.`);
+      setSuccess(`Phase 2 Optimierung abgeschlossen! ${result.assignedStudents}/${result.totalStudents} Studierende zugewiesen.`);
       setTimeout(() => setSuccess(null), 5000);
       setShowStudentAssignments(true);
     } catch (err: any) {
       console.error("Phase 2 optimization error:", err);
-      let errorMsg = "Phase 2 optimization failed";
+      let errorMsg = "Phase 2 Optimierung fehlgeschlagen";
       
       if (err.status === 401 || err.status === 403) {
-        errorMsg = "Authentication error: Please log in again";
+        errorMsg = "Authentifizierungsfehler: Bitte erneut anmelden";
       } else if (err.message) {
         errorMsg = err.message;
       }
@@ -535,7 +535,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleDeleteAllStudentAssignments = async () => {
     if (!selectedYear) return;
     
-    if (!confirm(`Delete all student assignments for ${selectedYear}?`)) {
+    if (!confirm(`Alle Studentenzuweisungen für ${selectedYear} löschen?`)) {
       return;
     }
 
@@ -544,7 +544,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setPhase2Result(null);
       setStudentAssignments([]);
       setShowStudentAssignments(false);
-      setSuccess("All student assignments deleted successfully!");
+      setSuccess("Alle Studentenzuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete student assignments");
@@ -566,7 +566,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
   const handleSaveEditInternship = async () => {
     handleCloseEditInternshipModal();
     await fetchPlannedInternships();
-    setSuccess("Assignment updated successfully!");
+    setSuccess("Zuweisung erfolgreich aktualisiert!");
     setTimeout(() => setSuccess(null), 3000);
   };
 
@@ -604,77 +604,153 @@ const handleConfirmDeleteTeacherConfig = async () => {
   };
 
   const handleSaveEditAssignment = async (force = false) => {
-    if (!editingAssignment) return;
-
-    if (!force && validationResult && validationResult.hardValid === false) {
-      setShowForceSaveAssignment(true);
-      return;
-    }
-    
-    console.log('=== SAVING ASSIGNMENT ===');
-    console.log('Full assignment object:', editingAssignment);
-    console.log('Saving assignment with data:', {
-      id: editingAssignment.id,
-      teacherId: editingAssignment.teacherId,
-      schoolId: editingAssignment.schoolId,
-      status: editingAssignment.status,
-    });
-    
+  if (!editingAssignment) return;
+    // CANCELLED should always be possible: do status-only update, no validation flow
+  if (editingAssignment.status === 'CANCELLED') {
     try {
-      // Use PATCH endpoint for status updates (this works reliably)
       await internshipAssignmentService.updateAssignmentStatus(
         editingAssignment.id,
-        editingAssignment.status
+        'CANCELLED'
       );
-      
-      // If teacher/school changed, also try to update via PUT
-      // (Note: Backend currently doesn't update teacher/school, but status is already updated via PATCH)
-      const originalAssignment = studentAssignments.find(a => a.id === editingAssignment.id);
-      if (originalAssignment && 
-          (originalAssignment.teacherId !== editingAssignment.teacherId || 
-           originalAssignment.schoolId !== editingAssignment.schoolId)) {
-        console.log('Teacher or school changed, attempting full update...');
-        await internshipAssignmentService.updateStudentAssignment(
-          editingAssignment.id,
-          {
-            teacherId: editingAssignment.teacherId || null,
-            schoolId: editingAssignment.schoolId || null,
-            status: editingAssignment.status,
-          },
-          { force }
-        );
-      }
-      
-      console.log('Update successful, fetching updated assignments...');
-      
-      // Mark this assignment as edited
+
+      // Make sure cancelled assignments are no longer treated as "edited"
       const newEditedIds = new Set(editedAssignmentIds);
-      newEditedIds.add(editingAssignment.id);
+      newEditedIds.delete(editingAssignment.id);
       setEditedAssignmentIds(newEditedIds);
-      
+
       await fetchStudentAssignments();
-      console.log('Student assignments refreshed');
-      setSuccess("Student assignment updated successfully!");
+      setSuccess("Studentenzuweisung erfolgreich abgesagt!");
       setTimeout(() => setSuccess(null), 3000);
       handleCloseEditAssignmentModal();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err:any) {
-      console.error('Update error:', err);
+    } catch (err: any) {
+      setError(err?.message || "Zuweisung konnte nicht abgesagt werden");
+      setTimeout(() => setError(null), 3000);
+    }
+    return;
+  }
 
-    //  backend validation (AssignmentValidationException -> ValidationResult) comes here
+  // If user is not forcing and we already have a hard violation stored -> show force dialog
+  if (!force && validationResult && validationResult.hardValid === false) {
+    setShowForceSaveAssignment(true);
+    return;
+  }
+
+  console.log("=== SAVING ASSIGNMENT ===");
+  console.log("Full assignment object:", editingAssignment);
+  console.log("Saving assignment with data:", {
+    id: editingAssignment.id,
+    teacherId: editingAssignment.teacherId,
+    schoolId: editingAssignment.schoolId,
+    status: editingAssignment.status,
+  });
+
+  try {
+    const originalAssignment = studentAssignments.find(
+      (a) => a.id === editingAssignment.id
+    );
+
+    const teacherChanged =
+      !!originalAssignment &&
+      originalAssignment.teacherId !== editingAssignment.teacherId;
+    const schoolChanged =
+      !!originalAssignment &&
+      originalAssignment.schoolId !== editingAssignment.schoolId;
+    const statusChanged =
+      !!originalAssignment &&
+      originalAssignment.status !== editingAssignment.status;
+
+    // 1) PATCH status first (reliable)
+    console.log("Updating status to:", editingAssignment.status);
+    await internshipAssignmentService.updateAssignmentStatus(
+      editingAssignment.id,
+      editingAssignment.status
+    );
+
+    // 2) If teacher/school changed, attempt PUT update (backend might ignore teacher/school,
+    //    but status was already updated via PATCH)
+    if (originalAssignment && (teacherChanged || schoolChanged)) {
+      const updatePayload = {
+        teacherId: editingAssignment.teacherId || null,
+        schoolId: editingAssignment.schoolId || null,
+        status: editingAssignment.status,
+      };
+      console.log("Teacher or school changed, attempting full update with payload:", updatePayload);
+      await internshipAssignmentService.updateStudentAssignment(
+        editingAssignment.id,
+        updatePayload,
+        { force }
+      );
+    }
+
+    // 3) Update local UI immediately (so status changes are visible without refresh)
+    //    This avoids waiting for fetchStudentAssignments to reflect the change.
+    setStudentAssignments((prev) =>
+      prev.map((a) =>
+        a.id === editingAssignment.id
+          ? {
+              ...a,
+              teacherId: editingAssignment.teacherId,
+              schoolId: editingAssignment.schoolId,
+              status: editingAssignment.status,
+            }
+          : a
+      )
+    );
+
+    // 4) IMPORTANT: Do NOT mark CANCELLED/CONFIRMED as "Edited"
+    //    Otherwise your badge logic shows "Edited" instead of "Cancelled".
+    const newEditedIds = new Set(editedAssignmentIds);
+    const isCancelled = editingAssignment.status === "CANCELLED";
+    const isConfirmed = editingAssignment.status === "CONFIRMED";
+
+    const shouldMarkEdited =
+      (teacherChanged || schoolChanged || statusChanged) && !isCancelled && !isConfirmed;
+
+    if (shouldMarkEdited) newEditedIds.add(editingAssignment.id);
+    else newEditedIds.delete(editingAssignment.id);
+
+    setEditedAssignmentIds(newEditedIds);
+
+    // 5) Clear validation state after a successful save
+    setValidationResult(null);
+    setShowForceSaveAssignment(false);
+
+    // 6) Refresh from backend (kept as in your code)
+    await fetchStudentAssignments();
+    console.log("Student assignments refreshed");
+
+    setSuccess("Studentenzuweisung erfolgreich aktualisiert!");
+    setTimeout(() => setSuccess(null), 3000);
+    handleCloseEditAssignmentModal();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("Update error:", err);
+    console.error("Error details:", {
+      status: err?.status,
+      message: err?.message,
+      response: err?.response,
+      data: err?.data,
+      hardViolations: err?.hardViolations,
+      softViolations: err?.softViolations
+    });
+
+    // backend validation (AssignmentValidationException -> ValidationResult) comes here
     if (err?.status === 400 && err?.hardViolations) {
-      setValidationResult(err);       // store full ValidationResult
-      setError(null);                 // don't show generic "Error"
+      setValidationResult(err); // store full ValidationResult
+      setError(null); // don't show generic "Error"
       setShowForceSaveAssignment(true);
-      return;                         // keep modal open
+      return; // keep modal open
     }
 
     // fallback generic error
     setValidationResult(null);
-    setError(err?.message || "Failed to update assignment");
-    setTimeout(() => setError(null), 3000);
-    }
-  };
+    setShowForceSaveAssignment(false);
+    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Failed to update assignment";
+    setError(errorMessage);
+    setTimeout(() => setError(null), 5000);
+  }
+};
+
 
   const handleValidateAssignment = async (assignmentId: number) => {
     const confirmed = window.confirm('Möchten Sie diese Zuweisung bestätigen?');
@@ -694,7 +770,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       console.log('Validation result:', result);
       await fetchStudentAssignments();
       console.log('Student assignments refreshed');
-      setSuccess("Assignment validated successfully!");
+      setSuccess("Zuweisung erfolgreich bestätigt!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Validation error:', err);
@@ -1042,6 +1118,22 @@ const handleConfirmNewYear = () => {
   const uniqueConfigYears = [...new Set(studentConfigs.map(c => c.year).filter(Boolean))].sort();
   const uniqueConfigSchoolTypes = [...new Set(studentConfigs.map(c => c.schoolType).filter(Boolean))].sort();
   const uniqueConfigMainCourses = [...new Set(studentConfigs.map(c => c.mainCourse?.name).filter((c): c is string => !!c))].sort();
+  const statusLabelDE = (status?: string) => {
+  switch (status) {
+    case "CANCELLED":
+      return "Abgesagt";
+    case "CONFIRMED":
+      return "Bestätigt";
+    case "PROPOSED":
+      return "Vorgeschlagen";
+    case "PLANNED":
+      return "Geplant";
+    case "DONE":
+      return "Abgeschlossen";
+    default:
+      return status ?? "-";
+  }
+};
 
   const studentConfigFilterConfigs: FilterConfig[] = [
     {
@@ -1214,7 +1306,7 @@ const handleConfirmNewYear = () => {
             onClick={handleCreateNewYear}
             style={{whiteSpace: 'nowrap'}}
           >
-            New Year
+            Neues Jahr
           </button>
         </div>
       </div>
@@ -1391,9 +1483,9 @@ const handleConfirmNewYear = () => {
                   {phase1Result && (
                     <div style={{marginBottom: '16px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px'}}>
                       <div style={{display: 'flex', gap: '24px', fontSize: '0.9em'}}>
-                        <span><strong>Total Internships:</strong> {phase1Result.totalPlannedInternships}</span>
-                        <span style={{color: '#15803d'}}><strong>Assigned:</strong> {phase1Result.assignedCount}</span>
-                        <span style={{color: '#dc2626'}}><strong>Unassigned:</strong> {phase1Result.unassignedCount}</span>
+                        <span><strong>Praktika insgesamt:</strong> {phase1Result.totalPlannedInternships}</span>
+                        <span style={{color: '#15803d'}}><strong>Zugewiesen:</strong> {phase1Result.assignedCount}</span>
+                        <span style={{color: '#dc2626'}}><strong>Nicht zugewiesen:</strong> {phase1Result.unassignedCount}</span>
                       </div>
                     </div>
                   )}
@@ -1621,17 +1713,29 @@ const handleConfirmNewYear = () => {
                                 </span>
                               </td>
                               <td>
-                                <span className={`status-badge ${
-                                  assignment.status === 'CONFIRMED' ? 'status-confirmed' : 
-                                  editedAssignmentIds.has(assignment.id) ? 'status-edited' :
-                                  assignment.status === 'PROPOSED' ? 'status-proposed' :
-                                  'status-other'
-                                }`}>
-                                  {assignment.status === 'CONFIRMED' ? 'Bestätigt' : 
-                                   editedAssignmentIds.has(assignment.id) ? 'Bearbeitet' :
-                                   assignment.status === 'PROPOSED' ? 'Vorgeschlagen' :
-                                   assignment.status}
-                                </span>
+                                <span
+                                className={`status-badge ${
+                                  assignment.status === "CANCELLED"
+                                    ? "status-cancelled"
+                                    : assignment.status === "CONFIRMED"
+                                    ? "status-confirmed"
+                                    : editedAssignmentIds.has(assignment.id)
+                                    ? "status-edited"
+                                    : assignment.status === "PROPOSED"
+                                    ? "status-proposed"
+                                    : "status-other"
+                                }`}
+                              >
+                                {assignment.status === "CANCELLED"
+                                  ? "Abgesagt"
+                                  : assignment.status === "CONFIRMED"
+                                  ? "Bestätigt"
+                                  : editedAssignmentIds.has(assignment.id)
+                                  ? "Bearbeitet"
+                                  : statusLabelDE(assignment.status)}
+                              </span>
+
+
                               </td>
                               <td>
                                 <button 
@@ -2136,6 +2240,9 @@ const handleConfirmNewYear = () => {
                     };
                     console.log('Updating assignment to:', updated);
                     setEditingAssignment(updated);
+                    setValidationResult(null);
+                    setShowForceSaveAssignment(false);
+
                   }}
                 >
                   <option value="">Kein Betreuer</option>
@@ -2170,10 +2277,29 @@ const handleConfirmNewYear = () => {
                   className="form-select"
                   value={editingAssignment.status}
                   onChange={(e) => {
-                    console.log('Status changed to:', e.target.value);
-                    const updated = {...editingAssignment, status: e.target.value};
-                    console.log('Updating assignment to:', updated);
-                    setEditingAssignment(updated);
+  const nextStatus = e.target.value;
+
+  // Clear any previous validation results / force-save UI
+  setValidationResult(null);
+  setShowForceSaveAssignment(false);
+
+  if (nextStatus === 'CANCELLED') {
+    // revert other pending edits to the original assignment
+    const original = studentAssignments.find(a => a.id === editingAssignment.id);
+
+    setEditingAssignment({
+      ...editingAssignment,
+      status: nextStatus,
+      teacherId: original?.teacherId ?? editingAssignment.teacherId,
+      teacherName: original?.teacherName ?? editingAssignment.teacherName,
+      schoolId: original?.schoolId ?? editingAssignment.schoolId,
+      schoolName: original?.schoolName ?? editingAssignment.schoolName,
+    });
+    return;
+  }
+
+  setEditingAssignment({ ...editingAssignment, status: nextStatus });
+
                   }}
                 >
                   <option value="PROPOSED">Vorgeschlagen</option>

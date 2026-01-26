@@ -35,6 +35,13 @@ public class InternshipAssignmentValidationService {
             Teacher teacher = teacherRepository.findById(teacherId)
                     .orElseThrow(() -> new IllegalArgumentException("Teacher not found: " + teacherId));
 
+            // Mirror InternshipEasyScoreCalculator: do not allow assigning inactive teachers
+            if (!teacher.isActive()) {
+                hard.add(v("TEACHER_INACTIVE", ViolationSeverity.HARD,
+                        "Lehrkraft ist inaktiv: Eine inaktive Lehrkraft darf nicht zugewiesen werden.",
+                        List.of("teacherId")));
+            }
+
             TeacherPlConfig cfg = teacher.getPlConfigs().stream()
                     .filter(c -> schoolYear != null && schoolYear.equals(c.getSchoolYear()))
                     .findFirst()
@@ -66,19 +73,21 @@ public class InternshipAssignmentValidationService {
             }
         }
 
-        // ---- school zone checks (same as Phase 1) ----
+        // ---- school zone checks ----
         if (schoolId != null) {
             School school = schoolRepository.findById(schoolId)
                     .orElseThrow(() -> new IllegalArgumentException("School not found: " + schoolId));
 
             String zone = school.getZone();
-            boolean oepnv = hasOepnv(school.getOepnv());
+            OepnvStatus oepnv = school.getOepnv();
 
             boolean violates;
             if (type == PraktikumType.ZSP || type == PraktikumType.SFP) {
-                violates = !(("1".equals(zone)) || ("2".equals(zone) && oepnv));
+                // ZSP & SFP: Zone 1 or Zone 2 acceptable (ÖPNV doesn't matter)
+                violates = !("1".equals(zone) || "2".equals(zone));
             } else { // PDP_I or PDP_II
-                violates = !("2".equals(zone) || "3".equals(zone));
+                // PDP: Zone 2 or Zone 3 acceptable, but ÖPNV FOUR_B is NOT allowed
+                violates = !("2".equals(zone) || "3".equals(zone)) || oepnv == OepnvStatus.FOUR_B;
             }
 
             if (violates) {
@@ -102,9 +111,5 @@ public class InternshipAssignmentValidationService {
                 .message(message)
                 .fields(fields)
                 .build();
-    }
-
-    private boolean hasOepnv(OepnvStatus status) {
-        return status != null && status.isAvailable();
     }
 }

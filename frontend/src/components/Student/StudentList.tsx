@@ -43,7 +43,7 @@ const StudentList: React.FC = () => {
     }, []);
 
     const handleDelete = async (matric: number) => {
-        if (!window.confirm("Delete this student?")) return;
+        if (!window.confirm("Diesen Studierenden l\u00f6schen?")) return;
         try {
             await StudentService.deleteStudent(matric);
             setStudents(prev => prev.filter(s => s.matriculationNbr !== matric));
@@ -146,7 +146,7 @@ const StudentList: React.FC = () => {
         setFilters({ schoolType: '', mainCourse: '', registred: '', oriented: '' });
     };
 
-    if (loading) return <div className="assign-root"><p>Loading students...</p></div>;
+    if (loading) return <div className="assign-root"><p>Studierende werden geladen...</p></div>;
 
     return (
         <div className="assign-root">
@@ -161,7 +161,7 @@ const StudentList: React.FC = () => {
                             setShowForm(true);
                         }}
                     >
-                        Add Student
+                        Hinzufügen
                     </button>
                 </div>
             </div>
@@ -185,20 +185,20 @@ const StudentList: React.FC = () => {
                         <thead>
                             <tr>
                                 <th>NAME</th>
-                                <th>MATRIC</th>
-                                <th>SCHOOL</th>
-                                <th>MAIN</th>
-                                <th>COURSE 1</th>
-                                <th>COURSE 2</th>
-                                <th>COURSE 3</th>
-                                <th>ACTIONS</th>
+                                <th>MATRIKEL</th>
+                                <th>SCHULE</th>
+                                <th>HAUPTFACH</th>
+                                <th>PRÄF. 1</th>
+                                <th>PRÄF. 2</th>
+                                <th>PRÄF. 3</th>
+                                <th>AKTIONEN</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredStudents.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="empty-state">
-                                        {searchTerm ? "No students match your search" : "No students found"}
+                                        {searchTerm ? "Keine Studierenden gefunden" : "Keine Studierenden vorhanden"}
                                     </td>
                                 </tr>
                             ) : (
@@ -219,14 +219,14 @@ const StudentList: React.FC = () => {
                                                         setSelectedStudent(student);
                                                         setShowForm(true);
                                                     }}
-                                                    title="Edit student"
+                                                    title="Studierenden bearbeiten"
                                                 >
                                                     ✏️
                                                 </button>
                                                 <button
                                                     className="action-btn delete-btn"
                                                     onClick={() => handleDelete(student.matriculationNbr)}
-                                                    title="Delete student"
+                                                    title="Studierenden l\u00f6schen"
                                                 >
                                                     🗑️
                                                 </button>

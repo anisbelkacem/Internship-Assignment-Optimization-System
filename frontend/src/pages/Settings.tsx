@@ -147,7 +147,7 @@ export default function Settings() {
           <p className="settings-subtitle">Verwalten Sie alle Benutzer im System.</p>
         </div>
         <div className="section-header-actions">
-          <button className="btn-primary-filled" onClick={() => handleOpenModal()}>
+          <button className="btn-primary-filled" style={{fontSize: '14px'}} onClick={() => handleOpenModal()}>
             Nutzer anlegen
           </button>
         </div>
@@ -159,7 +159,7 @@ export default function Settings() {
             <h3>Benutzerliste</h3>
             <span className="table-card-subtitle">Alle Konten mit Berechtigungen</span>
           </div>
-          <span className="table-count">{users.length} Nutzer</span>
+          <span className="table-count">{users.length} Benutzer</span>
         </div>
 
         {users.length === 0 ? (
@@ -209,7 +209,7 @@ export default function Settings() {
 
       <div className="settings-summary">
         <span className="summary-text">
-          Gesamt: <strong>{users.length}</strong> Benutzer
+          Insgesamt: <strong>{users.length}</strong> Benutzer
         </span>
         <div className="summary-stats">
           {Object.values(Permission).map((permission) => {
