@@ -187,7 +187,7 @@ export default function InternshipAssignments() {
       ]);
       
       // Calculate preservation: how many unique students kept assignments
-      const { preserved, totalUnique } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      const preserved = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
       
       // Always set results to show preservation
       setReoptimizationResults({
@@ -219,7 +219,7 @@ export default function InternshipAssignments() {
   const calculateStudentAssignmentPreservation = (
     winterAssignments: AssignmentDto[],
     summerAssignments: AssignmentDto[]
-  ): { preserved: number; totalUnique: number } => {
+  ): number => {
     // Build set of winter assignments by key: student/teacher/course
     const winterAssignmentKeys = new Set<string>();
     winterAssignments.forEach(assignment => {
@@ -240,7 +240,7 @@ export default function InternshipAssignments() {
       }
     });
     
-    return { preserved, totalUnique: summerAssignments.length };
+    return preserved;
   };
 
 const fetchInitialData = async () => {
@@ -735,7 +735,7 @@ const handleConfirmNewYear = () => {
   setShowNewYearModal(false);
   setNewYearInput('');
   setNewSemesterType('WiSe');
-  setSuccess(`New planning year "${fullYear}" created successfully!`);
+  setSuccess(`Neues Planungsjahr "${newYearInput.trim()}" erfolgreich erstellt!`);
   setTimeout(() => setSuccess(null), 3000);
 };
 
@@ -780,7 +780,7 @@ const handleConfirmNewYear = () => {
       
       // Calculate preservation in frontend using student assignments
       const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
-      const { preserved, totalUnique } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+      const preserved = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
       
       // Store results persistently with frontend-calculated preservation
       setReoptimizationResults({
@@ -1206,7 +1206,7 @@ const handleConfirmNewYear = () => {
               disabled={copyingConfigs}
               style={{whiteSpace: 'nowrap'}}
             >
-              {copyingConfigs ? "Copying..." : "Copy from WiSe"}
+              {copyingConfigs ? "Kopieren läuft..." : "kopieren"}
             </button>
           )}
           <button 
@@ -1321,7 +1321,7 @@ const handleConfirmNewYear = () => {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      {reoptimizing ? "Reoptimizing..." : "Reoptimize"}
+                      {reoptimizing ? "Reoptimierung läuft..." : "Reoptimieren"}
                     </button>
                   )}
                 </div>
