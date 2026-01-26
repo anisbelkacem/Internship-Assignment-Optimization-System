@@ -303,7 +303,7 @@ public class ReoptimizationService {
         // Count fixed supply
         Map<String, Long> fixedSupply = fixedInternships.stream()
             .map(pi -> {
-                if (pi.getPraktikumType() == PraktikumType.SFP) {
+                if (pi.getPraktikumType() == PraktikumType.SFP && pi.getCourse() != null) {
                     return pi.getPraktikumType() + "/" + pi.getSchoolType() + "/" + pi.getCourse().getId();
                 }
                 return pi.getPraktikumType() + "/" + pi.getSchoolType();

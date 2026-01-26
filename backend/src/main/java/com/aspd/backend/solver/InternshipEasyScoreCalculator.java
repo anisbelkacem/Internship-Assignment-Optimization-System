@@ -314,8 +314,8 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
                 int previousCount = previousCounts.getOrDefault(teacher, 0L).intValue();
                 int totalCount = currentCount + previousCount;
                 
-                if (actualCount > maxAllowed) {
-                    hardScore -= (actualCount - maxAllowed) * 40; // Teacher preference per excess
+                if (totalCount > maxAllowed) {
+                    hardScore -= (totalCount - maxAllowed) * 40; // Teacher preference per excess
                 }
             }
         }

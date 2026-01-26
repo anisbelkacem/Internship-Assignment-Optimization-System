@@ -1512,9 +1512,6 @@ const handleConfirmNewYear = () => {
                   </div>
                   {reoptimizationResults.winterBudgetUsed > 0 && (
                     <>
-                      <span style={{color: '#0ea5e9'}}>
-                        <strong>Winter Budget:</strong> {reoptimizationResults.initialBudget}
-                      </span>
                       <span style={{color: '#f59e0b'}}>
                         <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
                       </span>
