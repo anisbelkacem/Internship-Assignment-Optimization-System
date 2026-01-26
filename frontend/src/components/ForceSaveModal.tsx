@@ -1,4 +1,5 @@
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
+import ValidationFeedback from "./ValidationFeedback";
 
 type ForceSaveModalProps = {
   title?: string;
@@ -26,23 +27,16 @@ export default function ForceSaveModal({
 
         <p style={{ marginTop: 8, marginBottom: 12 }}>{message}</p>
 
-        {hardViolations && hardViolations.length > 0 && (
-          <div className="error-container" style={{ marginBottom: 12 }}>
-            <strong>Harte Regeln:</strong>
-            <ul style={{ margin: "8px 0 0 18px" }}>
-              {hardViolations.map((m, i) => <li key={i}>{m}</li>)}
-            </ul>
-          </div>
-        )}
+        <ValidationFeedback
+          hardViolations={hardViolations}
+          warnings={warnings}
+          hardTitle="Harte Regeln"
+          warningTitle="Warnungen"
+          openHard={true}
+          openWarnings={warnings && warnings.length > 0}
+          compact
+        />
 
-        {warnings && warnings.length > 0 && (
-          <div className="warning-container" style={{ marginBottom: 12 }}>
-            <strong>Warnungen:</strong>
-            <ul style={{ margin: "8px 0 0 18px" }}>
-              {warnings.map((m, i) => <li key={i}>{m}</li>)}
-            </ul>
-          </div>
-        )}
 
         <div className="modal-actions">
           <button

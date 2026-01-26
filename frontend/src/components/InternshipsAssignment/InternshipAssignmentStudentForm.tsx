@@ -5,6 +5,7 @@ import courseService, { type Course } from "../../services/courseService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
 import type { StudentConfigDto } from "../../services/studentConfigService";
 import studentService, { type Student } from "../../services/studentService";
+import ValidationFeedback from "../ValidationFeedback";
 
 
 interface Props {
@@ -206,14 +207,15 @@ const handleSubmit = async () => {
       <h3 className="student-config-form-title">
         {config?.id ? "Edit Configuration" : "Create Configuration"}
       </h3>
-      {validation && !validation.hardValid && (
-  <div className="error-message">
-    <strong>Nicht speicherbar:</strong>
-    <ul>
-      {validation.hardViolations.map((v, i) => <li key={i}>{v.message}</li>)}
-    </ul>
-  </div>
-)}
+<ValidationFeedback
+  hardViolations={validation?.hardViolations}
+  warnings={validation?.warnings}
+  hardTitle="Nicht speicherbar"
+  warningTitle="Warnungen"
+  openHard={true}
+  openWarnings={false}
+/>
+
 
 
       <div className="student-config-split-layout">
