@@ -135,8 +135,6 @@ export default function InternshipAssignments() {
   const [pollingJobId, setPollingJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [jobETA, setJobETA] = useState<string | null>(null);
-  const [jobStartTime, setJobStartTime] = useState<string | null>(null);
-  const [jobTimeLimit, setJobTimeLimit] = useState<number | null>(null);
 
   useEffect(() => {
     // Read tab from URL params on component mount
@@ -314,16 +312,12 @@ export default function InternshipAssignments() {
             setPollingJobId(null);
             setJobStatus(null);
             setJobETA(null);
-            setJobStartTime(null);
-            setJobTimeLimit(null);
             resolve(job);
           } else if (job.status === "FAILED") {
             clearInterval(pollInterval);
             setPollingJobId(null);
             setJobStatus(null);
             setJobETA(null);
-            setJobStartTime(null);
-            setJobTimeLimit(null);
             reject(new Error(job.errorMessage || "Optimization failed"));
           }
         } catch (err) {
@@ -331,8 +325,6 @@ export default function InternshipAssignments() {
           setPollingJobId(null);
           setJobStatus(null);
           setJobETA(null);
-          setJobStartTime(null);
-          setJobTimeLimit(null);
           reject(err);
         }
       }, 3000); // Poll every 3 seconds
