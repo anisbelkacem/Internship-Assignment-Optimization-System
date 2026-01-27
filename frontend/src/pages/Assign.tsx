@@ -69,6 +69,10 @@ export default function InternshipAssignments() {
   const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<AssignmentDto | null>(null);
 
+  // Confirm Assignment Modal State
+  const [showConfirmAssignmentModal, setShowConfirmAssignmentModal] = useState(false);
+  const [confirmingAssignmentId, setConfirmingAssignmentId] = useState<number | null>(null);
+
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   const [teacherFilters, setTeacherFilters] = useState<Record<string, string>>({
@@ -181,7 +185,10 @@ export default function InternshipAssignments() {
     if (!selectedYear || !selectedYear.startsWith('SoSe')) return;
     
     try {
-      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      // For SoSe26, we need WiSe25-26 (extract the first year from SoSe)
+      const year = selectedYear.replace('SoSe', '');
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      const winterYear = `WiSe${prevYear}-${year}`;
       
       // Fetch STUDENT ASSIGNMENTS (Phase 2), not planned internships
       const [winterAssignments, summerAssignments] = await Promise.all([
@@ -280,7 +287,7 @@ const fetchInitialData = async () => {
       setSelectedYear(yearsData[0]);
     }
   } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to load data");
+    setError(err instanceof Error ? err.message : "Daten konnten nicht geladen werden");
   } finally {
     setLoading(false);
   }
@@ -319,7 +326,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
       console.log('Fetched configs for year', selectedYear, ':', configs);
       setStudentConfigs(configs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load student configurations");
+      setError(err instanceof Error ? err.message : "Studentenkonfigurationen konnten nicht geladen werden");
     }
   };
 
@@ -365,7 +372,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
       
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete configuration");
+      setError(err instanceof Error ? err.message : "Konfiguration konnte nicht gelöscht werden");
     } finally {
       setShowDeleteStudentModal(false);
       setDeletingStudentConfigId(null);
@@ -402,7 +409,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     await fetchInitialData(); // Refresh teachers with updated configs
     setTimeout(() => setSuccess(null), 3000);
   } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to delete configuration");
+    setError(err instanceof Error ? err.message : "Konfiguration konnte nicht gelöscht werden");
   } finally {
     setShowDeleteTeacherModal(false);
     setDeletingTeacherConfig(null);
@@ -484,7 +491,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setSuccess("Alle Zuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete assignments");
+      setError(err instanceof Error ? err.message : "Zuweisungen konnten nicht gelöscht werden");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -564,7 +571,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setSuccess("Alle Studentenzuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete student assignments");
+      setError(err instanceof Error ? err.message : "Studentenzuweisungen konnten nicht gelöscht werden");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -770,20 +777,21 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
 
   const handleValidateAssignment = async (assignmentId: number) => {
-    const confirmed = window.confirm('Möchten Sie diese Zuweisung bestätigen?');
-    if (!confirmed) {
-      console.log('Validation cancelled by user');
-      return;
-    }
+    setConfirmingAssignmentId(assignmentId);
+    setShowConfirmAssignmentModal(true);
+  };
+
+  const handleConfirmValidateAssignment = async () => {
+    if (!confirmingAssignmentId) return;
     
-    console.log('Validating assignment:', assignmentId);
+    console.log('Validating assignment:', confirmingAssignmentId);
     try {
       // Remove from edited list when confirmed
       const newEditedIds = new Set(editedAssignmentIds);
-      newEditedIds.delete(assignmentId);
+      newEditedIds.delete(confirmingAssignmentId);
       setEditedAssignmentIds(newEditedIds);
       
-      const result = await internshipAssignmentService.updateAssignmentStatus(assignmentId, 'CONFIRMED');
+      const result = await internshipAssignmentService.updateAssignmentStatus(confirmingAssignmentId, 'CONFIRMED');
       console.log('Validation result:', result);
       await fetchStudentAssignments();
       console.log('Student assignments refreshed');
@@ -793,6 +801,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
       console.error('Validation error:', err);
       setError(err instanceof Error ? err.message : "Failed to validate assignment");
       setTimeout(() => setError(null), 3000);
+    } finally {
+      setShowConfirmAssignmentModal(false);
+      setConfirmingAssignmentId(null);
     }
   };
 
@@ -805,7 +816,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
 const handleConfirmNewYear = () => {
   if (!newYearInput.trim()) {
-    setError("Please enter a valid year");
+    setError("Bitte geben Sie ein gültiges Jahr ein");
     setTimeout(() => setError(null), 3000);
     return;
   }
@@ -835,7 +846,7 @@ const handleConfirmNewYear = () => {
   // Reoptimization Handler
   const handleReoptimization = async () => {
     if (!selectedYear) {
-      setError("Please select a year first");
+      setError("Bitte wählen Sie zuerst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -844,7 +855,10 @@ const handleConfirmNewYear = () => {
       setReoptimizing(true);
       
       // Fetch winter student assignments BEFORE reoptimization
-      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      // For SoSe26, we need WiSe25-26
+      const year = selectedYear.replace('SoSe', '');
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      const winterYear = `WiSe${prevYear}-${year}`;
       const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
       
       const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
@@ -903,7 +917,7 @@ const handleConfirmNewYear = () => {
   // Copy Semester Configs Handler
   const handleCopySemesterConfigs = async () => {
     if (!selectedYear) {
-      setError("Please select a year first");
+      setError("Bitte wählen Sie zuerst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -914,8 +928,10 @@ const handleConfirmNewYear = () => {
     
     if (selectedYear.startsWith('SoSe')) {
       // If summer semester is selected, copy from previous winter
+      // For SoSe26, copy from WiSe25-26
       const year = selectedYear.replace('SoSe', '');
-      sourceYear = `WiSe${year}`;
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      sourceYear = `WiSe${prevYear}-${year}`;
       targetYear = selectedYear;
     } else {
       setError("Semester config copy is only available for summer semesters (SoSe)");
@@ -1302,7 +1318,7 @@ const handleConfirmNewYear = () => {
             onChange={handleYearChange}
             style={{width: '150px'}}
           >
-            <option value="">Select Year</option>
+            <option value="">Jahr auswählen</option>
             {availableYears.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -1902,10 +1918,10 @@ const handleConfirmNewYear = () => {
                   <tr>
                     <th>Teacher Name</th>
                     <th>Main Subject</th>
-                    <th>School Year</th>
+                    <th>Schuljahr</th>
                     <th>Subject Specializations</th>
                     <th>Internship Preferences</th>
-                    <th>Actions</th>
+                    <th>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2134,31 +2150,48 @@ const handleConfirmNewYear = () => {
         <div className="modal-overlay">
           <div className="modal-content modal-small">
             <h2>Create New Planning Year</h2>
-            <p>Select semester type and enter the year (e.g., WiSe2026 or SoSe2025)</p>
-            <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+            <p>Select a semester from the list</p>
+            <div style={{marginBottom: '20px'}}>
               <select
-                className="form-select-small"
-                value={newSemesterType}
-                onChange={(e) => setNewSemesterType(e.target.value)}
-                style={{padding: '10px', fontSize: '1rem', width: '120px'}}
-              >
-                <option value="WiSe">WiSe</option>
-                <option value="SoSe">SoSe</option>
-              </select>
-              <input
-                type="text"
-                className="student-config-input"
-                placeholder="2026"
-                value={newYearInput}
-                onChange={(e) => setNewYearInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleConfirmNewYear();
+                className="form-select"
+                value={`${newSemesterType}${newYearInput}`}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.startsWith('WiSe')) {
+                    setNewSemesterType('WiSe');
+                    setNewYearInput(value.replace('WiSe', ''));
+                  } else if (value.startsWith('SoSe')) {
+                    setNewSemesterType('SoSe');
+                    setNewYearInput(value.replace('SoSe', ''));
                   }
                 }}
-                autoFocus
-                style={{flex: 1, padding: '10px', fontSize: '1rem', minWidth: '150px'}}
-              />
+                style={{padding: '10px', fontSize: '1rem', width: '100%'}}
+              >
+                <option value="">Select semester...</option>
+                {(() => {
+                  const options = [];
+                  // Generate years from 2028 down to 2023 (most recent first)
+                  for (let year = 2028; year >= 2023; year--) {
+                    const shortYear = year.toString().slice(-2);
+                    const nextShortYear = (year + 1).toString().slice(-2);
+                    // Winter semester (e.g., WiSe25-26)
+                    const winterValue = `WiSe${shortYear}-${nextShortYear}`;
+                    options.push(
+                      <option key={`wise${year}`} value={winterValue}>
+                        {winterValue}
+                      </option>
+                    );
+                    // Summer semester (e.g., SoSe26)
+                    const summerValue = `SoSe${shortYear}`;
+                    options.push(
+                      <option key={`sose${year}`} value={summerValue}>
+                        {summerValue}
+                      </option>
+                    );
+                  }
+                  return options;
+                })()}
+              </select>
             </div>
             <div className="modal-actions">
               <button
@@ -2169,13 +2202,13 @@ const handleConfirmNewYear = () => {
                   setNewSemesterType('WiSe');
                 }}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-primary-filled"
                 onClick={handleConfirmNewYear}
               >
-                Create Year
+                Jahr erstellen
               </button>
             </div>
           </div>
@@ -2186,20 +2219,47 @@ const handleConfirmNewYear = () => {
       {showDeleteStudentModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Confirm Delete</h2>
-            <p>Are you sure you want to delete this student configuration?</p>
+            <h2>Löschen bestätigen</h2>
+            <p>Sind Sie sicher, dass Sie diese Studierendenkonfiguration löschen möchten?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
                 onClick={() => setShowDeleteStudentModal(false)}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-danger"
                 onClick={handleConfirmDeleteStudentConfig}
               >
-                Delete
+                Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Assignment Modal */}
+      {showConfirmAssignmentModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-small">
+            <h2>Zuweisung bestätigen</h2>
+            <p>Möchten Sie diese Zuweisung bestätigen?</p>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowConfirmAssignmentModal(false);
+                  setConfirmingAssignmentId(null);
+                }}
+              >
+                Abbrechen
+              </button>
+              <button
+                className="btn-primary-filled"
+                onClick={handleConfirmValidateAssignment}
+              >
+                Bestätigen
               </button>
             </div>
           </div>
@@ -2239,20 +2299,20 @@ const handleConfirmNewYear = () => {
       {showDeleteTeacherModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Confirm Delete</h2>
-            <p>Are you sure you want to delete this teacher configuration?</p>
+            <h2>Löschen bestätigen</h2>
+            <p>Sind Sie sicher, dass Sie diese Lehrerkonfiguration löschen möchten?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
                 onClick={() => setShowDeleteTeacherModal(false)}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-danger"
                 onClick={handleConfirmDeleteTeacherConfig}
               >
-                Delete
+                Löschen
               </button>
             </div>
           </div>

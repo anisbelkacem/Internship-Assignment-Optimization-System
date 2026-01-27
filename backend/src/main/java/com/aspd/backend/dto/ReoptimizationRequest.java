@@ -22,9 +22,10 @@ public class ReoptimizationRequest {
     private String schoolYear;
     
     /**
-     * Optional time budget for optimization in seconds.
+     * Total internship budget (maximum number of internship slots).
+     * For summer semester, available budget = internshipBudget - winterBudgetUsed + uncompletedInternships.
      */
-    private Integer timeBudget;
+    private Integer internshipBudget;
     
     /**
      * Number of uncompleted internships from the previous semester (winter).

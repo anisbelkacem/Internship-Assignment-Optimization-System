@@ -131,7 +131,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
             </div>
 
             <div className="student-field">
-                <label className="required" htmlFor="email">Email</label>
+                <label className="required" htmlFor="email">E-Mail</label>
                 <input
                     id="email"
                     className="student-input"
@@ -196,7 +196,7 @@ const StudentForm: React.FC<Props> = ({ student, onClose, onSave }) => {
                 handleChange("mainCourseId", Number(e.target.value))
                 }
             >
-                <option value="">-- Select course --</option>
+                <option value="">-- Kurs auswählen --</option>
                 {courses.map(course => (
                 <option key={course.id} value={course.id}>
                     {course.name}

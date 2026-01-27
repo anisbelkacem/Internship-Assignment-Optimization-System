@@ -37,7 +37,7 @@ const CompletedInternshipsTable: React.FC<CompletedInternshipsTableProps> = ({
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
             <thead>
                 <tr>
-                    <th style={{ border: "1px solid gray", padding: "4px" }}>Type</th>
+                    <th style={{ border: "1px solid gray", padding: "4px" }}>Typ</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>Course</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>Start Date</th>
                     <th style={{ border: "1px solid gray", padding: "4px" }}>End Date</th>

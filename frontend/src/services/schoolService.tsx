@@ -80,7 +80,7 @@ class SchoolService {
     console.log('Import response status:', response.status);
 
     if (!response.ok) {
-      let errorMessage = `Import failed: ${response.status}`;
+      let errorMessage = `Import fehlgeschlagen: ${response.status}`;
       
       try {
         const contentType = response.headers.get('content-type');
@@ -106,7 +106,7 @@ class SchoolService {
       }
       
       if (response.status === 403) {
-        errorMessage = 'Access denied. You need EDIT permission to import schools.';
+        errorMessage = 'Zugriff verweigert. Sie benötigen EDIT-Berechtigung, um Schulen zu importieren.';
       }
       
       throw new Error(errorMessage);

@@ -6,6 +6,7 @@ import type {
   TeacherDto,
 } from "../../services/plService";
 import courseService, { type Course } from "../../services/courseService";
+import studentConfigService from "../../services/studentConfigService";
 import "../../styles/InternshipsAssignment/InternshipAssignmentStudentForm.css";
 
 interface Props {
@@ -26,6 +27,7 @@ export default function TeacherConfigForm({
   /* ---------------- Courses ---------------- */
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
   
   // Initialize form with course IDs instead of course names
   const [form, setForm] = useState<TeacherPlConfigRequest>({
@@ -35,6 +37,8 @@ export default function TeacherConfigForm({
     subjectSpecializations: config?.subjectSpecializations?.map(c => c.id) || [], // Store course IDs
     internshipPreferences: config?.internshipPreferences || [],
   });
+
+
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -48,7 +52,18 @@ export default function TeacherConfigForm({
         setLoadingCourses(false);
       }
     };
+
+    const loadYears = async () => {
+      try {
+        const years = await studentConfigService.getAllYears();
+        setAvailableYears(years);
+      } catch (err) {
+        console.error("Failed to load years", err);
+      }
+    };
+
     loadCourses();
+    loadYears();
   }, []);
 
   /* ---------------- Helpers ---------------- */
@@ -127,14 +142,19 @@ export default function TeacherConfigForm({
         {/* LEFT SIDE */}
         <div className="student-config-left-section">
           <div className="student-config-field">
-            <label>School Year</label>
-            <input
+            <label>Schuljahr</label>
+            <select
               className="student-config-input"
-              type="text"
-              placeholder="z.B. 2024"
               value={form.schoolYear}
               onChange={(e) => handleChange("schoolYear", e.target.value)}
-            />
+            >
+              <option value="">Jahr auswählen...</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="student-config-field">
@@ -178,10 +198,10 @@ export default function TeacherConfigForm({
             </label>
 
             {loadingCourses ? (
-              <div style={{ color: "#777" }}>Loading courses…</div>
+              <div style={{ color: "#777" }}>Kurse werden geladen…</div>
             ) : courses.length === 0 ? (
               <div style={{ color: "#777", fontStyle: "italic" }}>
-                No active courses available
+                Keine aktiven Kurse verfügbar
               </div>
             ) : (
               <div className="checkbox-group vertical" style={{ maxHeight: "200px", overflowY: "auto" }}>
@@ -263,14 +283,14 @@ export default function TeacherConfigForm({
           className="btn btn-ghost"
           onClick={onClose}
         >
-          Cancel
+          Abbrechen
         </button>
         <button
           className="btn-primary-filled"
           onClick={handleSubmit}
           disabled={loadingCourses}
         >
-          {config ? "Update" : "Create"}
+          {config ? "Aktualisieren" : "Erstellen"}
         </button>
       </div>
     </div>

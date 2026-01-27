@@ -114,10 +114,10 @@ export default function Schools() {
     try {
       if (editingSchool) {
         await schoolService.updateSchool(editingSchool.id, formData);
-        setSuccess('School updated successfully!');
+        setSuccess('Schule erfolgreich aktualisiert!');
       } else {
         await schoolService.createSchool(formData);
-        setSuccess('School created successfully!');
+        setSuccess('Schule erfolgreich erstellt!');
       }
 
       handleCloseModal();
@@ -139,7 +139,7 @@ export default function Schools() {
 
     try {
       await schoolService.deleteSchool(deletingSchoolId);
-      setSuccess('School deleted successfully!');
+      setSuccess('Schule erfolgreich gelöscht!');
       fetchSchools();
       
       setTimeout(() => setSuccess(null), 3000);
@@ -160,7 +160,7 @@ export default function Schools() {
         type: school.type,
         active: !school.active,
       });
-      setSuccess(`School ${!school.active ? 'activated' : 'deactivated'} successfully!`);
+      setSuccess(`Schule erfolgreich ${!school.active ? 'aktiviert' : 'deaktiviert'}!`);
       fetchSchools();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -292,7 +292,7 @@ export default function Schools() {
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setError('Please select a file');
+      setError('Bitte wählen Sie eine Datei aus');
       return;
     }
 

@@ -282,18 +282,26 @@ public class Phase2OptimizationService {
             String semester) {
         
         // Determine baseline semester to load
-        // For summer (SoSe), load winter (WiSe) baseline from same year
-        // For winter (WiSe), load summer (SoSe) baseline from previous year
+        // For summer (SoSe), load winter (WiSe) baseline from previous academic year
+        // For winter (WiSe), load summer (SoSe) baseline from previous calendar year
         String baselineYear;
         if ("summer".equalsIgnoreCase(semester)) {
-            // Loading for summer -> use winter baseline from same calendar year
-            baselineYear = schoolYear.replace("SoSe", "WiSe");
-        } else {
-            // Loading for winter -> use summer baseline from previous calendar year
-            if (schoolYear.startsWith("WiSe")) {
+            // Loading for summer (SoSe26) -> use winter baseline from previous academic year (WiSe25-26)
+            if (schoolYear.startsWith("SoSe")) {
                 String year = schoolYear.substring(4);
                 int yearNum = Integer.parseInt(year);
-                baselineYear = "SoSe" + (yearNum - 1);
+                int prevYear = yearNum - 1;
+                baselineYear = String.format("WiSe%02d-%02d", prevYear, yearNum);
+            } else {
+                baselineYear = schoolYear;  // fallback
+            }
+        } else {
+            // Loading for winter (WiSe25-26) -> use summer baseline from previous calendar year (SoSe25)
+            if (schoolYear.startsWith("WiSe")) {
+                // Extract the first year from WiSe25-26 format
+                String yearPart = schoolYear.substring(4);
+                String firstYear = yearPart.split("-")[0];
+                baselineYear = "SoSe" + firstYear;
             } else {
                 baselineYear = schoolYear;  // fallback
             }

@@ -72,7 +72,7 @@ public class ReoptimizationController {
         // Run re-optimization
         StudentAssignmentSolution solution = reoptimizationService.reoptimize(
             request.getSchoolYear(),
-            request.getTimeBudget(),
+            request.getInternshipBudget(),
             request.getUncompletedInternships()
         );
         

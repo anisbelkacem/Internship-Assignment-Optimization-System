@@ -45,6 +45,7 @@ export default function StudentConfigForm({ config, year, onClose, onSave }: Pro
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 const [validating, setValidating] = useState(false);
@@ -81,7 +82,18 @@ useEffect(() => {
         setLoadingCourses(false);
       }
     };
+
+    const loadYears = async () => {
+      try {
+        const years = await StudentConfigService.getAllYears();
+        setAvailableYears(years);
+      } catch (err) {
+        console.error("Failed to load years", err);
+      }
+    };
+
     loadCourses();
+    loadYears();
   }, []);
   useEffect(() => {
   const payload = {
@@ -149,13 +161,13 @@ const validateBackend = async (payload: any) => {
 const handleSubmit = async () => {
   // Validate year
   if (!form.year || form.year.trim() === "") {
-    alert('Please enter a year');
+    alert('Bitte geben Sie ein Jahr ein');
     return;
   }
   
   // Validate all courses are selected
   if (!form.mainCourse || !form.prefCourse1 || !form.prefCourse2 || !form.prefCourse3) {
-    alert('Please select all courses');
+    alert('Bitte wählen Sie alle Kurse aus');
     return;
   }
   
@@ -205,7 +217,7 @@ const handleSubmit = async () => {
   return (
     <div className="student-config-form-container">
       <h3 className="student-config-form-title">
-        {config?.id ? "Edit Configuration" : "Create Configuration"}
+        {config?.id ? "Konfiguration bearbeiten" : "Konfiguration erstellen"}
       </h3>
 <ValidationFeedback
   hardViolations={validation?.hardViolations}
@@ -243,19 +255,24 @@ const handleSubmit = async () => {
 
 
           <div className="student-config-field">
-            <label>Year</label>
-            <input
+            <label>Jahr</label>
+            <select
               className="student-config-input"
-              type="text"
               value={form.year}
               onChange={e => handleChange("year", e.target.value)}
-              placeholder="e.g., 2024/2025"
-            />
+            >
+              <option value="">Jahr auswählen...</option>
+              {availableYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
 
           {config && (
             <div className="student-config-field">
-              <label>School Type</label>
+              <label>Schulart</label>
               <select
                 className="student-config-input"
                 value={form.schoolType}
@@ -268,7 +285,7 @@ const handleSubmit = async () => {
           )}
 
           <div className="student-config-field" style={{ marginTop: "20px" }}>
-            <label style={{ marginBottom: "12px", display: "block" }}>Internship Types</label>
+            <label style={{ marginBottom: "12px", display: "block" }}>Praktikumsarten</label>
             <div className="checkbox-group">
               {["pdpI", "pdpII", "zsp", "sfp"].map(field => (
                 <div key={field} className="checkbox-label">
@@ -288,19 +305,19 @@ const handleSubmit = async () => {
         <div className="student-config-right-section">
           {loadingCourses ? (
             <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-              Loading courses...
+              Kurse werden geladen...
             </div>
           ) : courses.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-              No active courses available. Please add courses in the course management section.
+              Keine aktiven Kurse verfügbar. Bitte fügen Sie Kurse im Kursverwaltungsbereich hinzu.
             </div>
           ) : (
             <>
               {[
-                { key: "mainCourse" as const, label: "Main Course" },
-                { key: "prefCourse1" as const, label: "Preferred Course 1" },
-                { key: "prefCourse2" as const, label: "Preferred Course 2" },
-                { key: "prefCourse3" as const, label: "Preferred Course 3" }
+                { key: "mainCourse" as const, label: "Hauptfach" },
+                { key: "prefCourse1" as const, label: "Bevorzugtes Fach 1" },
+                { key: "prefCourse2" as const, label: "Bevorzugtes Fach 2" },
+                { key: "prefCourse3" as const, label: "Bevorzugtes Fach 3" }
               ].map(({ key, label }) => (
                 <div key={key} className="student-config-field">
                   <label>{label}</label>
@@ -309,7 +326,7 @@ const handleSubmit = async () => {
                     value={getCourseValue(key)}
                     onChange={e => handleCourseChange(key, e.target.value)}
                   >
-                    <option value="">Select course</option>
+                    <option value="">Kurs auswählen</option>
                     {courses.map(c => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -325,14 +342,14 @@ const handleSubmit = async () => {
 
       <div className="student-config-form-actions">
         <button className="btn btn-ghost" onClick={onClose}>
-          Cancel
+          Abbrechen
         </button>
         <button 
           className="btn-primary-filled" 
           onClick={handleSubmit}
           disabled={loadingCourses || courses.length === 0 || validating || (validation ? !validation.hardValid : false)}
         >
-          {config ? "Update" : "Create"}
+          {config ? "Aktualisieren" : "Erstellen"}
         </button>
       </div>
     </div>
