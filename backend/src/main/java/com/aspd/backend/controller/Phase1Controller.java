@@ -163,14 +163,8 @@ public class Phase1Controller {
             return ResponseEntity.badRequest().build();
         }
 
-        // Delete existing planned internships for this school year to avoid duplicates
-        List<PlannedInternship> existingInternships = plannedInternshipRepository.findBySchoolYear(schoolYear);
-        if (!existingInternships.isEmpty()) {
-            log.info("Deleting {} existing planned internships for year {}", existingInternships.size(), schoolYear);
-            plannedInternshipRepository.deleteAll(existingInternships);
-        }
-
         // Check if Phase 2 is currently running for this schoolYear - prevent concurrent phases
+        // MUST be done BEFORE deleting planned internships
         OptimizationJob phase2Job = jobService.getJobIfExists(JobType.PHASE2, schoolYear);
         if (phase2Job != null && phase2Job.getStatus() == com.aspd.backend.optimization.JobStatus.RUNNING) {
             log.warn("Cannot start Phase 1: Phase 2 is currently running for schoolYear={}", schoolYear);
@@ -180,6 +174,13 @@ public class Phase1Controller {
                             .status(com.aspd.backend.optimization.JobStatus.RUNNING)
                             .schoolYear(schoolYear)
                             .build());
+        }
+
+        // Delete existing planned internships for this school year to avoid duplicates
+        List<PlannedInternship> existingInternships = plannedInternshipRepository.findBySchoolYear(schoolYear);
+        if (!existingInternships.isEmpty()) {
+            log.info("Deleting {} existing planned internships for year {}", existingInternships.size(), schoolYear);
+            plannedInternshipRepository.deleteAll(existingInternships);
         }
 
         // Create or get existing job (prevents duplicate concurrent jobs for same schoolYear+type)

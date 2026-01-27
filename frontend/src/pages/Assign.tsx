@@ -516,9 +516,16 @@ const handleConfirmDeleteTeacherConfig = async () => {
       console.log('Response status:', response.status);
       
       if (!response.ok) {
+        // Handle 409 Conflict - Phase 2 is running
+        if (response.status === 409) {
+          const conflictJob = await response.json();
+          const conflictMsg = conflictJob.message || "Phase 2 läuft noch. Warten Sie, bis Phase 2 fertig ist.";
+          throw new Error(conflictMsg);
+        }
+        
         const errorText = await response.text();
         console.error('Error response:', errorText);
-        throw new Error("Failed to start Phase 1 optimization");
+        throw new Error("Phase 1 Optimierung konnte nicht gestartet werden");
       }
 
       const job = await response.json();
@@ -650,7 +657,13 @@ const handleConfirmDeleteTeacherConfig = async () => {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to start Phase 2 optimization");
+        // Handle 409 Conflict - Phase 1 is running
+        if (response.status === 409) {
+          const conflictJob = await response.json();
+          const conflictMsg = conflictJob.message || "Phase 1 läuft noch. Warten Sie, bis Phase 1 fertig ist.";
+          throw new Error(conflictMsg);
+        }
+        throw new Error("Phase 2 Optimierung konnte nicht gestartet werden");
       }
 
       const job = await response.json();
