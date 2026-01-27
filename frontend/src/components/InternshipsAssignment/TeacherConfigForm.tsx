@@ -158,7 +158,7 @@ export default function TeacherConfigForm({
           </div>
 
           <div className="student-config-field">
-            <label>Max Praktika Per Year</label>
+            <label>Max. Praktika pro Jahr</label>
             <input
               className="student-config-input"
               type="number"
@@ -166,19 +166,6 @@ export default function TeacherConfigForm({
               value={form.maxPraktikaPerYear}
               onChange={(e) =>
                 handleChange("maxPraktikaPerYear", Number(e.target.value))
-              }
-            />
-          </div>
-
-          <div className="student-config-field">
-            <label>Total Hours Credit</label>
-            <input
-              className="student-config-input"
-              type="number"
-              min={0}
-              value={form.totalHoursCredit}
-              onChange={(e) =>
-                handleChange("totalHoursCredit", Number(e.target.value))
               }
             />
           </div>

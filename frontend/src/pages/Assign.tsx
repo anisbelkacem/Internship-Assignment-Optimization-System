@@ -1757,15 +1757,22 @@ const handleConfirmNewYear = () => {
                     Solver Zeitlimit
                   </label>
                   <input
-                    type="time"
-                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}`}
+                    type="text"
+                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}:${String(phase1TimeLimit % 60).padStart(2, '0')}`}
                     onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':').map(Number);
-                      const totalSeconds = hours * 3600 + minutes * 60;
-                      if (totalSeconds >= 60 && totalSeconds <= 43200) {
-                        setPhase1TimeLimit(totalSeconds);
+                      const value = e.target.value;
+                      const parts = value.split(':');
+                      if (parts.length === 3) {
+                        const hours = parseInt(parts[0]) || 0;
+                        const minutes = parseInt(parts[1]) || 0;
+                        const seconds = parseInt(parts[2]) || 0;
+                        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                        if (totalSeconds >= 60 && totalSeconds <= 43200) {
+                          setPhase1TimeLimit(totalSeconds);
+                        }
                       }
                     }}
+                    placeholder="HH:MM:SS"
                     style={{
                       width: '120px',
                       padding: '8px 12px',
@@ -1775,7 +1782,8 @@ const handleConfirmNewYear = () => {
                       outline: 'none',
                       backgroundColor: '#ffffff',
                       color: '#111827',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      fontFamily: 'monospace'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#3b82f6';
