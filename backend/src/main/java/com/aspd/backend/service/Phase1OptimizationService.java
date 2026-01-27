@@ -1,6 +1,7 @@
 package com.aspd.backend.service;
 
 import com.aspd.backend.model.*;
+import com.aspd.backend.optimization.OptimizationJobService;
 import com.aspd.backend.repository.CourseRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.solver.InternshipEasyScoreCalculator;
@@ -9,11 +10,16 @@ import com.aspd.backend.dto.CoordinatesDto;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
+import org.optaplanner.core.api.solver.SolverJob;
+import org.optaplanner.core.api.solver.SolverManager;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -27,12 +33,26 @@ import static com.aspd.backend.common.constants.InternshipConstants.*;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class Phase1OptimizationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final CourseRepository courseRepository;
     private final InternshipEasyScoreCalculator scoreCalculator;
+    private final SolverManager<InternshipSolution, String> solverManager;
+    private final OptimizationJobService jobService;
+
+    public Phase1OptimizationService(
+            PlannedInternshipRepository plannedInternshipRepository,
+            CourseRepository courseRepository,
+            InternshipEasyScoreCalculator scoreCalculator,
+            @Qualifier("phase1SolverManager") SolverManager<InternshipSolution, String> solverManager,
+            OptimizationJobService jobService) {
+        this.plannedInternshipRepository = plannedInternshipRepository;
+        this.courseRepository = courseRepository;
+        this.scoreCalculator = scoreCalculator;
+        this.solverManager = solverManager;
+        this.jobService = jobService;
+    }
 
     /**
      * Run Phase 1: Teacher and School assignment.
@@ -207,6 +227,137 @@ public class Phase1OptimizationService {
         log.info("Score: {}\n", phase1Result.getScore());
         
         return phase1Result;
+    }
+
+    /**
+     * Run Phase 1 optimization asynchronously using SolverManager.
+     * This method is non-blocking and updates the job status via OptimizationJobService.
+     * 
+     * @param teachers Available teachers with their configurations
+     * @param schools Available schools
+     * @param studentConfigs Student configurations (to determine demand)
+     * @param schoolYear Academic year (e.g., "2024/2025")
+     * @param timeBudget Total internship slots budget
+     * @param solverTimeLimitSeconds Time limit for solver in seconds (60-43200)
+     * @param jobId Job ID for tracking progress
+     */
+    @Async("optimizationExecutor")
+    @Transactional
+    public void optimizeAsync(
+            List<Teacher> teachers,
+            List<School> schools,
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget,
+            Long solverTimeLimitSeconds,
+            String jobId) {
+        
+        log.info("\n========== PHASE 1 ASYNC: Teacher & School Assignment ==========");
+        log.info("Job ID: {}", jobId);
+        log.info("Input: {} teachers, {} schools, {} students", 
+                 teachers.size(), schools.size(), studentConfigs.size());
+        log.info("Solver time limit: {} seconds", solverTimeLimitSeconds);
+        log.info("Total internship slots budget: {}\n", timeBudget);
+        
+        try {
+            // Mark job as running
+            jobService.markJobAsRunning(jobId);
+            
+            // Create internship slots (one per student per checked type)
+            List<PlannedInternship> plannedInternships = createPlannedInternshipsFromDemand(
+                    studentConfigs, schoolYear);
+            
+            // Build ZSP course distribution maps from student preferences
+            ZspCourseDistribution zspDistribution = buildZspCourseDistribution(studentConfigs);
+
+            // Build PDP student coordinate lists (GS/MS) from semester address, falling back to home address
+            List<CoordinatesDto> pdpGsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.GS);
+            List<CoordinatesDto> pdpMsStudentCoords = buildPdpStudentCoords(studentConfigs, SchoolType.MS);
+            
+            log.info("Created {} internship slots\n", plannedInternships.size());
+            
+            // Fetch all active courses for ZSP assignment
+            List<Course> courses = courseRepository.findByActiveTrue();
+            
+            // Prepare problem
+            InternshipSolution unsolvedProblem = new InternshipSolution();
+            unsolvedProblem.setAvailableTeachers(teachers);
+            unsolvedProblem.setAvailableCourses(courses);
+            unsolvedProblem.setPlannedInternships(plannedInternships);
+            unsolvedProblem.setSchoolYear(schoolYear);
+            unsolvedProblem.setTimeBudget(timeBudget);
+            unsolvedProblem.setBudget(new InternshipBudget(timeBudget));
+            unsolvedProblem.setZspCourseDistribution(zspDistribution);
+            unsolvedProblem.setPdpGsStudentCoords(pdpGsStudentCoords);
+            unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
+            unsolvedProblem.setPreviousSemesterInternships(new ArrayList<>()); // Initialize to empty list
+            
+            // Use problem ID for solver manager (schoolYear + jobType)
+            String problemId = "PHASE1-" + schoolYear;
+            
+            // Solve asynchronously using SolverManager
+            log.info("Starting solver with problemId: {} and time limit: {}s", problemId, solverTimeLimitSeconds);
+            
+            SolverJob<InternshipSolution, String> solverJob = solverManager.solve(
+                    problemId, 
+                    unsolvedProblem
+            );
+            
+            // Wait for the solution
+            InternshipSolution solution;
+            try {
+                solution = solverJob.getFinalBestSolution();
+            } catch (Exception e) {
+                log.error("Solver job failed: {}", e.getMessage(), e);
+                throw new RuntimeException("Solver failed: " + e.getMessage(), e);
+            }
+            
+            // Post-solve diagnostic
+            logMinimumActivationStatus(solution.getPlannedInternships());
+            
+            // Remove inactive internships (solver decided we don't need them)
+            List<PlannedInternship> activeInternships = solution.getPlannedInternships().stream()
+                    .filter(PlannedInternship::isActive)
+                    .toList();
+            
+            // Deduplicate based on type, schoolType, course, teacher, and school
+            Map<String, PlannedInternship> uniqueInternships = new LinkedHashMap<>();
+            for (PlannedInternship pi : activeInternships) {
+                String key = buildInternshipKey(pi);
+                if (!uniqueInternships.containsKey(key)) {
+                    uniqueInternships.put(key, pi);
+                } else {
+                    log.debug("Skipping duplicate internship: {}", key);
+                }
+            }
+            
+            List<PlannedInternship> deduplicatedInternships = new ArrayList<>(uniqueInternships.values());
+            log.info("Deduplicated internships: {} active -> {} unique", 
+                     activeInternships.size(), deduplicatedInternships.size());
+            
+            // Populate schools from assigned teachers (post-optimization step)
+            deduplicatedInternships.forEach(PlannedInternship::populateSchoolFromTeacher);
+            
+            // Save only unique active internships to database
+            List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(deduplicatedInternships);
+            
+            long activeCount = savedInternships.stream()
+                    .filter(PlannedInternship::isActive)
+                    .count();
+            
+            log.info("========== PHASE 1 ASYNC COMPLETE ==========");
+            log.info("Active internships: {}/{}", activeCount, savedInternships.size());
+            log.info("Score: {}\n", solution.getScore());
+            
+            // Mark job as completed with success message
+            String message = String.format("Phase 1 complete: %d/%d internships assigned teachers. Score: %s",
+                    activeCount, savedInternships.size(), solution.getScore());
+            jobService.markJobAsCompleted(jobId, message);
+            
+        } catch (Exception e) {
+            log.error("Phase 1 async optimization failed for job {}: {}", jobId, e.getMessage(), e);
+            jobService.markJobAsFailed(jobId, "Optimization failed: " + e.getMessage());
+        }
     }
 
     /**

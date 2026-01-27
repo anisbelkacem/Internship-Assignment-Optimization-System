@@ -36,6 +36,7 @@ export default function InternshipAssignments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [showForceSaveAssignment, setShowForceSaveAssignment] = useState(false);
 
   // Student Config Modal States
@@ -128,6 +129,14 @@ export default function InternshipAssignments() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const [validationResult, setValidationResult] = useState<any>(null);
+
+  // Async optimization states
+  const [phase1TimeLimit, setPhase1TimeLimit] = useState<number>(300); // Default 5 minutes (300 seconds)
+  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [jobETA, setJobETA] = useState<string | null>(null);
+  const [jobStartTime, setJobStartTime] = useState<string | null>(null);
+  const [jobTimeLimit, setJobTimeLimit] = useState<number | null>(null);
 
   useEffect(() => {
     // Read tab from URL params on component mount
@@ -259,6 +268,75 @@ export default function InternshipAssignments() {
     
     console.log('Preserved:', preserved, 'out of', summerAssignments.length);
     return { preserved, preservedStudentNames };
+  };
+
+  // Poll job status until completion
+  const pollJobStatus = async (jobId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const token = sessionStorage.getItem("token");
+          const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          });
+
+          if (!response.ok) {
+            clearInterval(pollInterval);
+            reject(new Error("Failed to fetch job status"));
+            return;
+          }
+
+          const job = await response.json();
+          setJobStatus(job.status);
+
+          // Calculate ETA if job is running
+          if (job.status === "RUNNING" && job.startedAt && job.solverTimeLimitSeconds) {
+            const startTime = new Date(job.startedAt).getTime();
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            const remainingSeconds = Math.max(0, job.solverTimeLimitSeconds - elapsedSeconds);
+            
+            if (remainingSeconds > 0) {
+              const minutes = Math.floor(remainingSeconds / 60);
+              const seconds = remainingSeconds % 60;
+              setJobETA(`${minutes}m ${seconds}s`);
+            } else {
+              setJobETA('Finishing...');
+            }
+          } else {
+            setJobETA(null);
+          }
+
+          if (job.status === "COMPLETED") {
+            clearInterval(pollInterval);
+            setPollingJobId(null);
+            setJobStatus(null);
+            setJobETA(null);
+            setJobStartTime(null);
+            setJobTimeLimit(null);
+            resolve(job);
+          } else if (job.status === "FAILED") {
+            clearInterval(pollInterval);
+            setPollingJobId(null);
+            setJobStatus(null);
+            setJobETA(null);
+            setJobStartTime(null);
+            setJobTimeLimit(null);
+            reject(new Error(job.errorMessage || "Optimization failed"));
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          setPollingJobId(null);
+          setJobStatus(null);
+          setJobETA(null);
+          setJobStartTime(null);
+          setJobTimeLimit(null);
+          reject(err);
+        }
+      }, 3000); // Poll every 3 seconds
+    });
   };
 
 const fetchInitialData = async () => {
@@ -412,22 +490,88 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
   // Phase 1 Optimization Handler
   const handlePhase1Assignment = async () => {
+    console.log('Phase 1 Assignment clicked! Selected year:', selectedYear);
+    
     if (!selectedYear) {
+      console.log('No year selected!');
       setError("Bitte wählen Sie zuerst ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
 
+    console.log('Starting Phase 1 optimization...');
     setAssigningPhase1(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
-      setSuccess(`Phase 1 Optimierung abgeschlossen! ${result.assignedCount}/${result.totalPlannedInternships} Praktika zugewiesen.`);
-      setTimeout(() => setSuccess(null), 5000);
+      // Start async optimization
+      console.log('Fetching async endpoint with params:', {
+        schoolYear: selectedYear,
+        budget: timeBudget * 2,
+        solverTimeLimitSeconds: phase1TimeLimit
+      });
       
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/internships/phase1/optimize-async?schoolYear=${encodeURIComponent(selectedYear)}&budget=${timeBudget * 2}&solverTimeLimitSeconds=${phase1TimeLimit}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error("Failed to start Phase 1 optimization");
+      }
+
+      const job = await response.json();
+      console.log('Job created:', job);
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Phase 1 Optimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        // Continue polling the existing job
+        await pollJobStatus(job.jobId);
+        
+        await fetchPlannedInternships();
+        setShowTeacherAssignments(true);
+        setSuccess(`Phase 1 Optimierung abgeschlossen!`);
+        setTimeout(() => setSuccess(null), 5000);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Phase 1 Optimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        // Just fetch the results
+        await fetchPlannedInternships();
+        setShowTeacherAssignments(true);
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Optimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created - start polling
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      console.log('Starting polling...');
+      // Poll for completion
+      await pollJobStatus(job.jobId);
+
       // Fetch saved results from database
       await fetchPlannedInternships();
       setShowTeacherAssignments(true);
+      setSuccess(`Phase 1 Optimierung abgeschlossen!`);
+      setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Optimierung fehlgeschlagen";
       setError(errorMsg);
@@ -501,10 +645,58 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setAssigningPhase2(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase2(selectedYear);
-      setPhase2Result(result);
-      setStudentAssignments(result.assignments);
-      setSuccess(`Phase 2 Optimierung abgeschlossen! ${result.assignedStudents}/${result.totalStudents} Studierende zugewiesen.`);
+      // Start async optimization (fixed 120 seconds)
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/internships/phase2/optimize-async?schoolYear=${encodeURIComponent(selectedYear)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to start Phase 2 optimization");
+      }
+
+      const job = await response.json();
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Phase 2 Optimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await pollJobStatus(job.jobId);
+        await fetchStudentAssignments();
+        setSuccess(`Phase 2 Optimierung abgeschlossen!`);
+        setTimeout(() => setSuccess(null), 5000);
+        setShowStudentAssignments(true);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Phase 2 Optimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await fetchStudentAssignments();
+        setShowStudentAssignments(true);
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Optimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      // Poll for completion
+      await pollJobStatus(job.jobId);
+
+      // Fetch results from database
+      await fetchStudentAssignments();
+      setSuccess(`Phase 2 Optimierung abgeschlossen!`);
       setTimeout(() => setSuccess(null), 5000);
       setShowStudentAssignments(true);
     } catch (err: any) {
@@ -893,16 +1085,19 @@ const handleConfirmNewYear = () => {
       const winterYear = selectedYear.replace('SoSe', 'WiSe');
       const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
       
-      const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
+      // Start async reoptimization
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/reoptimization/optimize-async`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          'Authorization': token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({ 
           schoolYear: selectedYear,
           timeBudget: timeBudget,
-          uncompletedInternships: uncompletedInternships
+          uncompletedInternships: uncompletedInternships,
+          phase1TimeLimitSeconds: phase1TimeLimit
         })
       });
 
@@ -911,7 +1106,55 @@ const handleConfirmNewYear = () => {
         throw new Error(errorData.message || 'Reoptimization failed');
       }
 
-      const result = await response.json();
+      const job = await response.json();
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Reoptimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await pollJobStatus(job.jobId);
+        
+        await fetchPlannedInternships();
+        await fetchStudentAssignments();
+        
+        const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
+        const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+        
+        setReoptimizationResults({
+          studentsAssigned: summerAssignments.filter(a => a.praktikumType).length,
+          totalDemands: summerAssignments.length,
+          assignmentsPreserved: preserved,
+          preservedStudentNames: preservedStudentNames,
+          winterBudgetUsed: 0,
+          initialBudget: summerAssignments.length,
+          finalBudget: summerAssignments.length,
+          winterTotal: winterAssignments.length,
+          summerTotal: summerAssignments.length
+        });
+        
+        setSuccess(`Reoptimization completed successfully!`);
+        setTimeout(() => setSuccess(null), 3000);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Reoptimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await fetchPlannedInternships();
+        await fetchStudentAssignments();
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Reoptimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      // Poll for completion
+      await pollJobStatus(job.jobId);
       
       // Refresh Phase 1 and Phase 2 assignments
       await fetchPlannedInternships();
@@ -923,18 +1166,18 @@ const handleConfirmNewYear = () => {
       
       // Store results persistently with frontend-calculated preservation
       setReoptimizationResults({
-        studentsAssigned: result.studentsAssigned,
-        totalDemands: result.totalDemands,
+        studentsAssigned: summerAssignments.filter(a => a.praktikumType).length,
+        totalDemands: summerAssignments.length,
         assignmentsPreserved: preserved,
         preservedStudentNames: preservedStudentNames,
-        winterBudgetUsed: result.winterBudgetUsed,
-        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        winterBudgetUsed: 0, // Will be calculated in backend
+        initialBudget: summerAssignments.length,
         finalBudget: summerAssignments.length,
         winterTotal: winterAssignments.length,
         summerTotal: summerAssignments.length
       });
       
-      setSuccess(`Reoptimization completed successfully! Students: ${result.studentsAssigned}/${result.totalDemands}`);
+      setSuccess(`Reoptimization completed successfully!`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reoptimization failed");
@@ -1387,6 +1630,19 @@ const handleConfirmNewYear = () => {
         </div>
       )}
 
+      {info && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#dbeafe',
+          border: '1px solid #3b82f6',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          color: '#1e40af'
+        }}>
+          <strong>Info:</strong> {info}
+        </div>
+      )}
+
       {/* Tab Content: Assignments (Default View) */}
       {activeTab === 'assignments' && (
         <>
@@ -1397,6 +1653,24 @@ const handleConfirmNewYear = () => {
                 <h1 style={{fontSize: '20px'}}>Lehrerzuweisungen</h1>
               </div>
               <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                {pollingJobId && (
+                  <div style={{
+                    fontSize: '0.875rem', 
+                    color: '#6b7280', 
+                    minWidth: '200px',
+                    padding: '8px 12px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    Status: <span style={{fontWeight: 'bold', color: jobStatus === 'RUNNING' ? '#f59e0b' : '#3b82f6'}}>{jobStatus}</span>
+                    {jobETA && jobStatus === 'RUNNING' && (
+                      <span style={{marginLeft: '8px', display: 'block', marginTop: '2px'}}>
+                        ETA: <span style={{fontWeight: 'bold', color: '#10b981'}}>{jobETA}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
                   <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Zeitbudget</label>
                   <input
@@ -1457,6 +1731,41 @@ const handleConfirmNewYear = () => {
                     />
                   </div>
                 )}
+                <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>
+                    Solver Time Limit
+                  </label>
+                  <input
+                    type="time"
+                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':').map(Number);
+                      const totalSeconds = hours * 3600 + minutes * 60;
+                      if (totalSeconds >= 60 && totalSeconds <= 43200) {
+                        setPhase1TimeLimit(totalSeconds);
+                      }
+                    }}
+                    style={{
+                      width: '120px',
+                      padding: '8px 12px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
+                      textAlign: 'center'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.outline = 'none';
+                    }}
+                  />
+                </div>
                 <div style={{display: 'flex', gap: '12px', marginTop: '20px'}}>
                   {!selectedYear?.startsWith('SoSe') && (
                     <button 

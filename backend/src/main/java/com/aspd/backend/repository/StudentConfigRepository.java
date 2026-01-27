@@ -17,6 +17,17 @@ public interface StudentConfigRepository extends JpaRepository<StudentConfig, Lo
 
     // List all configs for a given year
     List<StudentConfig> findByYear(String year);
+    
+    // List all configs for a given year with eagerly fetched Student and Courses
+    @Query("SELECT sc FROM StudentConfig sc " +
+            "JOIN FETCH sc.student " +
+            "LEFT JOIN FETCH sc.mainCourse " +
+            "LEFT JOIN FETCH sc.prefCourse1 " +
+            "LEFT JOIN FETCH sc.prefCourse2 " +
+            "LEFT JOIN FETCH sc.prefCourse3 " +
+            "WHERE sc.year = :year")
+    List<StudentConfig> findByYearWithStudent(String year);
+    
     @Query("SELECT DISTINCT sc.year FROM StudentConfig sc")
     List<String> findDistinctYears();
 }

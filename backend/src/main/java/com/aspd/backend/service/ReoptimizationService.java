@@ -3,11 +3,13 @@ package com.aspd.backend.service;
 import com.aspd.backend.dto.BaselineAssignmentDto;
 import com.aspd.backend.dto.BaselineCaptureRequest;
 import com.aspd.backend.model.*;
+import com.aspd.backend.optimization.OptimizationJobService;
 import com.aspd.backend.repository.*;
 import com.aspd.backend.solver.InternshipSolution;
 import com.aspd.backend.solver.StudentAssignmentSolution;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ public class ReoptimizationService {
     private final Phase1OptimizationService phase1OptimizationService;
     private final Phase2OptimizationService phase2OptimizationService;
     private final BaselineService baselineService;
+    private final OptimizationJobService jobService;
     private final StudentConfigRepository studentConfigRepository;
     private final TeacherRepository teacherRepository;
     private final SchoolRepository schoolRepository;
@@ -84,7 +87,7 @@ public class ReoptimizationService {
             
             // STEP 3: Load student configurations for target semester
             log.info("\nSTEP 3: Loading student configurations for {}", schoolYear);
-            List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
+            List<StudentConfig> studentConfigs = studentConfigRepository.findByYearWithStudent(schoolYear);
             
             if (studentConfigs.isEmpty()) {
                 throw new IllegalStateException(
@@ -116,6 +119,191 @@ public class ReoptimizationService {
             // Note: Don't clear ThreadLocal here, controller needs to access values
             // Controller will clear after building response
         }
+    }
+    
+    /**
+     * Re-optimize student assignments asynchronously.
+     * This method runs the entire reoptimization workflow in a background thread,
+     * including Phase 1 and Phase 2 optimization.
+     * 
+     * @param schoolYear Academic year with semester notation (e.g., "SoSe2025")
+     * @param timeBudget Optional initial time budget
+     * @param uncompletedInternships Number of uncompleted internships from previous semester
+     * @param phase1TimeLimitSeconds Time limit for Phase 1 solver in seconds
+     * @param jobId Job ID for tracking progress
+     */
+    @Async("optimizationExecutor")
+    @Transactional
+    public void reoptimizeAsync(
+            String schoolYear,
+            Integer timeBudget,
+            Integer uncompletedInternships,
+            Long phase1TimeLimitSeconds,
+            String jobId) {
+        
+        log.info("\n========== ASYNC RE-OPTIMIZATION ==========");
+        log.info("Job ID: {}", jobId);
+        log.info("Target Semester: {}", schoolYear);
+        log.info("Phase 1 Time Limit: {} seconds", phase1TimeLimitSeconds);
+        
+        try {
+            // Mark job as running
+            jobService.markJobAsRunning(jobId);
+            
+            // Store initial budget
+            initialBudget.set(timeBudget);
+            
+            // Determine previous semester
+            String previousSemester = getPreviousSemester(schoolYear);
+            log.info("Previous Semester: {}", previousSemester);
+            log.info("==============================================\n");
+            
+            // STEP 1: Capture baseline from previous semester
+            log.info("STEP 1: Capturing baseline from {}", previousSemester);
+            captureBaselineFromPreviousSemester(previousSemester);
+            
+            // STEP 2: Run Phase 1 for target semester (this calls sync method but we're in async context)
+            log.info("\nSTEP 2: Running Phase 1 for {}", schoolYear);
+            runPhase1ForTargetSemesterAsync(schoolYear, timeBudget, uncompletedInternships, phase1TimeLimitSeconds);
+            
+            // STEP 3: Load student configurations for target semester
+            log.info("\nSTEP 3: Loading student configurations for {}", schoolYear);
+            List<StudentConfig> studentConfigs = studentConfigRepository.findByYearWithStudent(schoolYear);
+            
+            if (studentConfigs.isEmpty()) {
+                throw new IllegalStateException(
+                    "No student configurations found for school year: " + schoolYear);
+            }
+            
+            log.info("Loaded {} student configurations", studentConfigs.size());
+            
+            // STEP 4: Run Phase 2 re-optimization with baseline preservation
+            log.info("\nSTEP 4: Running Phase 2 re-optimization");
+            String semester = getSemesterType(schoolYear);
+            StudentAssignmentSolution solution = phase2OptimizationService.optimize(
+                studentConfigs,
+                schoolYear,
+                timeBudget,
+                semester
+            );
+            
+            log.info("Re-optimization completed with score: {}", solution.getScore());
+            
+            // STEP 5: Save results as baseline for this semester
+            log.info("\nSTEP 5: Saving results as baseline for {}", schoolYear);
+            saveAsBaseline(solution, schoolYear);
+            
+            log.info("\n========== ASYNC RE-OPTIMIZATION COMPLETE ==========\n");
+            
+            // Mark job as completed with success message
+            long assignedCount = solution.getStudentDemands().stream()
+                    .filter(d -> d.getAssignedInternship() != null)
+                    .count();
+            
+            String message = String.format("Reoptimization complete: %d/%d students assigned. Score: %s",
+                    assignedCount, solution.getStudentDemands().size(), solution.getScore());
+            jobService.markJobAsCompleted(jobId, message);
+            
+        } catch (Exception e) {
+            log.error("Async re-optimization failed for job {}: {}", jobId, e.getMessage(), e);
+            jobService.markJobAsFailed(jobId, "Reoptimization failed: " + e.getMessage());
+        } finally {
+            // Clear ThreadLocal values
+            clearBudgetInfo();
+        }
+    }
+    
+    /**
+     * Run Phase 1 for target semester with configurable time limit (async version).
+     */
+    private void runPhase1ForTargetSemesterAsync(
+            String schoolYear, Integer timeBudget, Integer uncompletedInternships, Long phase1TimeLimitSeconds) {
+        
+        // Delete old baseline assignments first (foreign key constraint)
+        if (baselineAssignmentRepository.existsBySchoolYear(schoolYear)) {
+            log.info("Deleting existing baseline assignments for {}", schoolYear);
+            baselineAssignmentRepository.deleteBySchoolYear(schoolYear);
+        }
+        
+        // Delete old student internship demands first (foreign key to planned_internships)
+        List<StudentInternshipDemand> existingDemands = demandRepository.findBySchoolYear(schoolYear);
+        if (!existingDemands.isEmpty()) {
+            log.info("Deleting {} existing student internship demands for {}", existingDemands.size(), schoolYear);
+            demandRepository.deleteAll(existingDemands);
+        }
+        
+        // Delete old internship assignments (foreign key to planned_internships)
+        List<InternshipAssignment> existingAssignments = assignmentRepository.findBySchoolYear(schoolYear);
+        if (!existingAssignments.isEmpty()) {
+            log.info("Deleting {} existing internship assignments for {}", existingAssignments.size(), schoolYear);
+            assignmentRepository.deleteAll(existingAssignments);
+        }
+        
+        // Delete old Phase 1 results if exist
+        List<PlannedInternship> existing = plannedInternshipRepository.findBySchoolYear(schoolYear);
+        if (!existing.isEmpty()) {
+            log.info("Deleting {} existing planned internships for {}", existing.size(), schoolYear);
+            plannedInternshipRepository.deleteAll(existing);
+        }
+        
+        // Get previous semester data
+        String previousSemester = getPreviousSemester(schoolYear);
+        List<PlannedInternship> previousInternships = plannedInternshipRepository.findBySchoolYear(previousSemester);
+        
+        if (previousInternships.isEmpty()) {
+            throw new IllegalStateException("Lehrerzuweisungen (Phase 1) fehlt für " + previousSemester + 
+                ". Bitte führen Sie zuerst Phase 1 Optimierung für " + previousSemester + " aus.");
+        }
+        
+        // Calculate winter budget used
+        double winterBudgetUsedValue = previousInternships.stream()
+            .filter(pi -> pi.getAssignedTeacher() != null)
+            .filter(pi -> "PDP_I".equals(pi.getPraktikumType().name()) || "ZSP".equals(pi.getPraktikumType().name()))
+            .collect(Collectors.groupingBy(
+                pi -> pi.getAssignedTeacher().getTeacherId(),
+                Collectors.mapping(pi -> pi.getPraktikumType().name(), Collectors.toSet())
+            ))
+            .values()
+            .stream()
+            .mapToDouble(types -> types.size() * 0.5)
+            .sum();
+        
+        log.info("Winter budget used (PDP_I + ZSP): {}", winterBudgetUsedValue);
+        this.winterBudgetUsed.set(winterBudgetUsedValue);
+        
+        // Calculate final budget
+        Integer budget;
+        if (timeBudget != null) {
+            int uncompleted = (uncompletedInternships != null) ? uncompletedInternships : 0;
+            budget = (int) Math.ceil(timeBudget - winterBudgetUsedValue + uncompleted);
+            log.info("Budget calculation: {} (initial) - {} (winter used) + {} (uncompleted) = {}",
+                timeBudget, winterBudgetUsedValue, uncompleted, budget);
+        } else {
+            budget = previousInternships.size();
+            log.info("Using default budget: {}", budget);
+        }
+        this.finalBudget.set(budget);
+        
+        // Load data for Phase 1
+        List<StudentConfig> studentConfigs = studentConfigRepository.findByYearWithStudent(schoolYear);
+        if (studentConfigs.isEmpty()) {
+            throw new IllegalStateException("Keine Studentenkonfigurationen für " + schoolYear + " gefunden");
+        }
+        
+        List<Teacher> teachers = teacherRepository.findAllWithConfigs().stream()
+            .filter(Teacher::isActive)
+            .collect(Collectors.toList());
+        
+        List<School> schools = schoolRepository.findAll().stream()
+            .filter(s -> Boolean.TRUE.equals(s.getActive()))
+            .collect(Collectors.toList());
+        
+        // Use the blocking optimize method with preservation, but we're already in async context
+        // so this won't block the main thread
+        InternshipSolution phase1Solution = phase1OptimizationService.optimizeWithPreviousSemester(
+            teachers, schools, studentConfigs, schoolYear, budget, previousInternships);
+        
+        log.info("Phase 1 completed for {} with score: {}", schoolYear, phase1Solution.getScore());
     }
     
     /**
@@ -285,7 +473,7 @@ public class ReoptimizationService {
         log.info("Marked {} internships for reassignment (teachers unavailable)", needReassignment.size());
         
         // STEP 3: Load summer student configs to determine additional demand
-        List<StudentConfig> studentConfigs = studentConfigRepository.findByYear(schoolYear);
+        List<StudentConfig> studentConfigs = studentConfigRepository.findByYearWithStudent(schoolYear);
         if (studentConfigs.isEmpty()) {
             throw new IllegalStateException("No student configurations for " + schoolYear);
         }

@@ -9,6 +9,11 @@ import com.aspd.backend.model.AssignmentStatus;
 import com.aspd.backend.model.InternshipAssignment;
 import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.StudentInternshipDemand;
+import com.aspd.backend.optimization.OptimizationJob;
+import com.aspd.backend.optimization.JobType;
+import com.aspd.backend.optimization.OptimizationJobService;
+import com.aspd.backend.optimization.OptimizationJob;
+import com.aspd.backend.optimization.JobType;
 import com.aspd.backend.repository.InternshipAssignmentRepository;
 import com.aspd.backend.service.ReoptimizationService;
 import com.aspd.backend.solver.StudentAssignmentSolution;
@@ -34,6 +39,7 @@ import java.util.stream.Collectors;
 public class ReoptimizationController {
 
     private final ReoptimizationService reoptimizationService;
+    private final OptimizationJobService jobService;
     private final AssignmentMapper assignmentMapper;
     private final InternshipAssignmentRepository assignmentRepository;
 
@@ -86,6 +92,68 @@ public class ReoptimizationController {
             response.getStudentsAssigned(), response.getScore());
         
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Re-optimize student assignments asynchronously.
+     * Returns immediately with a job ID that can be polled for status.
+     * 
+     * @param request Contains school year, time budget, and Phase1 solver time limit
+     * @return Job details with job ID for polling
+     */
+    @PreAuthorize("hasAnyAuthority('EDIT')")
+    @PostMapping("/optimize-async")
+    public ResponseEntity<OptimizationJob> reoptimizeAsync(
+            @RequestBody ReoptimizationRequest request) {
+        
+        log.info("Async re-optimization request received: year={}, phase1TimeLimitSeconds={}", 
+                request.getSchoolYear(), request.getPhase1TimeLimitSeconds());
+        
+        // Validate request
+        if (request.getSchoolYear() == null || request.getSchoolYear().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Validate semester format
+        if (!request.getSchoolYear().startsWith("WiSe") && 
+            !request.getSchoolYear().startsWith("SoSe")) {
+            log.error("Invalid semester format: {}. Expected 'WiSe2025' or 'SoSe2025'", 
+                request.getSchoolYear());
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Validate phase1TimeLimitSeconds (default 300 if not provided)
+        Long phase1TimeLimit = request.getPhase1TimeLimitSeconds() != null 
+                ? request.getPhase1TimeLimitSeconds() 
+                : 300L;
+        
+        if (phase1TimeLimit < 60 || phase1TimeLimit > 43200) {
+            log.error("Invalid Phase 1 solver time limit: {}. Must be between 60 and 43200 seconds", phase1TimeLimit);
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Create or get existing job (prevents duplicate concurrent jobs for same schoolYear+type)
+        // Inflate by 120s to account for Phase 2 fixed runtime so frontend ETA covers both phases
+        int totalTimeSeconds = Math.toIntExact(phase1TimeLimit + 120);
+        OptimizationJob job = jobService.createOrGetExistingJob(
+            JobType.REOPTIMIZATION, request.getSchoolYear(), totalTimeSeconds);
+        
+        if (job.getStatus() != com.aspd.backend.optimization.JobStatus.QUEUED) {
+            // Job already exists and is running or completed
+            log.info("Job already exists with status: {}", job.getStatus());
+            return ResponseEntity.ok(job);
+        }
+        
+        // Start async re-optimization
+        reoptimizationService.reoptimizeAsync(
+                request.getSchoolYear(),
+                request.getTimeBudget(),
+                request.getUncompletedInternships(),
+                phase1TimeLimit,
+                job.getJobId());
+        
+        log.info("Async re-optimization started with job ID: {}", job.getJobId());
+        return ResponseEntity.ok(job);
     }
 
     /**
