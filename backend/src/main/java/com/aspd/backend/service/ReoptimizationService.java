@@ -58,16 +58,16 @@ public class ReoptimizationService {
      * 4. Saves results as new baseline
      * 
      * @param schoolYear Academic year with semester notation (e.g., "SoSe2025")
-     * @param timeBudget Optional initial time budget
+     * @param internshipBudget Total internship budget (maximum number of internship slots)
      * @param uncompletedInternships Number of uncompleted internships from previous semester
      * @return Optimization solution with assignments
      */
     @Transactional
-    public StudentAssignmentSolution reoptimize(String schoolYear, Integer timeBudget, Integer uncompletedInternships) {
+    public StudentAssignmentSolution reoptimize(String schoolYear, Integer internshipBudget, Integer uncompletedInternships) {
         
         try {
             // Store initial budget
-            initialBudget.set(timeBudget);
+            initialBudget.set(internshipBudget);
             
             log.info("\n========== AUTOMATIC RE-OPTIMIZATION ==========");
             log.info("Target Semester: {}", schoolYear);
@@ -77,13 +77,12 @@ public class ReoptimizationService {
             log.info("Previous Semester: {}", previousSemester);
             log.info("==============================================\n");
             
-            // STEP 1: Capture baseline from previous semester
-            log.info("STEP 1: Capturing baseline from {}", previousSemester);
-            captureBaselineFromPreviousSemester(previousSemester);
+            // SMART PRESERVATION: Check if BOTH student and teacher configs are identical
+            log.info("\n========== CONFIG COMPARISON ==========");
+            log.info("Comparing {} → {}", previousSemester, schoolYear);
             
-            // STEP 2: Run Phase 1 for target semester
-            log.info("\nSTEP 2: Running Phase 1 for {}", schoolYear);
-            runPhase1ForTargetSemester(schoolYear, timeBudget, uncompletedInternships);
+            List<StudentConfig> previousStudentConfigs = studentConfigRepository.findByYear(previousSemester);
+            List<StudentConfig> currentStudentConfigs = studentConfigRepository.findByYear(schoolYear);
             
             // STEP 3: Load student configurations for target semester
             log.info("\nSTEP 3: Loading student configurations for {}", schoolYear);
@@ -94,15 +93,61 @@ public class ReoptimizationService {
                     "No student configurations found for school year: " + schoolYear);
             }
             
-            log.info("Loaded {} student configurations", studentConfigs.size());
+            log.info("Student configs: {} (previous) vs {} (current)", 
+                previousStudentConfigs.size(), currentStudentConfigs.size());
             
-            // STEP 4: Run Phase 2 re-optimization with baseline preservation
-            log.info("\nSTEP 4: Running Phase 2 re-optimization");
+            List<Teacher> previousTeachers = teacherRepository.findAllWithConfigs().stream()
+                .filter(t -> t.getPlConfigs().stream()
+                    .anyMatch(config -> config.getSchoolYear().equals(previousSemester) && config.isActive()))
+                .collect(Collectors.toList());
+            
+            List<Teacher> currentTeachers = teacherRepository.findAllWithConfigs().stream()
+                .filter(t -> t.getPlConfigs().stream()
+                    .anyMatch(config -> config.getSchoolYear().equals(schoolYear) && config.isActive()))
+                .collect(Collectors.toList());
+            
+            log.info("Teacher configs: {} (previous) vs {} (current)", 
+                previousTeachers.size(), currentTeachers.size());
+            
+            boolean configsFullyIdentical = areAllConfigsIdentical(
+                previousStudentConfigs, currentStudentConfigs,
+                previousTeachers, currentTeachers,
+                previousSemester, schoolYear
+            );
+            
+            log.info("==========================================\n");
+            
+            if (configsFullyIdentical) {
+                log.info("\n⚡⚡⚡ COMPLETE PRESERVATION: Student AND Teacher configs are IDENTICAL ⚡⚡⚡");
+                log.info("   Skipping Phase 1 AND Phase 2 - copying complete winter results for 100% preservation");
+                
+                StudentAssignmentSolution solution = copyCompleteWinterResults(
+                    previousSemester, 
+                    schoolYear, 
+                    currentStudentConfigs
+                );
+                
+                log.info("\n========== RE-OPTIMIZATION COMPLETE (FULL COPY - NO OPTIMIZATION NEEDED) ==========\n");
+                return solution;
+            }
+            
+            log.info("\nConfigurations have CHANGED - proceeding with optimization");
+            
+            // STEP 1: Capture baseline from previous semester
+            log.info("\nSTEP 1: Capturing baseline from {}", previousSemester);
+            captureBaselineFromPreviousSemester(previousSemester);
+            
+            // STEP 2: Run Phase 1 for target semester
+            log.info("\nSTEP 2: Running Phase 1 for {}", schoolYear);
+            runPhase1ForTargetSemester(schoolYear, internshipBudget, uncompletedInternships);
+            
+            // STEP 3: Run Phase 2 re-optimization with baseline preservation
+            log.info("\nSTEP 3: Running Phase 2 re-optimization");
             String semester = getSemesterType(schoolYear);
             StudentAssignmentSolution solution = phase2OptimizationService.optimize(
-                studentConfigs,
+                currentStudentConfigs,
                 schoolYear,
-                timeBudget,
+                internshipBudget,
                 semester
             );
             
@@ -301,7 +346,7 @@ public class ReoptimizationService {
         // Use the blocking optimize method with preservation, but we're already in async context
         // so this won't block the main thread
         InternshipSolution phase1Solution = phase1OptimizationService.optimizeWithPreviousSemester(
-            teachers, schools, studentConfigs, schoolYear, budget, previousInternships);
+            teachers, schools, studentConfigs, schoolYear, budget, previousInternships, phase1TimeLimitSeconds);
         
         log.info("Phase 1 completed for {} with score: {}", schoolYear, phase1Solution.getScore());
     }
@@ -349,7 +394,7 @@ public class ReoptimizationService {
      * NEW APPROACH: Copy winter PDP_II and SFP assignments as fixed, then optimize only for additional demand.
      * This ensures teacher assignments are preserved from winter to summer.
      */
-    private void runPhase1ForTargetSemester(String schoolYear, Integer timeBudget, Integer uncompletedInternships) {
+    private void runPhase1ForTargetSemester(String schoolYear, Integer internshipBudget, Integer uncompletedInternships) {
         // Delete old baseline assignments first (foreign key constraint)
         if (baselineAssignmentRepository.existsBySchoolYear(schoolYear)) {
             log.info("Deleting existing baseline assignments for {}", schoolYear);
@@ -404,11 +449,11 @@ public class ReoptimizationService {
         
         // Calculate final budget
         Integer budget;
-        if (timeBudget != null) {
+        if (internshipBudget != null) {
             int uncompleted = (uncompletedInternships != null) ? uncompletedInternships : 0;
-            budget = (int) Math.ceil(timeBudget - winterBudgetUsed + uncompleted);
-            log.info("Budget calculation: {} (initial) - {} (winter used) + {} (uncompleted) = {}",
-                timeBudget, winterBudgetUsed, uncompleted, budget);
+            budget = (int) Math.ceil(internshipBudget - winterBudgetUsed + uncompleted);
+            log.info("Budget calculation: {} (total budget) - {} (winter used) + {} (uncompleted) = {}",
+                internshipBudget, winterBudgetUsed, uncompleted, budget);
         } else {
             budget = previousInternships.size();
             log.info("Using default budget: {}", budget);
@@ -563,6 +608,369 @@ public class ReoptimizationService {
     }
     
     /**
+     * Check if ALL configurations (students AND teachers) are identical between semesters.
+     * 
+     * This enables complete preservation:
+     * - If both student AND teacher configs are identical, skip Phase 1 and Phase 2 entirely
+     * - Copy complete winter results for 100% preservation
+     * - Saves computation time and guarantees perfect stability
+     * 
+     * Student comparison criteria:
+     * - Same students (by matriculation number)
+     * - Same PDP_II requirements (isPdpII flag)
+     * - Same SFP requirements (isSfp flag)
+     * - Same main courses for SFP
+     * - Same school types
+     * 
+     * Teacher comparison criteria:
+     * - Same teachers (by teacher ID)
+     * - Same active status
+     * - Same max praktika per year
+     * - Same course assignments
+     * - Same internship type preferences
+     * 
+     * @param previousStudentConfigs Student configs from previous semester
+     * @param currentStudentConfigs Student configs from current semester
+     * @param previousTeachers Teachers from previous semester with configs
+     * @param currentTeachers Teachers from current semester with configs
+     * @param previousSemester Previous semester year
+     * @param currentSemester Current semester year
+     * @return true if ALL configs are identical, false otherwise
+     */
+    private boolean areAllConfigsIdentical(
+            List<StudentConfig> previousStudentConfigs,
+            List<StudentConfig> currentStudentConfigs,
+            List<Teacher> previousTeachers,
+            List<Teacher> currentTeachers,
+            String previousSemester,
+            String currentSemester) {
+        
+        // ===== PART 1: Compare Student Configurations =====
+        
+        // IMPORTANT: Only compare students who have PDP_II or SFP requirements
+        // (Winter students with only PDP_I/ZSP are not relevant for summer comparison)
+        List<StudentConfig> previousRelevantStudents = previousStudentConfigs.stream()
+            .filter(c -> c.isPdpII() || c.isSfp())
+            .collect(Collectors.toList());
+        
+        List<StudentConfig> currentRelevantStudents = currentStudentConfigs.stream()
+            .filter(c -> c.isPdpII() || c.isSfp())
+            .collect(Collectors.toList());
+        
+        log.info("Relevant students (PDP_II or SFP): {} (previous) vs {} (current)",
+            previousRelevantStudents.size(), currentRelevantStudents.size());
+        
+        if (previousRelevantStudents.size() != currentRelevantStudents.size()) {
+            log.info("Config comparison: Different number of relevant students ({} vs {})",
+                previousRelevantStudents.size(), currentRelevantStudents.size());
+            return false;
+        }
+        
+        Map<Integer, StudentConfig> previousStudentMap = previousRelevantStudents.stream()
+            .collect(Collectors.toMap(
+                config -> config.getStudent().getMatriculationNbr(),
+                config -> config,
+                (a, b) -> a
+            ));
+        
+        Map<Integer, StudentConfig> currentStudentMap = currentRelevantStudents.stream()
+            .collect(Collectors.toMap(
+                config -> config.getStudent().getMatriculationNbr(),
+                config -> config,
+                (a, b) -> a
+            ));
+        
+        if (!previousStudentMap.keySet().equals(currentStudentMap.keySet())) {
+            log.info("Config comparison: Different student sets");
+            return false;
+        }
+        
+        // Compare each student's requirements
+        for (Integer matriculationNbr : previousStudentMap.keySet()) {
+            StudentConfig prev = previousStudentMap.get(matriculationNbr);
+            StudentConfig curr = currentStudentMap.get(matriculationNbr);
+            
+            if (prev.isPdpII() != curr.isPdpII()) {
+                log.info("Config comparison: PDP_II flag changed for student {}", matriculationNbr);
+                return false;
+            }
+            
+            if (prev.isSfp() != curr.isSfp()) {
+                log.info("Config comparison: SFP flag changed for student {}", matriculationNbr);
+                return false;
+            }
+            
+            if (curr.isSfp()) {
+                Long prevCourseId = prev.getMainCourse() != null ? prev.getMainCourse().getId() : null;
+                Long currCourseId = curr.getMainCourse() != null ? curr.getMainCourse().getId() : null;
+                
+                if (!Objects.equals(prevCourseId, currCourseId)) {
+                    log.info("Config comparison: SFP course changed for student {} ({} vs {})",
+                        matriculationNbr, prevCourseId, currCourseId);
+                    return false;
+                }
+            }
+            
+            if (prev.getSchoolType() != curr.getSchoolType()) {
+                log.info("Config comparison: School type changed for student {}", matriculationNbr);
+                return false;
+            }
+        }
+        
+        log.info("✓ Student configs: IDENTICAL");
+        
+        // ===== PART 2: Compare Teacher Configurations =====
+        
+        if (previousTeachers.size() != currentTeachers.size()) {
+            log.info("Config comparison: Different number of teachers ({} vs {})",
+                previousTeachers.size(), currentTeachers.size());
+            return false;
+        }
+        
+        // Build maps by teacher ID
+        Map<Long, Teacher> previousTeacherMap = previousTeachers.stream()
+            .collect(Collectors.toMap(Teacher::getTeacherId, t -> t, (a, b) -> a));
+        
+        Map<Long, Teacher> currentTeacherMap = currentTeachers.stream()
+            .collect(Collectors.toMap(Teacher::getTeacherId, t -> t, (a, b) -> a));
+        
+        if (!previousTeacherMap.keySet().equals(currentTeacherMap.keySet())) {
+            log.info("Config comparison: Different teacher sets");
+            return false;
+        }
+        
+        // Compare each teacher's configuration
+        for (Long teacherId : previousTeacherMap.keySet()) {
+            Teacher prevTeacher = previousTeacherMap.get(teacherId);
+            Teacher currTeacher = currentTeacherMap.get(teacherId);
+            
+            // Get configs for the specific semesters
+            TeacherPlConfig prevConfig = prevTeacher.getPlConfigs().stream()
+                .filter(c -> c.getSchoolYear().equals(previousSemester) && c.isActive())
+                .findFirst()
+                .orElse(null);
+            
+            TeacherPlConfig currConfig = currTeacher.getPlConfigs().stream()
+                .filter(c -> c.getSchoolYear().equals(currentSemester) && c.isActive())
+                .findFirst()
+                .orElse(null);
+            
+            if (prevConfig == null || currConfig == null) {
+                log.info("Config comparison: Missing config for teacher {} (prev={}, curr={})", 
+                    teacherId, prevConfig != null, currConfig != null);
+                return false;
+            }
+            
+            // Compare max praktika
+            if (!Objects.equals(prevConfig.getMaxPraktikaPerYear(), currConfig.getMaxPraktikaPerYear())) {
+                log.info("Config comparison: Max praktika changed for teacher {} ({} vs {})", 
+                    teacherId, prevConfig.getMaxPraktikaPerYear(), currConfig.getMaxPraktikaPerYear());
+                return false;
+            }
+            
+            // Compare course assignments
+            Set<Long> prevCourses = prevConfig.getSubjectSpecializations().stream()
+                .map(Course::getId)
+                .collect(Collectors.toSet());
+            Set<Long> currCourses = currConfig.getSubjectSpecializations().stream()
+                .map(Course::getId)
+                .collect(Collectors.toSet());
+            
+            if (!prevCourses.equals(currCourses)) {
+                log.info("Config comparison: Course assignments changed for teacher {} ({} vs {})", 
+                    teacherId, prevCourses, currCourses);
+                return false;
+            }
+            
+            // Compare internship preferences
+            Set<PraktikumType> prevPrefs = new HashSet<>(prevConfig.getInternshipPreferences());
+            Set<PraktikumType> currPrefs = new HashSet<>(currConfig.getInternshipPreferences());
+            
+            if (!prevPrefs.equals(currPrefs)) {
+                log.info("Config comparison: Internship preferences changed for teacher {} ({} vs {})", 
+                    teacherId, prevPrefs, currPrefs);
+                return false;
+            }
+        }
+        
+        log.info("✓ Teacher configs: IDENTICAL");
+        log.info("✓✓✓ ALL CONFIGS ARE IDENTICAL - 100% preservation possible");
+        return true;
+    }
+    
+    /**
+     * Copy complete winter results to summer when ALL configs are identical.
+     * 
+     * This is used when BOTH student and teacher configs are identical.
+     * Ensures 100% preservation by copying:
+     * - Phase 1 results (planned internships with teacher assignments)
+     * - Phase 2 results (student assignments)
+     * 
+     * Steps:
+     * 1. Copy all planned internships from winter to summer (Phase 1 results)
+     * 2. Copy all student assignments from winter to summer (Phase 2 results)
+     * 3. Update all school years to current semester
+     * 4. Save everything to database
+     * 5. Return as solution
+     * 
+     * @param previousSemester Previous semester year (e.g., "WiSe2025")
+     * @param currentSemester Current semester year (e.g., "SoSe2025")
+     * @param studentConfigs Current semester student configs
+     * @return Solution with copied assignments
+     */
+    private StudentAssignmentSolution copyCompleteWinterResults(
+            String previousSemester,
+            String currentSemester,
+            List<StudentConfig> studentConfigs) {
+        
+        log.info("Copying COMPLETE winter results from {} to {}", previousSemester, currentSemester);
+        
+        // STEP 1: Copy Phase 1 results (planned internships)
+        // Only copy PDP_II and SFP internships (not PDP_I or ZSP which are winter-only)
+        List<PlannedInternship> winterInternships = plannedInternshipRepository
+            .findBySchoolYear(previousSemester);
+        
+        if (winterInternships.isEmpty()) {
+            throw new IllegalStateException(
+                "No planned internships found for " + previousSemester
+            );
+        }
+        
+        // Filter to only PDP_II and SFP internships for summer
+        List<PlannedInternship> relevantWinterInternships = winterInternships.stream()
+            .filter(pi -> pi.getPraktikumType() == PraktikumType.PDP_II || 
+                         pi.getPraktikumType() == PraktikumType.SFP)
+            .collect(Collectors.toList());
+        
+        log.info("Filtering winter internships: {} total → {} relevant (PDP_II + SFP only)",
+            winterInternships.size(), relevantWinterInternships.size());
+        
+        // Create copies for summer semester
+        List<PlannedInternship> summerInternships = relevantWinterInternships.stream()
+            .map(winter -> PlannedInternship.builder()
+                .praktikumType(winter.getPraktikumType())
+                .schoolType(winter.getSchoolType())
+                .course(winter.getCourse())
+                .originalCourse(winter.getOriginalCourse())
+                .schoolYear(currentSemester)  // Update to summer
+                .maxCapacity(winter.getMaxCapacity())
+                .currentAssignments(0)  // Will be updated when copying student assignments
+                .active(winter.isActive())
+                .assignedTeacher(winter.getAssignedTeacher())
+                .assignedSchool(winter.getAssignedSchool())
+                .build())
+            .collect(Collectors.toList());
+        
+        // Save Phase 1 results
+        List<PlannedInternship> savedInternships = plannedInternshipRepository.saveAll(summerInternships);
+        log.info("Copied {} planned internships (Phase 1 results)", savedInternships.size());
+        
+        // STEP 2: Copy Phase 2 results (student assignments)
+        List<StudentInternshipDemand> previousDemands = demandRepository
+            .findBySchoolYear(previousSemester);
+        
+        // Create new demands for current semester by copying previous assignments
+        List<StudentInternshipDemand> newDemands = new ArrayList<>();
+        
+        for (StudentConfig config : studentConfigs) {
+            int matriculationNbr = config.getStudent().getMatriculationNbr();
+            
+            // Find previous demands for this student (only PDP_II and SFP for summer)
+            List<StudentInternshipDemand> prevStudentDemands = previousDemands.stream()
+                .filter(d -> d.getStudentConfig() != null)
+                .filter(d -> d.getStudentConfig().getStudent()
+                    .getMatriculationNbr() == matriculationNbr)
+                .filter(d -> d.getPraktikumType() == PraktikumType.PDP_II || 
+                            d.getPraktikumType() == PraktikumType.SFP)
+                .collect(Collectors.toList());
+            
+            // Copy each demand to new semester
+            for (StudentInternshipDemand prevDemand : prevStudentDemands) {
+                // Find matching summer internship (exact match by teacher and properties)
+                PlannedInternship matchingInternship = savedInternships.stream()
+                    .filter(pi -> pi.getPraktikumType() == prevDemand.getPraktikumType())
+                    .filter(pi -> pi.getSchoolType() == prevDemand.getStudentConfig().getSchoolType())
+                    .filter(pi -> {
+                        // For SFP, also match course
+                        if (prevDemand.getPraktikumType() == PraktikumType.SFP) {
+                            return Objects.equals(
+                                pi.getCourse() != null ? pi.getCourse().getId() : null,
+                                prevDemand.getAssignedInternship() != null && 
+                                prevDemand.getAssignedInternship().getCourse() != null ?
+                                prevDemand.getAssignedInternship().getCourse().getId() : null
+                            );
+                        }
+                        return true;
+                    })
+                    .filter(pi -> pi.getAssignedTeacher() != null)
+                    .filter(pi -> Objects.equals(
+                        pi.getAssignedTeacher().getTeacherId(),
+                        prevDemand.getAssignedInternship() != null &&
+                        prevDemand.getAssignedInternship().getAssignedTeacher() != null ?
+                        prevDemand.getAssignedInternship().getAssignedTeacher().getTeacherId() : null
+                    ))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (matchingInternship != null) {
+                    // Create new demand copying the previous assignment
+                    StudentInternshipDemand newDemand = StudentInternshipDemand.builder()
+                        .studentConfig(config)
+                        .praktikumType(prevDemand.getPraktikumType())
+                        .schoolYear(currentSemester)
+                        .assignedInternship(matchingInternship)
+                        .build();
+                    
+                    newDemands.add(newDemand);
+                    
+                    // Update internship capacity
+                    matchingInternship.setCurrentAssignments(
+                        matchingInternship.getCurrentAssignments() + 1
+                    );
+                } else {
+                    log.warn("Could not find matching internship for student {} - {} {}",
+                        matriculationNbr,
+                        prevDemand.getPraktikumType(),
+                        prevDemand.getStudentConfig().getSchoolType());
+                }
+            }
+        }
+        
+        // Save new demands
+        List<StudentInternshipDemand> savedDemands = demandRepository.saveAll(newDemands);
+        log.info("Copied {} student demands (Phase 2 results)", savedDemands.size());
+        
+        // Save updated internship capacities
+        plannedInternshipRepository.saveAll(savedInternships);
+        
+        // STEP 3: Create InternshipAssignment records (needed for frontend display)
+        log.info("Creating internship assignment records for summer...");
+        List<InternshipAssignment> assignments = phase2OptimizationService
+            .createFinalAssignments(savedDemands, currentSemester);
+        
+        // Delete existing assignments first to avoid duplicates
+        List<InternshipAssignment> existingAssignments = assignmentRepository.findBySchoolYear(currentSemester);
+        if (!existingAssignments.isEmpty()) {
+            log.info("Deleting {} existing assignments for {}", existingAssignments.size(), currentSemester);
+            assignmentRepository.deleteAll(existingAssignments);
+        }
+        
+        // Save new assignments
+        List<InternshipAssignment> savedAssignments = assignmentRepository.saveAll(assignments);
+        log.info("Created {} internship assignments for frontend", savedAssignments.size());
+        
+        log.info("✓ Complete winter results copied: {} internships + {} demands + {} assignments",
+            savedInternships.size(), savedDemands.size(), savedAssignments.size());
+        
+        // Build solution object (mimics Phase 2 output)
+        StudentAssignmentSolution solution = new StudentAssignmentSolution();
+        solution.setStudentDemands(savedDemands);
+        solution.setScore(org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore.ZERO);
+        
+        return solution;
+    }
+    
+    /**
      * Calculate how many teacher assignments were preserved from winter to summer.
      * Compares winter PDP_II and SFP assignments with summer results.
      * 
@@ -624,25 +1032,28 @@ public class ReoptimizationService {
     /**
      * Determine the previous semester from current semester notation.
      * Examples:
-     * - "SoSe2025" -> "WiSe2025" (summer 2025 uses winter 2025 baseline)
-     * - "WiSe2026" -> "SoSe2025" (winter 2026 uses summer 2025 baseline)
+     * - "SoSe26" -> "WiSe25-26" (summer 2026 uses winter 2025-26 baseline)
+     * - "WiSe25-26" -> "SoSe25" (winter 2025-26 uses summer 2025 baseline)
      * 
-     * @param schoolYear Current semester (e.g., "SoSe2025")
-     * @return Previous semester (e.g., "WiSe2025")
+     * @param schoolYear Current semester (e.g., "SoSe26" or "WiSe25-26")
+     * @return Previous semester (e.g., "WiSe25-26" or "SoSe25")
      */
     private String getPreviousSemester(String schoolYear) {
         if (schoolYear.startsWith("SoSe")) {
-            // Summer semester -> use same year winter semester
-            String year = schoolYear.substring(4);
-            return "WiSe" + year;
-        } else if (schoolYear.startsWith("WiSe")) {
-            // Winter semester -> use previous year summer semester
+            // Summer semester (SoSe26) -> use winter from previous academic year (WiSe25-26)
             String year = schoolYear.substring(4);
             int yearNum = Integer.parseInt(year);
-            return "SoSe" + (yearNum - 1);
+            int prevYear = yearNum - 1;
+            return String.format("WiSe%02d-%02d", prevYear, yearNum);
+        } else if (schoolYear.startsWith("WiSe")) {
+            // Winter semester (WiSe25-26) -> use previous year summer semester (SoSe25)
+            // Extract the first year from the format WiSe25-26
+            String yearPart = schoolYear.substring(4);
+            String firstYear = yearPart.split("-")[0];
+            return "SoSe" + firstYear;
         }
         throw new IllegalArgumentException("Invalid semester format: " + schoolYear + 
-            ". Expected format: 'WiSe2025' or 'SoSe2025'");
+            ". Expected format: 'WiSe25-26' or 'SoSe26'");
     }
 
     /**

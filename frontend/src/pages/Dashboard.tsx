@@ -12,6 +12,7 @@ const Dashboard: React.FC = () => {
   const [showOverbookedModal, setShowOverbookedModal] = useState(false);
   const [showNewYearModal, setShowNewYearModal] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
+  const [newSemesterType, setNewSemesterType] = useState('WiSe');
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [totalRegelpraktikum, setTotalRegelpraktikum] = useState(0);
@@ -108,6 +109,8 @@ const Dashboard: React.FC = () => {
       console.error('Failed to load years:', err);
     }
   };
+
+
 
   const fetchTeacherStats = async () => {
     try {
@@ -426,22 +429,25 @@ const Dashboard: React.FC = () => {
 
   const handleConfirmNewYear = () => {
     if (!newYearInput.trim()) {
-      alert('Please enter a valid year');
+      alert('Bitte geben Sie ein gültiges Jahr ein');
       return;
     }
 
-    if (availableYears.includes(newYearInput.trim())) {
+    const fullYear = `${newSemesterType}${newYearInput}`;
+    
+    if (availableYears.includes(fullYear)) {
       alert('This year already exists');
       return;
     }
 
     // Add the new year to the list and select it
-    const updatedYears = [...availableYears, newYearInput.trim()].sort();
+    const updatedYears = [...availableYears, fullYear].sort();
     setAvailableYears(updatedYears);
-    setSelectedYear(newYearInput.trim());
+    setSelectedYear(fullYear);
     setShowNewYearModal(false);
     setNewYearInput('');
-    alert(`New planning year "${newYearInput.trim()}" created successfully!`);
+    setNewSemesterType('WiSe');
+    alert(`New planning year "${fullYear}" created successfully!`);
   };
 
   return (
@@ -1455,22 +1461,48 @@ const Dashboard: React.FC = () => {
         <div className="modal-overlay">
           <div className="modal-content modal-small">
             <h2>Neues Planungsjahr erstellen</h2>
-            <p>Geben Sie das akademische Jahr ein (z.B. 2026)</p>
+            <p>Wählen Sie ein Semester aus der Liste</p>
             <div style={{marginBottom: '20px'}}>
-              <input
-                type="text"
-                className="student-config-input"
-                placeholder="z.B. 2026"
-                value={newYearInput}
-                onChange={(e) => setNewYearInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleConfirmNewYear();
+              <select
+                className="form-select"
+                value={`${newSemesterType}${newYearInput}`}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.startsWith('WiSe')) {
+                    setNewSemesterType('WiSe');
+                    setNewYearInput(value.replace('WiSe', ''));
+                  } else if (value.startsWith('SoSe')) {
+                    setNewSemesterType('SoSe');
+                    setNewYearInput(value.replace('SoSe', ''));
                   }
                 }}
-                autoFocus
-                style={{width: '100%', padding: '10px', fontSize: '1rem'}}
-              />
+                style={{padding: '10px', fontSize: '1rem', width: '100%'}}
+              >
+                <option value="">Semester auswählen...</option>
+                {(() => {
+                  const options = [];
+                  // Generate years from 2028 down to 2023 (most recent first)
+                  for (let year = 2028; year >= 2023; year--) {
+                    const shortYear = year.toString().slice(-2);
+                    const nextShortYear = (year + 1).toString().slice(-2);
+                    // Winter semester (e.g., WiSe25-26)
+                    const winterValue = `WiSe${shortYear}-${nextShortYear}`;
+                    options.push(
+                      <option key={`wise${year}`} value={winterValue}>
+                        {winterValue}
+                      </option>
+                    );
+                    // Summer semester (e.g., SoSe26)
+                    const summerValue = `SoSe${shortYear}`;
+                    options.push(
+                      <option key={`sose${year}`} value={summerValue}>
+                        {summerValue}
+                      </option>
+                    );
+                  }
+                  return options;
+                })()}
+              </select>
             </div>
             <div className="modal-actions">
               <button
@@ -1478,6 +1510,7 @@ const Dashboard: React.FC = () => {
                 onClick={() => {
                   setShowNewYearModal(false);
                   setNewYearInput('');
+                  setNewSemesterType('WiSe');
                 }}
                 style={{
                   background: 'transparent',

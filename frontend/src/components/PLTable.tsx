@@ -18,7 +18,7 @@ const PLTable: FC = () => {
             <th>Zone</th>
             <th>ÖPNV</th>
             <th>Stunden</th>
-            <th>Actions</th>
+            <th>Aktionen</th>
           </tr>
         </thead>
         <tbody>
@@ -32,7 +32,7 @@ const PLTable: FC = () => {
               <td>{r.opnv}</td>
               <td>{r.hours}</td>
               <td>
-                <button className="link">Edit</button>
+                <button className="link">Bearbeiten</button>
               </td>
             </tr>
           ))}

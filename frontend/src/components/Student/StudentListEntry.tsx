@@ -47,8 +47,8 @@ const StudentListEntry: React.FC<Props> = ({
                     <p>Email: {student.email}</p>
                     <p>Phone: {student.phone || "N/A"}</p>
                     <p>Birth Date: {student.birthDate || "N/A"}</p>
-                    <p>School Type: {student.schoolType}</p>
-                    <p>Main Course: {getCourseName(student.mainCourseId)}</p>
+                    <p>Schulart: {student.schoolType}</p>
+                    <p>Hauptfach: {getCourseName(student.mainCourseId)}</p>
 
                     <p>
                         Preferences:{" "}
@@ -61,7 +61,7 @@ const StudentListEntry: React.FC<Props> = ({
                     <p>Description: {student.description || "N/A"}</p>
 
                     {/* Address */}
-                    <h5>Address</h5>
+                    <h5>Adresse</h5>
                     <p>Street: {student.address?.street || "N/A"}</p>
                     <p>City: {student.address?.city || "N/A"}</p>
                     <p>House Number: {student.address?.houseNbr || "N/A"}</p>

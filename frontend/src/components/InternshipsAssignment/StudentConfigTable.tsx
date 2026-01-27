@@ -51,11 +51,11 @@ export default function StudentConfigTable({ tabName, editMode, onEdit ,refreshK
                 <thead>
                     <tr>
                         <th style={{ whiteSpace: 'nowrap' }}>Student ID</th>
-                        <th style={{ whiteSpace: 'nowrap' }}>School Type</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Schulart</th>
                         <th style={{ whiteSpace: 'nowrap' }}>Praktika</th>
-                        <th style={{ whiteSpace: 'nowrap' }}>Main Course</th>
-                        <th style={{ whiteSpace: 'nowrap' }}>Preferred Courses</th>
-                        {editMode && <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>Actions</th>}
+                        <th style={{ whiteSpace: 'nowrap' }}>Hauptfach</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Bevorzugte Fächer</th>
+                        {editMode && <th style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>Aktionen</th>}
                     </tr>
                 </thead>
 

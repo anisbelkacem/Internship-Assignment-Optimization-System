@@ -737,8 +737,9 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
         }
         
         int softScore = 0;
+        int preservedCount = 0;
         
-        // Build lookup map: key = type/schoolType/course -> teacher
+        // Build lookup map: key = type/schoolType/schoolId/course -> teacher
         Map<String, Teacher> previousAssignments = new HashMap<>();
         for (PlannedInternship prev : previousInternships) {
             if (!prev.isActive() || prev.getAssignedTeacher() == null) {
@@ -748,6 +749,8 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             String key = buildPreservationKey(prev);
             previousAssignments.put(key, prev.getAssignedTeacher());
         }
+        
+        log.debug("[PRESERVATION] Previous assignments map size: {}", previousAssignments.size());
         
         // Check current assignments against previous
         for (PlannedInternship current : internships) {
@@ -761,7 +764,13 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
             if (previousTeacher != null && previousTeacher.equals(current.getAssignedTeacher())) {
                 // Same teacher assigned to same type of internship - HIGH REWARD
                 softScore += 1000;
+                preservedCount++;
             }
+        }
+        
+        if (preservedCount > 0) {
+            log.debug("[PRESERVATION] Phase 1: Preserved {} teacher-school assignments (score: +{})", 
+                     preservedCount, softScore);
         }
         
         return softScore;
@@ -769,10 +778,17 @@ public class InternshipEasyScoreCalculator implements EasyScoreCalculator<Intern
     
     /**
      * Build a key for matching internships between semesters.
-     * Key format: "praktikumType/schoolType" or "praktikumType/schoolType/courseId"
+     * Key format: "praktikumType/schoolType/schoolId" or "praktikumType/schoolType/schoolId/courseId"
+     * 
+     * IMPORTANT: Include school ID to ensure exact teacher-school preservation
      */
     private String buildPreservationKey(PlannedInternship internship) {
-        String baseKey = internship.getPraktikumType() + "/" + internship.getSchoolType();
+        // Include school ID for exact teacher-school matching
+        String schoolId = (internship.getSchool() != null) ? 
+            String.valueOf(internship.getSchool().getId()) : "NULL";
+        
+        String baseKey = internship.getPraktikumType() + "/" + 
+                        internship.getSchoolType() + "/" + schoolId;
         
         // For ZSP and SFP, include course in the key
         if (internship.getCourse() != null && 

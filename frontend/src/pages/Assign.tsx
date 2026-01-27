@@ -71,6 +71,10 @@ export default function InternshipAssignments() {
   const [showEditAssignmentModal, setShowEditAssignmentModal] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<AssignmentDto | null>(null);
 
+  // Confirm Assignment Modal State
+  const [showConfirmAssignmentModal, setShowConfirmAssignmentModal] = useState(false);
+  const [confirmingAssignmentId, setConfirmingAssignmentId] = useState<number | null>(null);
+
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   const [teacherFilters, setTeacherFilters] = useState<Record<string, string>>({
@@ -189,7 +193,10 @@ export default function InternshipAssignments() {
     if (!selectedYear || !selectedYear.startsWith('SoSe')) return;
     
     try {
-      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      // For SoSe26, we need WiSe25-26 (extract the first year from SoSe)
+      const year = selectedYear.replace('SoSe', '');
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      const winterYear = `WiSe${prevYear}-${year}`;
       
       // Fetch STUDENT ASSIGNMENTS (Phase 2), not planned internships
       const [winterAssignments, summerAssignments] = await Promise.all([
@@ -1013,20 +1020,21 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
 
   const handleValidateAssignment = async (assignmentId: number) => {
-    const confirmed = window.confirm('Möchten Sie diese Zuweisung bestätigen?');
-    if (!confirmed) {
-      console.log('Validation cancelled by user');
-      return;
-    }
+    setConfirmingAssignmentId(assignmentId);
+    setShowConfirmAssignmentModal(true);
+  };
+
+  const handleConfirmValidateAssignment = async () => {
+    if (!confirmingAssignmentId) return;
     
-    console.log('Validating assignment:', assignmentId);
+    console.log('Validating assignment:', confirmingAssignmentId);
     try {
       // Remove from edited list when confirmed
       const newEditedIds = new Set(editedAssignmentIds);
-      newEditedIds.delete(assignmentId);
+      newEditedIds.delete(confirmingAssignmentId);
       setEditedAssignmentIds(newEditedIds);
       
-      const result = await internshipAssignmentService.updateAssignmentStatus(assignmentId, 'CONFIRMED');
+      const result = await internshipAssignmentService.updateAssignmentStatus(confirmingAssignmentId, 'CONFIRMED');
       console.log('Validation result:', result);
       await fetchStudentAssignments();
       console.log('Student assignments refreshed');
@@ -1036,6 +1044,9 @@ const handleConfirmDeleteTeacherConfig = async () => {
       console.error('Validation error:', err);
       setError(err instanceof Error ? err.message : "Zuweisung konnte nicht validiert werden");
       setTimeout(() => setError(null), 3000);
+    } finally {
+      setShowConfirmAssignmentModal(false);
+      setConfirmingAssignmentId(null);
     }
   };
 
@@ -1087,7 +1098,10 @@ const handleConfirmNewYear = () => {
       setReoptimizing(true);
       
       // Fetch winter student assignments BEFORE reoptimization
-      const winterYear = selectedYear.replace('SoSe', 'WiSe');
+      // For SoSe26, we need WiSe25-26
+      const year = selectedYear.replace('SoSe', '');
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      const winterYear = `WiSe${prevYear}-${year}`;
       const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
       
       // Start async reoptimization
@@ -1208,8 +1222,10 @@ const handleConfirmNewYear = () => {
     
     if (selectedYear.startsWith('SoSe')) {
       // If summer semester is selected, copy from previous winter
+      // For SoSe26, copy from WiSe25-26
       const year = selectedYear.replace('SoSe', '');
-      sourceYear = `WiSe${year}`;
+      const prevYear = (parseInt(year) - 1).toString().padStart(2, '0');
+      sourceYear = `WiSe${prevYear}-${year}`;
       targetYear = selectedYear;
     } else {
       setError("Semesterkonfiguration kann nur für Sommersemester (SoSe) kopiert werden");
@@ -1741,15 +1757,22 @@ const handleConfirmNewYear = () => {
                     Solver Zeitlimit
                   </label>
                   <input
-                    type="time"
-                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}`}
+                    type="text"
+                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}:${String(phase1TimeLimit % 60).padStart(2, '0')}`}
                     onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(':').map(Number);
-                      const totalSeconds = hours * 3600 + minutes * 60;
-                      if (totalSeconds >= 60 && totalSeconds <= 43200) {
-                        setPhase1TimeLimit(totalSeconds);
+                      const value = e.target.value;
+                      const parts = value.split(':');
+                      if (parts.length === 3) {
+                        const hours = parseInt(parts[0]) || 0;
+                        const minutes = parseInt(parts[1]) || 0;
+                        const seconds = parseInt(parts[2]) || 0;
+                        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                        if (totalSeconds >= 60 && totalSeconds <= 43200) {
+                          setPhase1TimeLimit(totalSeconds);
+                        }
                       }
                     }}
+                    placeholder="HH:MM:SS"
                     style={{
                       width: '120px',
                       padding: '8px 12px',
@@ -1759,7 +1782,8 @@ const handleConfirmNewYear = () => {
                       outline: 'none',
                       backgroundColor: '#ffffff',
                       color: '#111827',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      fontFamily: 'monospace'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = '#3b82f6';
@@ -2505,28 +2529,45 @@ const handleConfirmNewYear = () => {
             <p>Wählen Sie den Semestertyp und geben Sie das Jahr ein (z.B. WiSe2026 oder SoSe2025)</p>
             <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
               <select
-                className="form-select-small"
-                value={newSemesterType}
-                onChange={(e) => setNewSemesterType(e.target.value)}
-                style={{padding: '10px', fontSize: '1rem', width: '120px'}}
-              >
-                <option value="WiSe">WiSe</option>
-                <option value="SoSe">SoSe</option>
-              </select>
-              <input
-                type="text"
-                className="student-config-input"
-                placeholder="2026"
-                value={newYearInput}
-                onChange={(e) => setNewYearInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleConfirmNewYear();
+                className="form-select"
+                value={`${newSemesterType}${newYearInput}`}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.startsWith('WiSe')) {
+                    setNewSemesterType('WiSe');
+                    setNewYearInput(value.replace('WiSe', ''));
+                  } else if (value.startsWith('SoSe')) {
+                    setNewSemesterType('SoSe');
+                    setNewYearInput(value.replace('SoSe', ''));
                   }
                 }}
-                autoFocus
-                style={{flex: 1, padding: '10px', fontSize: '1rem', minWidth: '150px'}}
-              />
+                style={{padding: '10px', fontSize: '1rem', width: '100%'}}
+              >
+                <option value="">Select semester...</option>
+                {(() => {
+                  const options = [];
+                  // Generate years from 2028 down to 2023 (most recent first)
+                  for (let year = 2028; year >= 2023; year--) {
+                    const shortYear = year.toString().slice(-2);
+                    const nextShortYear = (year + 1).toString().slice(-2);
+                    // Winter semester (e.g., WiSe25-26)
+                    const winterValue = `WiSe${shortYear}-${nextShortYear}`;
+                    options.push(
+                      <option key={`wise${year}`} value={winterValue}>
+                        {winterValue}
+                      </option>
+                    );
+                    // Summer semester (e.g., SoSe26)
+                    const summerValue = `SoSe${shortYear}`;
+                    options.push(
+                      <option key={`sose${year}`} value={summerValue}>
+                        {summerValue}
+                      </option>
+                    );
+                  }
+                  return options;
+                })()}
+              </select>
             </div>
             <div className="modal-actions">
               <button
@@ -2568,6 +2609,33 @@ const handleConfirmNewYear = () => {
                 onClick={handleConfirmDeleteStudentConfig}
               >
                 Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Assignment Modal */}
+      {showConfirmAssignmentModal && (
+        <div className="modal-overlay">
+          <div className="modal-content modal-small">
+            <h2>Zuweisung bestätigen</h2>
+            <p>Möchten Sie diese Zuweisung bestätigen?</p>
+            <div className="modal-actions">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowConfirmAssignmentModal(false);
+                  setConfirmingAssignmentId(null);
+                }}
+              >
+                Abbrechen
+              </button>
+              <button
+                className="btn-primary-filled"
+                onClick={handleConfirmValidateAssignment}
+              >
+                Bestätigen
               </button>
             </div>
           </div>

@@ -19,6 +19,7 @@ import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
 import org.optaplanner.core.api.solver.SolverJob;
 import org.optaplanner.core.api.solver.SolverManager;
+import org.optaplanner.core.config.solver.SolverConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -115,22 +116,21 @@ public class Phase2OptimizationService {
             applyBaselineToDemandsInternships(studentDemands, plannedInternships, schoolYear, semester);
         }
         
-        // Run Phase 2
+        // Run Phase 2 (use default 120s for synchronous optimize)
         StudentAssignmentSolution phase2Result = runPhase2(
-                plannedInternships, studentDemands, schoolYear, timeBudget);
+                plannedInternships, studentDemands, schoolYear, timeBudget, 120);
         
         // Save and finalize results
         return saveAndFinalizeResults(phase2Result);
     }
 
     /**
-     * Optimize Phase 2 asynchronously using SolverManager.
+     * Optimize Phase 2 asynchronously using direct Solver (not SolverManager).
      * This method is non-blocking and updates the job status via OptimizationJobService.
-     * Fixed time limit of 120 seconds.
      * 
      * @param studentConfigs Student configurations
      * @param schoolYear Academic year
-     * @param timeBudget Total hours budget
+     * @param timeBudget SOLVER TIME LIMIT in seconds (not internship budget!)
      * @param jobId Job ID for tracking progress
      */
     @Async("optimizationExecutor")
@@ -143,7 +143,7 @@ public class Phase2OptimizationService {
         
         log.info("\n========== PHASE 2 ASYNC: Student Assignment ==========");
         log.info("Job ID: {}", jobId);
-        log.info("Solver time limit: 120 seconds (fixed)");
+        log.info("Solver time limit: {}s", timeBudget);
         
         try {
             // Mark job as running
@@ -159,27 +159,31 @@ public class Phase2OptimizationService {
             List<StudentInternshipDemand> studentDemands = createStudentDemandsFromConfigs(
                     studentConfigs, schoolYear);
             
+            // Load base config and override time limit
+            SolverConfig solverConfig = SolverConfig.createFromXmlResource("studentAssignmentSolverConfig.xml");
+            
+            // Override time limit at runtime
+            if (solverConfig.getTerminationConfig() != null && timeBudget != null) {
+                solverConfig.getTerminationConfig().setSecondsSpentLimit((long) timeBudget);
+                log.info("Phase 2 async solver time limit set to: {}s", timeBudget);
+            }
+            
+            // Create solver factory with updated config
+            SolverFactory<StudentAssignmentSolution> solverFactory = SolverFactory.create(solverConfig);
+            Solver<StudentAssignmentSolution> solver = solverFactory.buildSolver();
+            
             // Create unified solution with all demands and internships
+            // Pass null for timeBudget since it's not used in score calculation
             StudentAssignmentSolution problem = createSolution(
-                    plannedInternships, studentDemands, schoolYear, timeBudget);
+                    plannedInternships, studentDemands, schoolYear, null);
             
-            // Use problem ID for solver manager (schoolYear + jobType)
-            String problemId = "PHASE2-" + schoolYear;
-            
-            // Solve asynchronously using SolverManager (fixed 120 seconds)
-            log.info("Starting solver with problemId: {}", problemId);
-            
-            SolverJob<StudentAssignmentSolution, String> solverJob = solverManager.solve(
-                    problemId,
-                    problem
-            );
-            
-            // Wait for the solution
+            // Solve synchronously (but in async thread)
+            log.info("Starting solver...");
             StudentAssignmentSolution solution;
             try {
-                solution = solverJob.getFinalBestSolution();
+                solution = solver.solve(problem);
             } catch (Exception e) {
-                log.error("Solver job failed: {}", e.getMessage(), e);
+                log.error("Solver failed: {}", e.getMessage(), e);
                 throw new RuntimeException("Solver failed: " + e.getMessage(), e);
             }
             
@@ -249,17 +253,34 @@ public class Phase2OptimizationService {
     /**
      * PHASE 2: Assign students to planned internships.
      * Uses a single unified solver leveraging Phase 1 guarantees.
+     * 
+     * @param plannedInternships Available internship slots
+     * @param studentDemands Student internship demands
+     * @param schoolYear Academic year
+     * @param timeBudget Internship hours budget (for solution, not solver time)
+     * @param solverTimeLimitSeconds Solver time limit in seconds (null = use default 120s)
      */
     private StudentAssignmentSolution runPhase2(
             List<PlannedInternship> plannedInternships,
             List<StudentInternshipDemand> studentDemands,
             String schoolYear,
-            Integer timeBudget) {
+            Integer timeBudget,
+            Integer solverTimeLimitSeconds) {
         
-        // Create solver factory
-        SolverFactory<StudentAssignmentSolution> solverFactory = 
-                SolverFactory.createFromXmlResource("studentAssignmentSolverConfig.xml");
+        // Default to 120 seconds if not specified
+        int timeLimit = (solverTimeLimitSeconds != null) ? solverTimeLimitSeconds : 120;
         
+        // Load base config and override time limit
+        SolverConfig solverConfig = SolverConfig.createFromXmlResource("studentAssignmentSolverConfig.xml");
+        
+        // Override time limit at runtime
+        if (solverConfig.getTerminationConfig() != null) {
+            solverConfig.getTerminationConfig().setSecondsSpentLimit((long) timeLimit);
+            log.info("Phase 2 solver time limit set to: {}s", timeLimit);
+        }
+        
+        // Create solver factory with updated config
+        SolverFactory<StudentAssignmentSolution> solverFactory = SolverFactory.create(solverConfig);
         Solver<StudentAssignmentSolution> solver = solverFactory.buildSolver();
         
         // Create unified solution with all demands and internships
@@ -400,18 +421,26 @@ public class Phase2OptimizationService {
             String semester) {
         
         // Determine baseline semester to load
-        // For summer (SoSe), load winter (WiSe) baseline from same year
-        // For winter (WiSe), load summer (SoSe) baseline from previous year
+        // For summer (SoSe), load winter (WiSe) baseline from previous academic year
+        // For winter (WiSe), load summer (SoSe) baseline from previous calendar year
         String baselineYear;
         if ("summer".equalsIgnoreCase(semester)) {
-            // Loading for summer -> use winter baseline from same calendar year
-            baselineYear = schoolYear.replace("SoSe", "WiSe");
-        } else {
-            // Loading for winter -> use summer baseline from previous calendar year
-            if (schoolYear.startsWith("WiSe")) {
+            // Loading for summer (SoSe26) -> use winter baseline from previous academic year (WiSe25-26)
+            if (schoolYear.startsWith("SoSe")) {
                 String year = schoolYear.substring(4);
                 int yearNum = Integer.parseInt(year);
-                baselineYear = "SoSe" + (yearNum - 1);
+                int prevYear = yearNum - 1;
+                baselineYear = String.format("WiSe%02d-%02d", prevYear, yearNum);
+            } else {
+                baselineYear = schoolYear;  // fallback
+            }
+        } else {
+            // Loading for winter (WiSe25-26) -> use summer baseline from previous calendar year (SoSe25)
+            if (schoolYear.startsWith("WiSe")) {
+                // Extract the first year from WiSe25-26 format
+                String yearPart = schoolYear.substring(4);
+                String firstYear = yearPart.split("-")[0];
+                baselineYear = "SoSe" + firstYear;
             } else {
                 baselineYear = schoolYear;  // fallback
             }

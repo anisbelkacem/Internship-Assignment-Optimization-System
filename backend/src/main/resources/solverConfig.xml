@@ -13,7 +13,7 @@
     </scoreDirectorFactory>
 
     <termination>
-        <secondsSpentLimit>50</secondsSpentLimit>
+        <!-- Time limit configured at runtime via SolverManager -->
         <bestScoreLimit>0hard/*soft</bestScoreLimit>
     </termination>
 </solver>
