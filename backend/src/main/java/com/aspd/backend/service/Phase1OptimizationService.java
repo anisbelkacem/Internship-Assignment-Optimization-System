@@ -12,6 +12,7 @@ import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
 import org.optaplanner.core.api.solver.SolverJob;
 import org.optaplanner.core.api.solver.SolverManager;
+import org.optaplanner.core.config.solver.SolverConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -162,14 +163,16 @@ public class Phase1OptimizationService {
             List<StudentConfig> studentConfigs,
             String schoolYear,
             Integer timeBudget,
-            List<PlannedInternship> previousSemesterInternships) {
+            List<PlannedInternship> previousSemesterInternships,
+            Long solverTimeLimitSeconds) {
         
         log.info("\n========== PHASE 1: Teacher & School Assignment (with preservation) ==========");
         log.info("Input: {} teachers, {} schools, {} students", 
                  teachers.size(), schools.size(), studentConfigs.size());
         log.info("Previous semester assignments: {}", 
                  previousSemesterInternships != null ? previousSemesterInternships.size() : 0);
-        log.info("Total internship slots budget: {}\n", timeBudget);
+        log.info("Total internship slots budget: {}", timeBudget);
+        log.info("Solver time limit: {}s\n", solverTimeLimitSeconds);
         
         // Create internship slots
         List<PlannedInternship> plannedInternships = createPlannedInternshipsFromDemand(
@@ -189,7 +192,7 @@ public class Phase1OptimizationService {
         InternshipSolution phase1Result = runPhase1WithPreservation(
             teachers, schools, courses, plannedInternships, schoolYear, timeBudget, 
             zspDistribution, pdpGsStudentCoords, pdpMsStudentCoords, 
-            previousSemesterInternships);
+            previousSemesterInternships, solverTimeLimitSeconds);
         
         // Remove inactive internships
         List<PlannedInternship> activeInternships = phase1Result.getPlannedInternships().stream()
@@ -292,23 +295,30 @@ public class Phase1OptimizationService {
             unsolvedProblem.setPdpMsStudentCoords(pdpMsStudentCoords);
             unsolvedProblem.setPreviousSemesterInternships(new ArrayList<>()); // Initialize to empty list
             
-            // Use problem ID for solver manager (schoolYear + jobType)
-            String problemId = "PHASE1-" + schoolYear;
+            // Use problem ID for solver manager (schoolYear + jobType + timestamp to avoid conflicts)
+            String problemId = "PHASE1-" + schoolYear + "-" + System.currentTimeMillis();
             
-            // Solve asynchronously using SolverManager
+            // Create a custom solver config with runtime time limit
             log.info("Starting solver with problemId: {} and time limit: {}s", problemId, solverTimeLimitSeconds);
             
-            SolverJob<InternshipSolution, String> solverJob = solverManager.solve(
-                    problemId, 
-                    unsolvedProblem
-            );
+            // Load base config and override time limit
+            SolverConfig solverConfig = SolverConfig.createFromXmlResource("solverConfig.xml");
             
-            // Wait for the solution
+            // Override time limit at runtime
+            if (solverConfig.getTerminationConfig() != null) {
+                solverConfig.getTerminationConfig().setSecondsSpentLimit(solverTimeLimitSeconds);
+            }
+            
+            // Create solver factory with updated config
+            SolverFactory<InternshipSolution> solverFactory = SolverFactory.create(solverConfig);
+            Solver<InternshipSolution> solver = solverFactory.buildSolver();
+            
+            // Solve synchronously (but in async thread)
             InternshipSolution solution;
             try {
-                solution = solverJob.getFinalBestSolution();
+                solution = solver.solve(unsolvedProblem);
             } catch (Exception e) {
-                log.error("Solver job failed: {}", e.getMessage(), e);
+                log.error("Solver failed: {}", e.getMessage(), e);
                 throw new RuntimeException("Solver failed: " + e.getMessage(), e);
             }
             
@@ -556,11 +566,21 @@ public class Phase1OptimizationService {
             ZspCourseDistribution zspDistribution,
             List<CoordinatesDto> pdpGsStudentCoords,
             List<CoordinatesDto> pdpMsStudentCoords,
-            List<PlannedInternship> previousSemesterInternships) {
+            List<PlannedInternship> previousSemesterInternships,
+            Long solverTimeLimitSeconds) {
         
-        // Create solver for Phase 1
-        SolverFactory<InternshipSolution> solverFactory = 
-                SolverFactory.createFromXmlResource("solverConfig.xml");
+        // Load base config and override time limit
+        SolverConfig solverConfig = SolverConfig.createFromXmlResource("solverConfig.xml");
+        
+        // Override time limit at runtime (default to 300s if not specified)
+        long timeLimit = (solverTimeLimitSeconds != null) ? solverTimeLimitSeconds : 300L;
+        if (solverConfig.getTerminationConfig() != null) {
+            solverConfig.getTerminationConfig().setSecondsSpentLimit(timeLimit);
+            log.info("Phase 1 (with preservation) solver time limit set to: {}s", timeLimit);
+        }
+        
+        // Create solver factory with updated config
+        SolverFactory<InternshipSolution> solverFactory = SolverFactory.create(solverConfig);
         Solver<InternshipSolution> solver = solverFactory.buildSolver();
         
         // Prepare problem with previous semester data

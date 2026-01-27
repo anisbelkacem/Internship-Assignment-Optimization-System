@@ -346,7 +346,7 @@ public class ReoptimizationService {
         // Use the blocking optimize method with preservation, but we're already in async context
         // so this won't block the main thread
         InternshipSolution phase1Solution = phase1OptimizationService.optimizeWithPreviousSemester(
-            teachers, schools, studentConfigs, schoolYear, budget, previousInternships);
+            teachers, schools, studentConfigs, schoolYear, budget, previousInternships, phase1TimeLimitSeconds);
         
         log.info("Phase 1 completed for {} with score: {}", schoolYear, phase1Solution.getScore());
     }

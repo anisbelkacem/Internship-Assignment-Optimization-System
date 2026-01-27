@@ -13,6 +13,7 @@
     </scoreDirectorFactory>
 
     <termination>
-        <secondsSpentLimit>120</secondsSpentLimit>
+        <!-- Time limit is set dynamically at runtime in Phase2OptimizationService -->
+        <!-- DO NOT hardcode secondsSpentLimit here -->
     </termination>
 </solver>

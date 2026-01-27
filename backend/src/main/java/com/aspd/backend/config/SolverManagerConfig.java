@@ -24,7 +24,13 @@ public class SolverManagerConfig {
     public SolverManager<InternshipSolution, String> phase1SolverManager() {
         SolverConfig solverConfig = SolverConfig.createFromXmlResource("solverConfig.xml");
         
-        // Time limit will be overridden at runtime via withProblemId()
+        // Remove any hardcoded time limit from XML - will be set at runtime
+        // Default to 5 minutes if not specified
+        if (solverConfig.getTerminationConfig() != null && 
+            solverConfig.getTerminationConfig().getSecondsSpentLimit() == null) {
+            solverConfig.getTerminationConfig().setSecondsSpentLimit(300L);
+        }
+        
         return SolverManager.create(solverConfig, new org.optaplanner.core.config.solver.SolverManagerConfig());
     }
     
