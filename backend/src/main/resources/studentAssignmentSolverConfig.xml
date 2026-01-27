@@ -13,6 +13,6 @@
     </scoreDirectorFactory>
 
     <termination>
-        <secondsSpentLimit>50</secondsSpentLimit>
+        <secondsSpentLimit>120</secondsSpentLimit>
     </termination>
 </solver>

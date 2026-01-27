@@ -16,6 +16,7 @@ import type { TeacherPlConfigDto, TeacherDto } from "../services/plService";
 import { PraktikumType } from "../services/plService";
 import type { Student } from "../services/studentService";
 import type { TeacherAssignmentResult, PlannedInternshipDto, StudentAssignmentResult, AssignmentDto } from "../services/internshipAssignmentService";
+import API_BASE_URL from "../config/api";
 import "../styles/InternshipsAssignment/InternshipAssignmentModal.css";
 import "../styles/InternshipsAssignment/StudentConfigTable.css";
 import ForceSaveModal from "../components/ForceSaveModal";
@@ -35,6 +36,7 @@ export default function InternshipAssignments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [showForceSaveAssignment, setShowForceSaveAssignment] = useState(false);
 
   // Student Config Modal States
@@ -131,6 +133,12 @@ export default function InternshipAssignments() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const [validationResult, setValidationResult] = useState<any>(null);
+
+  // Async optimization states
+  const [phase1TimeLimit, setPhase1TimeLimit] = useState<number>(300); // Default 5 minutes (300 seconds)
+  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [jobETA, setJobETA] = useState<string | null>(null);
 
   useEffect(() => {
     // Read tab from URL params on component mount
@@ -265,6 +273,69 @@ export default function InternshipAssignments() {
     
     console.log('Preserved:', preserved, 'out of', summerAssignments.length);
     return { preserved, preservedStudentNames };
+  };
+
+  // Poll job status until completion
+  const pollJobStatus = async (jobId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const token = sessionStorage.getItem("token");
+          const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          });
+
+          if (!response.ok) {
+            clearInterval(pollInterval);
+            reject(new Error("Konnte Jobstatus nicht abrufen"));
+            return;
+          }
+
+          const job = await response.json();
+          setJobStatus(job.status);
+
+          // Calculate ETA if job is running
+          if (job.status === "RUNNING" && job.startedAt && job.solverTimeLimitSeconds) {
+            const startTime = new Date(job.startedAt).getTime();
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            const remainingSeconds = Math.max(0, job.solverTimeLimitSeconds - elapsedSeconds);
+            
+            if (remainingSeconds > 0) {
+              const minutes = Math.floor(remainingSeconds / 60);
+              const seconds = remainingSeconds % 60;
+              setJobETA(`${minutes}m ${seconds}s`);
+            } else {
+              setJobETA('Finishing...');
+            }
+          } else {
+            setJobETA(null);
+          }
+
+          if (job.status === "COMPLETED") {
+            clearInterval(pollInterval);
+            setPollingJobId(null);
+            setJobStatus(null);
+            setJobETA(null);
+            resolve(job);
+          } else if (job.status === "FAILED") {
+            clearInterval(pollInterval);
+            setPollingJobId(null);
+            setJobStatus(null);
+            setJobETA(null);
+            reject(new Error(job.errorMessage || "Optimierung ist fehlgeschlagen"));
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          setPollingJobId(null);
+          setJobStatus(null);
+          setJobETA(null);
+          reject(err);
+        }
+      }, 3000); // Poll every 3 seconds
+    });
   };
 
 const fetchInitialData = async () => {
@@ -418,22 +489,95 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
   // Phase 1 Optimization Handler
   const handlePhase1Assignment = async () => {
+    console.log('Phase 1 Assignment clicked! Selected year:', selectedYear);
+    
     if (!selectedYear) {
+      console.log('No year selected!');
       setError("Bitte wählen Sie zuerst ein Schuljahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
 
+    console.log('Starting Phase 1 optimization...');
     setAssigningPhase1(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase1(selectedYear, timeBudget * 2);
-      setSuccess(`Phase 1 Optimierung abgeschlossen! ${result.assignedCount}/${result.totalPlannedInternships} Praktika zugewiesen.`);
-      setTimeout(() => setSuccess(null), 5000);
+      // Start async optimization
+      console.log('Fetching async endpoint with params:', {
+        schoolYear: selectedYear,
+        budget: timeBudget * 2,
+        solverTimeLimitSeconds: phase1TimeLimit
+      });
       
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/internships/phase1/optimize-async?schoolYear=${encodeURIComponent(selectedYear)}&budget=${timeBudget * 2}&solverTimeLimitSeconds=${phase1TimeLimit}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        // Handle 409 Conflict - Phase 2 is running
+        if (response.status === 409) {
+          const conflictJob = await response.json();
+          const conflictMsg = conflictJob.message || "Phase 2 läuft noch. Warten Sie, bis Phase 2 fertig ist.";
+          throw new Error(conflictMsg);
+        }
+        
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error("Phase 1 Optimierung konnte nicht gestartet werden");
+      }
+
+      const job = await response.json();
+      console.log('Job created:', job);
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Phase 1 Optimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        // Continue polling the existing job
+        await pollJobStatus(job.jobId);
+        
+        await fetchPlannedInternships();
+        setShowTeacherAssignments(true);
+        setSuccess(`Phase 1 Optimierung abgeschlossen!`);
+        setTimeout(() => setSuccess(null), 5000);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Phase 1 Optimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        // Just fetch the results
+        await fetchPlannedInternships();
+        setShowTeacherAssignments(true);
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Optimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created - start polling
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      console.log('Starting polling...');
+      // Poll for completion
+      await pollJobStatus(job.jobId);
+
       // Fetch saved results from database
       await fetchPlannedInternships();
       setShowTeacherAssignments(true);
+      setSuccess(`Phase 1 Optimierung abgeschlossen!`);
+      setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Optimierung fehlgeschlagen";
       setError(errorMsg);
@@ -472,7 +616,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
         await calculateAndDisplayPreservation();
       }
     } catch (err) {
-      console.error("Failed to fetch planned internships:", err);
+      console.error("Konnte geplante Praktika nicht abrufen:", err);
     }
   };
 
@@ -507,10 +651,64 @@ const handleConfirmDeleteTeacherConfig = async () => {
     setAssigningPhase2(true);
     
     try {
-      const result = await internshipAssignmentService.optimizePhase2(selectedYear);
-      setPhase2Result(result);
-      setStudentAssignments(result.assignments);
-      setSuccess(`Phase 2 Optimierung abgeschlossen! ${result.assignedStudents}/${result.totalStudents} Studierende zugewiesen.`);
+      // Start async optimization (fixed 120 seconds)
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/internships/phase2/optimize-async?schoolYear=${encodeURIComponent(selectedYear)}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        // Handle 409 Conflict - Phase 1 is running
+        if (response.status === 409) {
+          const conflictJob = await response.json();
+          const conflictMsg = conflictJob.message || "Phase 1 läuft noch. Warten Sie, bis Phase 1 fertig ist.";
+          throw new Error(conflictMsg);
+        }
+        throw new Error("Phase 2 Optimierung konnte nicht gestartet werden");
+      }
+
+      const job = await response.json();
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Phase 2 Optimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await pollJobStatus(job.jobId);
+        await fetchStudentAssignments();
+        setSuccess(`Phase 2 Optimierung abgeschlossen!`);
+        setTimeout(() => setSuccess(null), 5000);
+        setShowStudentAssignments(true);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Phase 2 Optimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await fetchStudentAssignments();
+        setShowStudentAssignments(true);
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Optimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      // Poll for completion
+      await pollJobStatus(job.jobId);
+
+      // Fetch results from database
+      await fetchStudentAssignments();
+      setSuccess(`Phase 2 Optimierung abgeschlossen!`);
       setTimeout(() => setSuccess(null), 5000);
       setShowStudentAssignments(true);
     } catch (err: any) {
@@ -527,6 +725,51 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setTimeout(() => setError(null), 5000);
     } finally {
       setAssigningPhase2(false);
+    }
+  };
+
+  const handleExportAssignments = async () => {
+    if (!selectedYear) {
+      setError("Bitte wählen Sie ein Schuljahr aus");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({ schoolYear: selectedYear });
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/internship-assignments/export?${params.toString()}`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        let message = "Export fehlgeschlagen";
+        try {
+          const errorBody = await response.json();
+          message = errorBody?.message || message;
+        } catch (err) {
+          console.error("Export response parse error", err);
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `student-assignments-${selectedYear}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSuccess("Export gestartet - Download sollte beginnen");
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: any) {
+      setError(err?.message || "Export fehlgeschlagen");
+      setTimeout(() => setError(null), 4000);
     }
   };
 
@@ -769,7 +1012,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // fallback generic error
     setValidationResult(null);
     setShowForceSaveAssignment(false);
-    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Failed to update assignment";
+    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Zuweisung konnte nicht aktualisiert werden";
     setError(errorMessage);
     setTimeout(() => setError(null), 5000);
   }
@@ -799,7 +1042,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Validation error:', err);
-      setError(err instanceof Error ? err.message : "Failed to validate assignment");
+      setError(err instanceof Error ? err.message : "Zuweisung konnte nicht validiert werden");
       setTimeout(() => setError(null), 3000);
     } finally {
       setShowConfirmAssignmentModal(false);
@@ -825,7 +1068,7 @@ const handleConfirmNewYear = () => {
   const fullYear = `${newSemesterType}${newYearInput.trim()}`;
 
   if (availableYears.includes(fullYear)) {
-    setError("This year already exists");
+    setError("Dieses Jahr existiert bereits");
     setTimeout(() => setError(null), 3000);
     return;
   }
@@ -846,7 +1089,7 @@ const handleConfirmNewYear = () => {
   // Reoptimization Handler
   const handleReoptimization = async () => {
     if (!selectedYear) {
-      setError("Bitte wählen Sie zuerst ein Jahr aus");
+      setError("Bitte wählen Sie zunächst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -861,25 +1104,76 @@ const handleConfirmNewYear = () => {
       const winterYear = `WiSe${prevYear}-${year}`;
       const winterAssignments = await internshipAssignmentService.getStudentAssignments(winterYear);
       
-      const response = await fetch('http://localhost:8080/api/reoptimization/optimize', {
+      // Start async reoptimization
+      const token = sessionStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/reoptimization/optimize-async`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          'Authorization': token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({ 
           schoolYear: selectedYear,
           timeBudget: timeBudget,
-          uncompletedInternships: uncompletedInternships
+          uncompletedInternships: uncompletedInternships,
+          phase1TimeLimitSeconds: phase1TimeLimit
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Reoptimization failed' }));
-        throw new Error(errorData.message || 'Reoptimization failed');
+        const errorData = await response.json().catch(() => ({ message: 'Reoptimierung ist fehlgeschlagen' }));
+        throw new Error(errorData.message || 'Reoptimierung ist fehlgeschlagen');
       }
 
-      const result = await response.json();
+      const job = await response.json();
+      
+      // Check if job is already running or completed
+      if (job.status === 'RUNNING') {
+        setPollingJobId(job.jobId);
+        setJobStatus('RUNNING');
+        setInfo(`Eine Reoptimierung läuft bereits für ${selectedYear}. Status wird aktualisiert...`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await pollJobStatus(job.jobId);
+        
+        await fetchPlannedInternships();
+        await fetchStudentAssignments();
+        
+        const summerAssignments = await internshipAssignmentService.getStudentAssignments(selectedYear);
+        const { preserved, preservedStudentNames } = calculateStudentAssignmentPreservation(winterAssignments, summerAssignments);
+        
+        setReoptimizationResults({
+          studentsAssigned: summerAssignments.filter(a => a.praktikumType).length,
+          totalDemands: summerAssignments.length,
+          assignmentsPreserved: preserved,
+          preservedStudentNames: preservedStudentNames,
+          winterBudgetUsed: 0,
+          initialBudget: summerAssignments.length,
+          finalBudget: summerAssignments.length,
+          winterTotal: winterAssignments.length,
+          summerTotal: summerAssignments.length
+        });
+        
+        setSuccess(`Reoptimierung erfolgreich abgeschlossen!`);
+        setTimeout(() => setSuccess(null), 3000);
+        return;
+      } else if (job.status === 'COMPLETED') {
+        setInfo(`Reoptimierung wurde bereits abgeschlossen für ${selectedYear}.`);
+        setTimeout(() => setInfo(null), 5000);
+        
+        await fetchPlannedInternships();
+        await fetchStudentAssignments();
+        return;
+      } else if (job.status === 'FAILED') {
+        throw new Error(job.errorMessage || 'Vorherige Reoptimierung ist fehlgeschlagen. Bitte erneut versuchen.');
+      }
+      
+      // New job created
+      setPollingJobId(job.jobId);
+      setJobStatus("QUEUED");
+
+      // Poll for completion
+      await pollJobStatus(job.jobId);
       
       // Refresh Phase 1 and Phase 2 assignments
       await fetchPlannedInternships();
@@ -891,21 +1185,21 @@ const handleConfirmNewYear = () => {
       
       // Store results persistently with frontend-calculated preservation
       setReoptimizationResults({
-        studentsAssigned: result.studentsAssigned,
-        totalDemands: result.totalDemands,
+        studentsAssigned: summerAssignments.filter(a => a.praktikumType).length,
+        totalDemands: summerAssignments.length,
         assignmentsPreserved: preserved,
         preservedStudentNames: preservedStudentNames,
-        winterBudgetUsed: result.winterBudgetUsed,
-        initialBudget: summerAssignments.length, // Use total summer assignments as denominator
+        winterBudgetUsed: 0, // Will be calculated in backend
+        initialBudget: summerAssignments.length,
         finalBudget: summerAssignments.length,
         winterTotal: winterAssignments.length,
         summerTotal: summerAssignments.length
       });
       
-      setSuccess(`Reoptimization completed successfully! Students: ${result.studentsAssigned}/${result.totalDemands}`);
+      setSuccess(`Reoptimierung erfolgreich abgeschlossen!`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reoptimization failed");
+      setError(err instanceof Error ? err.message : "Reoptimierung ist fehlgeschlagen");
       setTimeout(() => setError(null), 5000);
     } finally {
       setReoptimizing(false);
@@ -917,7 +1211,7 @@ const handleConfirmNewYear = () => {
   // Copy Semester Configs Handler
   const handleCopySemesterConfigs = async () => {
     if (!selectedYear) {
-      setError("Bitte wählen Sie zuerst ein Jahr aus");
+      setError("Bitte wählen Sie zunächst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -934,7 +1228,7 @@ const handleConfirmNewYear = () => {
       sourceYear = `WiSe${prevYear}-${year}`;
       targetYear = selectedYear;
     } else {
-      setError("Semester config copy is only available for summer semesters (SoSe)");
+      setError("Semesterkonfiguration kann nur für Sommersemester (SoSe) kopiert werden");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -952,12 +1246,12 @@ const handleConfirmNewYear = () => {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to copy semester configs');
+        throw new Error('Semesterkonfigurationen konnten nicht kopiert werden');
       }
 
       const result = await response.json();
       setSuccess(
-        `Configs copied successfully! Teachers: ${result.teacherConfigsCopied}, Students: ${result.studentConfigsCopied}`
+        `Konfigurationen erfolgreich kopiert! Lehrer: ${result.teacherConfigsCopied}, Schüler: ${result.studentConfigsCopied}`
       );
       
       // Refresh student configs and teacher data without changing selected year
@@ -967,7 +1261,7 @@ const handleConfirmNewYear = () => {
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to copy semester configs");
+      setError(err instanceof Error ? err.message : "Semesterkonfigurationen konnten nicht kopiert werden");
       setTimeout(() => setError(null), 3000);
     } finally {
       setCopyingConfigs(false);
@@ -1309,7 +1603,7 @@ const handleConfirmNewYear = () => {
     <div className="schools-container">
       <div className="schools-header">
         <div className="schools-header-content">
-          <h1>Praktikum Planning</h1>
+          <h1>Praktikum-Planung</h1>
         </div>
         <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <select
@@ -1357,6 +1651,19 @@ const handleConfirmNewYear = () => {
         </div>
       )}
 
+      {info && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#dbeafe',
+          border: '1px solid #3b82f6',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          color: '#1e40af'
+        }}>
+          <strong>Info:</strong> {info}
+        </div>
+      )}
+
       {/* Tab Content: Assignments (Default View) */}
       {activeTab === 'assignments' && (
         <>
@@ -1367,6 +1674,24 @@ const handleConfirmNewYear = () => {
                 <h1 style={{fontSize: '20px'}}>Lehrerzuweisungen</h1>
               </div>
               <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                {pollingJobId && (
+                  <div style={{
+                    fontSize: '0.875rem', 
+                    color: '#6b7280', 
+                    minWidth: '200px',
+                    padding: '8px 12px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    Status: <span style={{fontWeight: 'bold', color: jobStatus === 'RUNNING' ? '#f59e0b' : '#3b82f6'}}>{jobStatus}</span>
+                    {jobETA && jobStatus === 'RUNNING' && (
+                      <span style={{marginLeft: '8px', display: 'block', marginTop: '2px'}}>
+                        ETA: <span style={{fontWeight: 'bold', color: '#10b981'}}>{jobETA}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
                   <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Zeitbudget</label>
                   <input
@@ -1398,7 +1723,7 @@ const handleConfirmNewYear = () => {
                 </div>
                 {selectedYear?.startsWith('SoSe') && (
                   <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Uncompleted</label>
+                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Nicht abgeschlossen</label>
                     <input
                       type="number"
                       min="0"
@@ -1427,6 +1752,41 @@ const handleConfirmNewYear = () => {
                     />
                   </div>
                 )}
+                <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>
+                    Solver Zeitlimit
+                  </label>
+                  <input
+                    type="time"
+                    value={`${String(Math.floor(phase1TimeLimit / 3600)).padStart(2, '0')}:${String(Math.floor((phase1TimeLimit % 3600) / 60)).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':').map(Number);
+                      const totalSeconds = hours * 3600 + minutes * 60;
+                      if (totalSeconds >= 60 && totalSeconds <= 43200) {
+                        setPhase1TimeLimit(totalSeconds);
+                      }
+                    }}
+                    style={{
+                      width: '120px',
+                      padding: '8px 12px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
+                      textAlign: 'center'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.outline = '2px solid rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.outline = 'none';
+                    }}
+                  />
+                </div>
                 <div style={{display: 'flex', gap: '12px', marginTop: '20px'}}>
                   {!selectedYear?.startsWith('SoSe') && (
                     <button 
@@ -1436,7 +1796,7 @@ const handleConfirmNewYear = () => {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
+                      {assigningPhase1 ? "Läuft..." : "Zuweisen"}
                     </button>
                   )}
                   {selectedYear?.startsWith('SoSe') && (
@@ -1523,13 +1883,13 @@ const handleConfirmNewYear = () => {
                       </button>
                     )}
                     <span style={{color: '#3b82f6'}}>
-                      <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
+                      <strong>Bewahrte:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
                     </span>
                   </div>
                   {reoptimizationResults.winterBudgetUsed > 0 && (
                     <>
                       <span style={{color: '#f59e0b'}}>
-                        <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
+                        <strong>Winter verwendet:</strong> {reoptimizationResults.winterBudgetUsed}
                       </span>
                     </>
                   )}
@@ -1749,7 +2109,7 @@ const handleConfirmNewYear = () => {
                           <td colSpan={4} className="table-empty">
                             {studentSearchTerm || Object.values(studentFilters).some(v => v) ? 
                               'Keine Zuweisungen entsprechen den Filterkriterien' : 
-                              'No student assignments generated'}
+                              'Keine Studentenzuweisungen erstellt'}
                           </td>
                         </tr>
                       ) : (
@@ -1871,8 +2231,8 @@ const handleConfirmNewYear = () => {
                     </tbody>
                   </table>
                   
-                  {/* Delete All Button at Bottom */}
-                  <div className="table-footer-actions">
+                  {/* Delete All & Export Buttons at Bottom */}
+                  <div className="table-footer-actions" style={{display: 'flex', gap: '12px'}}>
                     <button 
                       className="btn-delete-all" 
                       onClick={handleDeleteAllStudentAssignments}
@@ -1883,6 +2243,14 @@ const handleConfirmNewYear = () => {
                         </svg>
                       </span>
                       Alle Löschen
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={handleExportAssignments}
+                      disabled={!phase1Result}
+                      style={{border: '1px solid #1e293b', backgroundColor: 'white', color: '#1e293b'}}
+                    >
+                      Export (.xlsx)
                     </button>
                   </div>
                 </>
@@ -1897,13 +2265,13 @@ const handleConfirmNewYear = () => {
         <div style={{marginBottom: '24px'}}>
           <div className="schools-header" style={{marginBottom: '16px'}}>
             <div className="schools-header-content">
-              <h1 style={{fontSize: '20px'}}>PL Configuration</h1>
+              <h1 style={{fontSize: '20px'}}>PL-Konfiguration</h1>
               <p>Praktikumslehrer Konfiguration und Präferenzen</p>
             </div>
           </div>
           <div style={{marginLeft: '16px'}}>
             <SearchFilter
-              searchPlaceholder="🔍 Search teachers..."
+              searchPlaceholder="🔍 Lehrer suchen..."
               searchValue={plConfigSearchTerm}
               onSearchChange={setPlConfigSearchTerm}
               filters={plConfigFilterConfigs}
@@ -1916,11 +2284,11 @@ const handleConfirmNewYear = () => {
               <table className="schools-table">
                 <thead>
                   <tr>
-                    <th>Teacher Name</th>
-                    <th>Main Subject</th>
+                    <th>Lehrername</th>
+                    <th>Hauptfach</th>
                     <th>Schuljahr</th>
-                    <th>Subject Specializations</th>
-                    <th>Internship Preferences</th>
+                    <th>Fachspezialisierungen</th>
+                    <th>Praktikumspräferenzen</th>
                     <th>Aktionen</th>
                   </tr>
                 </thead>
@@ -1928,7 +2296,7 @@ const handleConfirmNewYear = () => {
                   {filteredPlConfigTeachers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="empty-state">
-                        {plConfigSearchTerm || Object.values(plConfigFilters).some(v => v) ? 'No teachers match your filters' : 'No teachers found'}
+                        {plConfigSearchTerm || Object.values(plConfigFilters).some(v => v) ? 'Keine Lehrer entsprechen Ihren Filtern' : 'Keine Lehrer gefunden'}
                       </td>
                     </tr>
                   ) : (
@@ -1942,13 +2310,13 @@ const handleConfirmNewYear = () => {
                           <tr key={`teacher-${teacher.teacherId}`}>
                             <td>{getTeacherName(teacher)}</td>
                             <td>{teacher.mainSubject.name}</td>
-                            <td colSpan={3} className="empty-state">No configurations</td>
+                            <td colSpan={3} className="empty-state">Keine Konfigurationen</td>
                             <td>
                               <button
                                 className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher)}
-                                title="Edit teacher configuration"
-                                aria-label="Edit teacher configuration"
+                                title="Lehrerkonfiguration bearbeiten"
+                                aria-label="Lehrerkonfiguration bearbeiten"
                               >
                                 ✏️
                               </button>
@@ -1982,16 +2350,16 @@ const handleConfirmNewYear = () => {
                               <button
                                 className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher, config)}
-                                title="Edit configuration"
-                                aria-label="Edit configuration"
+                                title="Konfiguration bearbeiten"
+                                aria-label="Konfiguration bearbeiten"
                               >
                                 ✏️
                               </button>
                               <button
                                 className="action-btn delete-btn"
                                 onClick={() => handleDeleteTeacherConfig(teacher.teacherId, config.id)}
-                                title="Delete configuration"
-                                aria-label="Delete configuration"
+                                title="Konfiguration löschen"
+                                aria-label="Konfiguration löschen"
                               >
                                 🗑️
                               </button>
@@ -2064,7 +2432,7 @@ const handleConfirmNewYear = () => {
           <td colSpan={12} className="empty-state">
             {studentSearchTerm || Object.values(studentConfigFilters).some(v => v) ? 
               'Keine Konfigurationen entsprechen den Filterkriterien' : 
-              'No students found'}
+              'Keine Schüler gefunden'}
           </td>
         </tr>
       );
@@ -2081,7 +2449,7 @@ const handleConfirmNewYear = () => {
         return (
           <tr key={`student-${student.matriculationNbr}`}>
             <td>{student.firstName} {student.lastName}</td>
-            <td colSpan={8} className="empty-state">No configurations</td>
+            <td colSpan={8} className="empty-state">Keine Konfigurationen</td>
           </tr>
         );
       }
@@ -2121,14 +2489,14 @@ const handleConfirmNewYear = () => {
                 <button
                   className="action-btn edit-btn"
                   onClick={() => handleOpenStudentConfigModal(config)}
-                  title="Edit"
+                  title="Bearbeiten"
                 >
                   ✏️
                 </button>
                 <button
                   className="action-btn delete-btn"
                   onClick={() => config.id && handleDeleteStudentConfig(config.id)}
-                  title="Delete"
+                  title="Löschen"
                 >
                   🗑️
                 </button>
@@ -2149,9 +2517,9 @@ const handleConfirmNewYear = () => {
       {showNewYearModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Create New Planning Year</h2>
-            <p>Select a semester from the list</p>
-            <div style={{marginBottom: '20px'}}>
+            <h2>Neues Planungsjahr erstellen</h2>
+            <p>Wählen Sie den Semestertyp und geben Sie das Jahr ein (z.B. WiSe2026 oder SoSe2025)</p>
+            <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
               <select
                 className="form-select"
                 value={`${newSemesterType}${newYearInput}`}
@@ -2219,8 +2587,8 @@ const handleConfirmNewYear = () => {
       {showDeleteStudentModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Löschen bestätigen</h2>
-            <p>Sind Sie sicher, dass Sie diese Studierendenkonfiguration löschen möchten?</p>
+            <h2>Löschung bestätigen</h2>
+            <p>Möchten Sie diese Schülerkonfiguration wirklich löschen?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
@@ -2287,7 +2655,7 @@ const handleConfirmNewYear = () => {
                 
                 await fetchStudentConfigsByYear();
                 
-                setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
+                setSuccess(wasEditing ? "Schülerkonfiguration aktualisiert!" : "Schülerkonfiguration erstellt!");
                 setTimeout(() => setSuccess(null), 3000);
               }}
             />
@@ -2299,8 +2667,8 @@ const handleConfirmNewYear = () => {
       {showDeleteTeacherModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Löschen bestätigen</h2>
-            <p>Sind Sie sicher, dass Sie diese Lehrerkonfiguration löschen möchten?</p>
+            <h2>Löschung bestätigen</h2>
+            <p>Möchten Sie diese Lehrerkonfiguration wirklich löschen?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
@@ -2331,7 +2699,7 @@ const handleConfirmNewYear = () => {
               onSave={async () => {
                 handleCloseTeacherConfigModal();
                 await fetchInitialData();
-                setSuccess(editingTeacherConfig?.config ? "Teacher configuration updated!" : "Teacher configuration created!");
+                setSuccess(editingTeacherConfig?.config ? "Lehrerkonfiguration aktualisiert!" : "Lehrerkonfiguration erstellt!");
                 setTimeout(() => setSuccess(null), 3000);
               }}
             />
@@ -2404,7 +2772,7 @@ const handleConfirmNewYear = () => {
                     <option key={`teacher-${teacher.teacherId}-${idx}`} value={teacher.teacherId?.toString()}>
                       {teacher.firstName} {teacher.lastName}
                     </option>
-                  )) : <option disabled>Loading...</option>}
+                  )) : <option disabled>Lädt...</option>}
                 </select>
               </div>
               <div className="form-group">

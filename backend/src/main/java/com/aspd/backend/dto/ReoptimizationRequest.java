@@ -32,4 +32,10 @@ public class ReoptimizationRequest {
      * These internships were not completed and need to be added to the summer semester budget.
      */
     private Integer uncompletedInternships;
+    
+    /**
+     * Solver time limit in seconds for Phase 1 optimization (60-43200).
+     * Used for async reoptimization. Defaults to 300 (5 minutes).
+     */
+    private Long phase1TimeLimitSeconds;
 }

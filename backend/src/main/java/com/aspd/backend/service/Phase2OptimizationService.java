@@ -8,18 +8,25 @@ import com.aspd.backend.model.PlannedInternship;
 import com.aspd.backend.model.PraktikumType;
 import com.aspd.backend.model.StudentConfig;
 import com.aspd.backend.model.StudentInternshipDemand;
+import com.aspd.backend.optimization.OptimizationJobService;
 import com.aspd.backend.repository.BaselineAssignmentRepository;
+import com.aspd.backend.repository.InternshipAssignmentRepository;
 import com.aspd.backend.repository.PlannedInternshipRepository;
 import com.aspd.backend.repository.StudentInternshipDemandRepository;
 import com.aspd.backend.solver.StudentAssignmentSolution;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
+import org.optaplanner.core.api.solver.SolverJob;
+import org.optaplanner.core.api.solver.SolverManager;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,12 +38,29 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class Phase2OptimizationService {
 
     private final PlannedInternshipRepository plannedInternshipRepository;
     private final StudentInternshipDemandRepository studentInternshipDemandRepository;
     private final BaselineAssignmentRepository baselineAssignmentRepository;
+    private final InternshipAssignmentRepository assignmentRepository;
+    private final SolverManager<StudentAssignmentSolution, String> solverManager;
+    private final OptimizationJobService jobService;
+
+    public Phase2OptimizationService(
+            PlannedInternshipRepository plannedInternshipRepository,
+            StudentInternshipDemandRepository studentInternshipDemandRepository,
+            BaselineAssignmentRepository baselineAssignmentRepository,
+            InternshipAssignmentRepository assignmentRepository,
+            @Qualifier("phase2SolverManager") SolverManager<StudentAssignmentSolution, String> solverManager,
+            OptimizationJobService jobService) {
+        this.plannedInternshipRepository = plannedInternshipRepository;
+        this.studentInternshipDemandRepository = studentInternshipDemandRepository;
+        this.baselineAssignmentRepository = baselineAssignmentRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.solverManager = solverManager;
+        this.jobService = jobService;
+    }
 
     /**
      * Optimize Phase 2: Student assignment.
@@ -97,6 +121,100 @@ public class Phase2OptimizationService {
         
         // Save and finalize results
         return saveAndFinalizeResults(phase2Result);
+    }
+
+    /**
+     * Optimize Phase 2 asynchronously using SolverManager.
+     * This method is non-blocking and updates the job status via OptimizationJobService.
+     * Fixed time limit of 120 seconds.
+     * 
+     * @param studentConfigs Student configurations
+     * @param schoolYear Academic year
+     * @param timeBudget Total hours budget
+     * @param jobId Job ID for tracking progress
+     */
+    @Async("optimizationExecutor")
+    @Transactional
+    public void optimizeAsync(
+            List<StudentConfig> studentConfigs,
+            String schoolYear,
+            Integer timeBudget,
+            String jobId) {
+        
+        log.info("\n========== PHASE 2 ASYNC: Student Assignment ==========");
+        log.info("Job ID: {}", jobId);
+        log.info("Solver time limit: 120 seconds (fixed)");
+        
+        try {
+            // Mark job as running
+            jobService.markJobAsRunning(jobId);
+            
+            // Load and validate planned internships from Phase 1
+            List<PlannedInternship> plannedInternships = loadAndValidatePlannedInternships(schoolYear);
+            
+            log.info("Loaded {} planned internships from Phase 1", plannedInternships.size());
+            log.info("Processing {} students\n", studentConfigs.size());
+            
+            // Create student demands
+            List<StudentInternshipDemand> studentDemands = createStudentDemandsFromConfigs(
+                    studentConfigs, schoolYear);
+            
+            // Create unified solution with all demands and internships
+            StudentAssignmentSolution problem = createSolution(
+                    plannedInternships, studentDemands, schoolYear, timeBudget);
+            
+            // Use problem ID for solver manager (schoolYear + jobType)
+            String problemId = "PHASE2-" + schoolYear;
+            
+            // Solve asynchronously using SolverManager (fixed 120 seconds)
+            log.info("Starting solver with problemId: {}", problemId);
+            
+            SolverJob<StudentAssignmentSolution, String> solverJob = solverManager.solve(
+                    problemId,
+                    problem
+            );
+            
+            // Wait for the solution
+            StudentAssignmentSolution solution;
+            try {
+                solution = solverJob.getFinalBestSolution();
+            } catch (Exception e) {
+                log.error("Solver job failed: {}", e.getMessage(), e);
+                throw new RuntimeException("Solver failed: " + e.getMessage(), e);
+            }
+            
+            long assignedCount = solution.getStudentDemands().stream()
+                    .filter(d -> d.getAssignedInternship() != null)
+                    .count();
+            
+            log.info("Student assignments: {}/{}", assignedCount, studentDemands.size());
+            log.info("Score: {}", solution.getScore());
+            
+            // Save and finalize results
+            List<StudentInternshipDemand> savedDemands = studentInternshipDemandRepository.saveAll(
+                    solution.getStudentDemands());
+            
+            solution.setStudentDemands(savedDemands);
+            
+            // Create and save final InternshipAssignment records
+            List<InternshipAssignment> finalAssignments = createFinalAssignments(
+                    savedDemands, schoolYear);
+            assignmentRepository.saveAll(finalAssignments);
+            
+            log.info("========== PHASE 2 ASYNC COMPLETE ==========");
+            log.info("Assigned: {}/{}", assignedCount, savedDemands.size());
+            log.info("Saved {} InternshipAssignment records", finalAssignments.size());
+            log.info("Score: {}\n", solution.getScore());
+            
+            // Mark job as completed with success message
+            String message = String.format("Phase 2 complete: %d/%d students assigned. Score: %s",
+                    assignedCount, savedDemands.size(), solution.getScore());
+            jobService.markJobAsCompleted(jobId, message);
+            
+        } catch (Exception e) {
+            log.error("Phase 2 async optimization failed for job {}: {}", jobId, e.getMessage(), e);
+            jobService.markJobAsFailed(jobId, "Optimization failed: " + e.getMessage());
+        }
     }
 
     private List<PlannedInternship> loadAndValidatePlannedInternships(String schoolYear) {
