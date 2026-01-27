@@ -147,7 +147,7 @@ public class ReoptimizationController {
         // Start async re-optimization
         reoptimizationService.reoptimizeAsync(
                 request.getSchoolYear(),
-                request.getTimeBudget(),
+                request.getInternshipBudget(),
                 request.getUncompletedInternships(),
                 phase1TimeLimit,
                 job.getJobId());
