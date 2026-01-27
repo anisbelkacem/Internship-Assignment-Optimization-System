@@ -282,7 +282,7 @@ export default function InternshipAssignments() {
 
           if (!response.ok) {
             clearInterval(pollInterval);
-            reject(new Error("Failed to fetch job status"));
+            reject(new Error("Konnte Jobstatus nicht abrufen"));
             return;
           }
 
@@ -318,7 +318,7 @@ export default function InternshipAssignments() {
             setPollingJobId(null);
             setJobStatus(null);
             setJobETA(null);
-            reject(new Error(job.errorMessage || "Optimization failed"));
+            reject(new Error(job.errorMessage || "Optimierung ist fehlgeschlagen"));
           }
         } catch (err) {
           clearInterval(pollInterval);
@@ -351,7 +351,7 @@ const fetchInitialData = async () => {
       setSelectedYear(yearsData[0]);
     }
   } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to load data");
+    setError(err instanceof Error ? err.message : "Daten konnten nicht geladen werden");
   } finally {
     setLoading(false);
   }
@@ -390,7 +390,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
       console.log('Fetched configs for year', selectedYear, ':', configs);
       setStudentConfigs(configs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load student configurations");
+      setError(err instanceof Error ? err.message : "Studentenkonfigurationen konnten nicht geladen werden");
     }
   };
 
@@ -436,7 +436,7 @@ const refreshAvailableYears = async (yearToKeep?: string) => {
       
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete configuration");
+      setError(err instanceof Error ? err.message : "Konfiguration konnte nicht gelöscht werden");
     } finally {
       setShowDeleteStudentModal(false);
       setDeletingStudentConfigId(null);
@@ -473,7 +473,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     await fetchInitialData(); // Refresh teachers with updated configs
     setTimeout(() => setSuccess(null), 3000);
   } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to delete configuration");
+    setError(err instanceof Error ? err.message : "Konfiguration konnte nicht gelöscht werden");
   } finally {
     setShowDeleteTeacherModal(false);
     setDeletingTeacherConfig(null);
@@ -609,7 +609,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
         await calculateAndDisplayPreservation();
       }
     } catch (err) {
-      console.error("Failed to fetch planned internships:", err);
+      console.error("Konnte geplante Praktika nicht abrufen:", err);
     }
   };
 
@@ -628,7 +628,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setSuccess("Alle Zuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete assignments");
+      setError(err instanceof Error ? err.message : "Zuweisungen konnten nicht gelöscht werden");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -807,7 +807,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setSuccess("Alle Studentenzuweisungen erfolgreich gelöscht!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete student assignments");
+      setError(err instanceof Error ? err.message : "Studentenzuweisungen konnten nicht gelöscht werden");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -1005,7 +1005,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
     // fallback generic error
     setValidationResult(null);
     setShowForceSaveAssignment(false);
-    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Failed to update assignment";
+    const errorMessage = err?.message || err?.response?.data?.message || err?.data?.message || "Zuweisung konnte nicht aktualisiert werden";
     setError(errorMessage);
     setTimeout(() => setError(null), 5000);
   }
@@ -1034,7 +1034,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Validation error:', err);
-      setError(err instanceof Error ? err.message : "Failed to validate assignment");
+      setError(err instanceof Error ? err.message : "Zuweisung konnte nicht validiert werden");
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -1048,7 +1048,7 @@ const handleConfirmDeleteTeacherConfig = async () => {
 
 const handleConfirmNewYear = () => {
   if (!newYearInput.trim()) {
-    setError("Please enter a valid year");
+    setError("Bitte geben Sie ein gültiges Jahr ein");
     setTimeout(() => setError(null), 3000);
     return;
   }
@@ -1057,7 +1057,7 @@ const handleConfirmNewYear = () => {
   const fullYear = `${newSemesterType}${newYearInput.trim()}`;
 
   if (availableYears.includes(fullYear)) {
-    setError("This year already exists");
+    setError("Dieses Jahr existiert bereits");
     setTimeout(() => setError(null), 3000);
     return;
   }
@@ -1078,7 +1078,7 @@ const handleConfirmNewYear = () => {
   // Reoptimization Handler
   const handleReoptimization = async () => {
     if (!selectedYear) {
-      setError("Please select a year first");
+      setError("Bitte wählen Sie zunächst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -1107,8 +1107,8 @@ const handleConfirmNewYear = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Reoptimization failed' }));
-        throw new Error(errorData.message || 'Reoptimization failed');
+        const errorData = await response.json().catch(() => ({ message: 'Reoptimierung ist fehlgeschlagen' }));
+        throw new Error(errorData.message || 'Reoptimierung ist fehlgeschlagen');
       }
 
       const job = await response.json();
@@ -1140,7 +1140,7 @@ const handleConfirmNewYear = () => {
           summerTotal: summerAssignments.length
         });
         
-        setSuccess(`Reoptimization completed successfully!`);
+        setSuccess(`Reoptimierung erfolgreich abgeschlossen!`);
         setTimeout(() => setSuccess(null), 3000);
         return;
       } else if (job.status === 'COMPLETED') {
@@ -1182,10 +1182,10 @@ const handleConfirmNewYear = () => {
         summerTotal: summerAssignments.length
       });
       
-      setSuccess(`Reoptimization completed successfully!`);
+      setSuccess(`Reoptimierung erfolgreich abgeschlossen!`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reoptimization failed");
+      setError(err instanceof Error ? err.message : "Reoptimierung ist fehlgeschlagen");
       setTimeout(() => setError(null), 5000);
     } finally {
       setReoptimizing(false);
@@ -1197,7 +1197,7 @@ const handleConfirmNewYear = () => {
   // Copy Semester Configs Handler
   const handleCopySemesterConfigs = async () => {
     if (!selectedYear) {
-      setError("Please select a year first");
+      setError("Bitte wählen Sie zunächst ein Jahr aus");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -1212,7 +1212,7 @@ const handleConfirmNewYear = () => {
       sourceYear = `WiSe${year}`;
       targetYear = selectedYear;
     } else {
-      setError("Semester config copy is only available for summer semesters (SoSe)");
+      setError("Semesterkonfiguration kann nur für Sommersemester (SoSe) kopiert werden");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -1230,12 +1230,12 @@ const handleConfirmNewYear = () => {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to copy semester configs');
+        throw new Error('Semesterkonfigurationen konnten nicht kopiert werden');
       }
 
       const result = await response.json();
       setSuccess(
-        `Configs copied successfully! Teachers: ${result.teacherConfigsCopied}, Students: ${result.studentConfigsCopied}`
+        `Konfigurationen erfolgreich kopiert! Lehrer: ${result.teacherConfigsCopied}, Schüler: ${result.studentConfigsCopied}`
       );
       
       // Refresh student configs and teacher data without changing selected year
@@ -1245,7 +1245,7 @@ const handleConfirmNewYear = () => {
       
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to copy semester configs");
+      setError(err instanceof Error ? err.message : "Semesterkonfigurationen konnten nicht kopiert werden");
       setTimeout(() => setError(null), 3000);
     } finally {
       setCopyingConfigs(false);
@@ -1587,7 +1587,7 @@ const handleConfirmNewYear = () => {
     <div className="schools-container">
       <div className="schools-header">
         <div className="schools-header-content">
-          <h1>Praktikum Planning</h1>
+          <h1>Praktikum-Planung</h1>
         </div>
         <div className="header-actions" style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
           <select
@@ -1596,7 +1596,7 @@ const handleConfirmNewYear = () => {
             onChange={handleYearChange}
             style={{width: '150px'}}
           >
-            <option value="">Select Year</option>
+            <option value="">Jahr auswählen</option>
             {availableYears.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -1707,7 +1707,7 @@ const handleConfirmNewYear = () => {
                 </div>
                 {selectedYear?.startsWith('SoSe') && (
                   <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Uncompleted</label>
+                    <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>Nicht abgeschlossen</label>
                     <input
                       type="number"
                       min="0"
@@ -1738,7 +1738,7 @@ const handleConfirmNewYear = () => {
                 )}
                 <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
                   <label style={{fontSize: '0.875rem', fontWeight: '500', color: '#374151'}}>
-                    Solver Time Limit
+                    Solver Zeitlimit
                   </label>
                   <input
                     type="time"
@@ -1780,7 +1780,7 @@ const handleConfirmNewYear = () => {
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      {assigningPhase1 ? "Optimizing..." : "Zuweisen"}
+                      {assigningPhase1 ? "Läuft..." : "Zuweisen"}
                     </button>
                   )}
                   {selectedYear?.startsWith('SoSe') && (
@@ -1867,13 +1867,13 @@ const handleConfirmNewYear = () => {
                       </button>
                     )}
                     <span style={{color: '#3b82f6'}}>
-                      <strong>Preserved:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
+                      <strong>Bewahrte:</strong> {reoptimizationResults.assignmentsPreserved}/{reoptimizationResults.initialBudget}
                     </span>
                   </div>
                   {reoptimizationResults.winterBudgetUsed > 0 && (
                     <>
                       <span style={{color: '#f59e0b'}}>
-                        <strong>Winter Used:</strong> {reoptimizationResults.winterBudgetUsed}
+                        <strong>Winter verwendet:</strong> {reoptimizationResults.winterBudgetUsed}
                       </span>
                     </>
                   )}
@@ -2093,7 +2093,7 @@ const handleConfirmNewYear = () => {
                           <td colSpan={4} className="table-empty">
                             {studentSearchTerm || Object.values(studentFilters).some(v => v) ? 
                               'Keine Zuweisungen entsprechen den Filterkriterien' : 
-                              'No student assignments generated'}
+                              'Keine Studentenzuweisungen erstellt'}
                           </td>
                         </tr>
                       ) : (
@@ -2249,13 +2249,13 @@ const handleConfirmNewYear = () => {
         <div style={{marginBottom: '24px'}}>
           <div className="schools-header" style={{marginBottom: '16px'}}>
             <div className="schools-header-content">
-              <h1 style={{fontSize: '20px'}}>PL Configuration</h1>
+              <h1 style={{fontSize: '20px'}}>PL-Konfiguration</h1>
               <p>Praktikumslehrer Konfiguration und Präferenzen</p>
             </div>
           </div>
           <div style={{marginLeft: '16px'}}>
             <SearchFilter
-              searchPlaceholder="🔍 Search teachers..."
+              searchPlaceholder="🔍 Lehrer suchen..."
               searchValue={plConfigSearchTerm}
               onSearchChange={setPlConfigSearchTerm}
               filters={plConfigFilterConfigs}
@@ -2268,19 +2268,19 @@ const handleConfirmNewYear = () => {
               <table className="schools-table">
                 <thead>
                   <tr>
-                    <th>Teacher Name</th>
-                    <th>Main Subject</th>
-                    <th>School Year</th>
-                    <th>Subject Specializations</th>
-                    <th>Internship Preferences</th>
-                    <th>Actions</th>
+                    <th>Lehrername</th>
+                    <th>Hauptfach</th>
+                    <th>Schuljahr</th>
+                    <th>Fachspezialisierungen</th>
+                    <th>Praktikumspräferenzen</th>
+                    <th>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPlConfigTeachers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="empty-state">
-                        {plConfigSearchTerm || Object.values(plConfigFilters).some(v => v) ? 'No teachers match your filters' : 'No teachers found'}
+                        {plConfigSearchTerm || Object.values(plConfigFilters).some(v => v) ? 'Keine Lehrer entsprechen Ihren Filtern' : 'Keine Lehrer gefunden'}
                       </td>
                     </tr>
                   ) : (
@@ -2294,13 +2294,13 @@ const handleConfirmNewYear = () => {
                           <tr key={`teacher-${teacher.teacherId}`}>
                             <td>{getTeacherName(teacher)}</td>
                             <td>{teacher.mainSubject.name}</td>
-                            <td colSpan={3} className="empty-state">No configurations</td>
+                            <td colSpan={3} className="empty-state">Keine Konfigurationen</td>
                             <td>
                               <button
                                 className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher)}
-                                title="Edit teacher configuration"
-                                aria-label="Edit teacher configuration"
+                                title="Lehrerkonfiguration bearbeiten"
+                                aria-label="Lehrerkonfiguration bearbeiten"
                               >
                                 ✏️
                               </button>
@@ -2334,16 +2334,16 @@ const handleConfirmNewYear = () => {
                               <button
                                 className="action-btn edit-btn"
                                 onClick={() => handleOpenTeacherConfigModal(teacher, config)}
-                                title="Edit configuration"
-                                aria-label="Edit configuration"
+                                title="Konfiguration bearbeiten"
+                                aria-label="Konfiguration bearbeiten"
                               >
                                 ✏️
                               </button>
                               <button
                                 className="action-btn delete-btn"
                                 onClick={() => handleDeleteTeacherConfig(teacher.teacherId, config.id)}
-                                title="Delete configuration"
-                                aria-label="Delete configuration"
+                                title="Konfiguration löschen"
+                                aria-label="Konfiguration löschen"
                               >
                                 🗑️
                               </button>
@@ -2416,7 +2416,7 @@ const handleConfirmNewYear = () => {
           <td colSpan={12} className="empty-state">
             {studentSearchTerm || Object.values(studentConfigFilters).some(v => v) ? 
               'Keine Konfigurationen entsprechen den Filterkriterien' : 
-              'No students found'}
+              'Keine Schüler gefunden'}
           </td>
         </tr>
       );
@@ -2433,7 +2433,7 @@ const handleConfirmNewYear = () => {
         return (
           <tr key={`student-${student.matriculationNbr}`}>
             <td>{student.firstName} {student.lastName}</td>
-            <td colSpan={8} className="empty-state">No configurations</td>
+            <td colSpan={8} className="empty-state">Keine Konfigurationen</td>
           </tr>
         );
       }
@@ -2473,14 +2473,14 @@ const handleConfirmNewYear = () => {
                 <button
                   className="action-btn edit-btn"
                   onClick={() => handleOpenStudentConfigModal(config)}
-                  title="Edit"
+                  title="Bearbeiten"
                 >
                   ✏️
                 </button>
                 <button
                   className="action-btn delete-btn"
                   onClick={() => config.id && handleDeleteStudentConfig(config.id)}
-                  title="Delete"
+                  title="Löschen"
                 >
                   🗑️
                 </button>
@@ -2501,8 +2501,8 @@ const handleConfirmNewYear = () => {
       {showNewYearModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Create New Planning Year</h2>
-            <p>Select semester type and enter the year (e.g., WiSe2026 or SoSe2025)</p>
+            <h2>Neues Planungsjahr erstellen</h2>
+            <p>Wählen Sie den Semestertyp und geben Sie das Jahr ein (z.B. WiSe2026 oder SoSe2025)</p>
             <div style={{marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px'}}>
               <select
                 className="form-select-small"
@@ -2537,13 +2537,13 @@ const handleConfirmNewYear = () => {
                   setNewSemesterType('WiSe');
                 }}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-primary-filled"
                 onClick={handleConfirmNewYear}
               >
-                Create Year
+                Jahr erstellen
               </button>
             </div>
           </div>
@@ -2554,20 +2554,20 @@ const handleConfirmNewYear = () => {
       {showDeleteStudentModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Confirm Delete</h2>
-            <p>Are you sure you want to delete this student configuration?</p>
+            <h2>Löschung bestätigen</h2>
+            <p>Möchten Sie diese Schülerkonfiguration wirklich löschen?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
                 onClick={() => setShowDeleteStudentModal(false)}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-danger"
                 onClick={handleConfirmDeleteStudentConfig}
               >
-                Delete
+                Löschen
               </button>
             </div>
           </div>
@@ -2595,7 +2595,7 @@ const handleConfirmNewYear = () => {
                 
                 await fetchStudentConfigsByYear();
                 
-                setSuccess(wasEditing ? "Student configuration updated!" : "Student configuration created!");
+                setSuccess(wasEditing ? "Schülerkonfiguration aktualisiert!" : "Schülerkonfiguration erstellt!");
                 setTimeout(() => setSuccess(null), 3000);
               }}
             />
@@ -2607,20 +2607,20 @@ const handleConfirmNewYear = () => {
       {showDeleteTeacherModal && (
         <div className="modal-overlay">
           <div className="modal-content modal-small">
-            <h2>Confirm Delete</h2>
-            <p>Are you sure you want to delete this teacher configuration?</p>
+            <h2>Löschung bestätigen</h2>
+            <p>Möchten Sie diese Lehrerkonfiguration wirklich löschen?</p>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
                 onClick={() => setShowDeleteTeacherModal(false)}
               >
-                Cancel
+                Abbrechen
               </button>
               <button
                 className="btn-danger"
                 onClick={handleConfirmDeleteTeacherConfig}
               >
-                Delete
+                Löschen
               </button>
             </div>
           </div>
@@ -2639,7 +2639,7 @@ const handleConfirmNewYear = () => {
               onSave={async () => {
                 handleCloseTeacherConfigModal();
                 await fetchInitialData();
-                setSuccess(editingTeacherConfig?.config ? "Teacher configuration updated!" : "Teacher configuration created!");
+                setSuccess(editingTeacherConfig?.config ? "Lehrerkonfiguration aktualisiert!" : "Lehrerkonfiguration erstellt!");
                 setTimeout(() => setSuccess(null), 3000);
               }}
             />
@@ -2712,7 +2712,7 @@ const handleConfirmNewYear = () => {
                     <option key={`teacher-${teacher.teacherId}-${idx}`} value={teacher.teacherId?.toString()}>
                       {teacher.firstName} {teacher.lastName}
                     </option>
-                  )) : <option disabled>Loading...</option>}
+                  )) : <option disabled>Lädt...</option>}
                 </select>
               </div>
               <div className="form-group">
