@@ -1,0 +1,463 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+% Page geometry
+\geometry{
+    left=3cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\thepage}
+\lhead{\leftmark}
+
+% Code listing settings
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{orange},
+    showstringspaces=false
+}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+% Document information
+\title{Internship Assignment Optimization System}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+% Title page
+\maketitle
+
+% Management Summary (non-technical, decision-level)
+\chapter*{Management Summary}
+\addcontentsline{toc}{chapter}{Management Summary}
+
+\section*{Client and Context}
+% The university unit responsible for organizing teaching internships
+% Challenge: coordinating hundreds of students across multiple schools
+
+\section*{Core Challenges}
+% • Large number of students requiring placements
+% • Multiple internship types (PDP, ZSP, SFP) with different subjects
+% • Limited teacher availability and capacity
+% • Distance, zone, and subject matching constraints
+% • Budget constraints limiting number of active placements
+
+\section*{Solution Delivered}
+% A web-based software system that:
+% • Automates teacher and student assignment to internship placements
+% • Optimizes assignments across multiple planning phases
+% • Provides configurable constraints and budget controls
+% • Offers interactive assignment management and validation
+
+\section*{Outcomes}
+% • High-quality, feasible assignment plans
+% • Significant reduction in manual planning effort
+% • Transparent, auditable decision-making
+% • Flexible configuration for changing requirements
+
+% Table of contents
+\tableofcontents
+\newpage
+
+% Chapter 1: Introduction (motivation & context)
+\chapter{Introduction}
+
+\section{Teaching Internships in Teacher Education}
+% • Role of practical experience in teacher training programs
+% • Different internship types serving different pedagogical goals
+% • Importance of quality supervision by experienced teachers
+
+\section{Scale and Complexity of Internship Coordination}
+% • Hundreds of students per semester
+% • Dozens of schools and supervising teachers
+% • Multiple subject areas and school types (GS, MS)
+% • Geographic distribution and accessibility considerations
+
+\section{Limitations of Manual Planning}
+% • Time-intensive process
+% • Difficulty balancing competing constraints
+% • Prone to errors and inconsistencies
+% • Lack of optimization and transparency
+% • Challenge of reoptimization when circumstances change
+
+\section{Course Context}
+% • Real client: university internship coordination unit
+% • Multiple student teams working on related aspects
+% • Agile, sprint-based development over multiple semesters
+% • Collaboration with stakeholders and teaching assistants
+
+\section{Team Contribution}
+% • Your specific role and deliverables
+% • Integration with work from other teams
+% • Evolution of the system across development cycles
+
+% Chapter 2: Requirements Overview
+\chapter{Requirements Overview}
+
+\section{System Vision}
+% • Support annual internship planning cycle
+% • Optimize assignments under real-world constraints
+% • Prioritize solution quality over strict feasibility guarantees
+% • Provide transparency and configurability
+
+\section{Stakeholders}
+\subsection{Primary: Internship Coordination Unit}
+% • Needs efficient planning tools
+% • Requires audit trails and justification for decisions
+
+\subsection{Teaching Students}
+% • Need fair, quality placements
+% • Prefer locations close to home
+% • Require subject-appropriate supervision
+
+\subsection{Schools and Supervising Teachers}
+% • Have capacity and availability constraints
+% • Bring subject expertise and preferences
+% • Constrained by geographic zones and accessibility
+
+\section{Core Problem Definition}
+
+\subsection{Input Data}
+% Students:
+% • Internship type requirements (PDP_I, PDP_II, ZSP, SFP)
+% • Subject preferences and specializations
+% • Home addresses for distance calculations
+
+% Schools:
+% • Type (GS - elementary, MS - middle school)
+% • Location, zone, and public transport accessibility
+% • Available supervising teachers
+
+% Teachers:
+% • Subject expertise and qualifications
+% • Capacity and availability preferences
+% • Maximum workload constraints
+
+\subsection{Constraints}
+% Hard constraints (must be satisfied):
+% • Budget: total number of active internship slots
+% • Teacher workload: valid combinations (1, 2, or 4 internships)
+% • Subject matching: teachers must be qualified for assigned subjects
+% • Zone feasibility: appropriate geographic zones per internship type
+% • Course pinning: certain subjects fixed, others flexible
+
+% Soft constraints (preferences to optimize):
+% • Minimize student travel distance (PDP internships)
+% • Balance teacher workload (prefer 2 internships per teacher)
+% • Diversity: mix of internship types at each school
+% • Preserve teacher assignments across semesters
+% • Zone preferences: optimal zones per internship type
+
+\subsection{Objectives}
+% • Produce high-quality assignment plans
+% • Maximize satisfaction of soft constraints
+% • Acknowledge: not guaranteed feasibility due to conflicting constraints
+% • System is an optimization system rather than a pure feasibility solver
+
+% Chapter 3: Architecture Overview
+\chapter{Architecture Overview}
+
+\section{System Architecture}
+% • Backend-centered design
+% • RESTful API for frontend integration
+% • Database for persistent storage
+% • Optimization engine integration
+
+\section{Technology Stack}
+
+\subsection{Backend}
+% • Spring Boot framework
+% • OptaPlanner constraint satisfaction solver
+% • PostgreSQL database
+% • Maven build system
+
+\subsection{Frontend}
+% • React with TypeScript
+% • Vite build tool
+% • Component-based architecture
+
+\section{Separation of Concerns}
+% • Data preparation and validation layer
+% • Assignment optimization logic
+% • User-facing management interfaces
+% • Audit and reporting subsystems
+
+\section{Core Data Model}
+% • Students and their internship requirements
+% • Teachers with qualifications and availability
+% • Schools with capacity and characteristics
+% • Internship slots (planning entities)
+% • Assignments (relationships)
+
+\section{Multi-Phase Assignment Strategy}
+% The assignment logic is structured into multiple stages to reflect 
+% real-world planning constraints:
+% • Preparation: transform requirements into demand slots
+% • Teacher assignment: allocate teachers and activate slots
+% • Student assignment: match students to activated slots
+% Rationale: separates capacity planning from individual assignment
+
+% Chapter 4: System Implementation
+\chapter{System Implementation}
+
+\section{Preparation Phase (Phase 0)}
+
+\subsection{Demand Slot Generation}
+% • Transform student requirements into demand slots
+% • One slot per internship type per school type
+% • Aggregate student demand by type and location
+
+\subsection{Data Enrichment}
+% • Address geocoding for distance calculations
+% • Subject preference mapping
+% • School capacity and teacher availability validation
+
+\subsection{Rationale}
+% • Decouples demand modeling from individual student assignment
+% • Enables capacity planning before granular assignments
+% • Simplifies teacher assignment optimization
+
+\section{Phase 1: Teacher Assignment and Slot Activation}
+
+\subsection{Optimization Goal}
+% • Assign supervising teachers to internship slots
+% • Activate optimal subset of slots within budget
+% • Maximize coverage while respecting capacity constraints
+
+\subsection{Planning Variables}
+% For each slot:
+% • assignedTeacher (Teacher or null)
+% • active (boolean)
+% • course (for flexible course assignments like ZSP)
+
+\subsection{Key Constraints}
+% Hard constraints:
+% • Budget: total active slots ≤ budget limit
+% • Teacher workload: 0, 1, 2, or 4 internships per teacher
+% • Teacher diversity: if 2+ internships, all different types
+% • Subject qualification: teachers must be qualified for assigned courses
+% • Zone feasibility: appropriate zones per internship type
+% • Course pinning: PDP has no course, SFP course is fixed
+
+% Soft constraints:
+% • Prefer 2 internships per teacher
+% • Minimize PDP distance (teachers to student demand centroids)
+% • Diversity: varied internship types at each school
+% • Preserve teacher assignments from previous semester
+
+\subsection{Distance Optimization for PDP}
+% Two mechanisms:
+% 1. Bidirectional matching: each student finds closest teacher, 
+%    each teacher finds closest student
+% 2. Centroid distance: teachers positioned toward student demand center
+% Ensures geographic spread and accessibility
+
+\subsection{Trade-offs}
+% • Balance coverage vs. budget
+% • Trade off teacher preference vs. student demand
+% • Optimize for quality, may not achieve strict feasibility
+
+\section{Phase 2: Student Assignment}
+
+\subsection{Optimization Goal}
+% • Assign individual students to activated slots
+% • Minimize total distance for PDP students
+% • Respect subject preferences
+
+\subsection{Planning Variables}
+% For each student:
+% • assignedSlot (PlannedInternship or null)
+
+\subsection{Key Constraints}
+% Hard constraints:
+% • Each student assigned to exactly one slot
+% • Slot must match student's internship type requirement
+% • Slot must be active (from Phase 1)
+% • Subject matching for ZSP/SFP
+
+% Soft constraints:
+% • Minimize distance for PDP students to assigned school
+% • Prefer slots matching student subject preferences
+
+\subsection{Rationale}
+% • Separation from Phase 1 reduces complexity
+% • Teacher availability already determined
+% • Focus purely on student satisfaction
+% • Enables what-if scenarios without reoptimizing teachers
+
+\section{Optimization Engine}
+
+\subsection{OptaPlanner Integration}
+% • Constraint satisfaction solver
+% • Hard/soft score calculation
+% • Local search and metaheuristics
+% • Termination conditions and time limits
+
+\subsection{Score Calculator Implementation}
+% • Manual score calculator to avoid caching issues
+% • Pure Java constraint evaluation
+% • Efficient incremental scoring
+% • Detailed logging for debugging
+
+\subsection{Solver Configuration}
+% • Local search algorithms (Tabu Search, Late Acceptance)
+% • Time budget per optimization run
+% • Score weight tuning
+
+% Chapter 5: Project Process
+\chapter{Project Process}
+
+\section{Development Methodology}
+% • Agile/Scrum process
+% • Sprint duration and planning
+% • Stakeholder engagement
+
+\section{Evolution of the System}
+
+\subsection{Sprint Overview}
+% • Sprint 1-2: Initial data model and basic assignment
+% • Sprint 3-4: Distance optimization and zone constraints
+% • Sprint 5-6: Multi-phase optimization and preservation
+% • Sprint 7+: Refinement and testing
+
+\subsection{Key Milestones}
+% • When Phase 0/1/2 separation was introduced
+% • Distance optimization added after client feedback
+% • Preservation constraint for semester continuity
+% • Budget and workload constraint refinements
+
+\section{Team Collaboration}
+% • Coordination with other teams
+% • Integration of shared components
+% • Code review and quality practices
+
+\section{Quality Metrics}
+% • GitLab activity and commit patterns
+% • TeamScale code quality scores
+% • Test coverage
+% • Defect tracking
+
+\section{Challenges and Solutions}
+% • Technical challenges (OptaPlanner caching, performance)
+% • Requirement changes and adaptations
+% • Balancing optimization quality vs. runtime
+
+% Chapter 6: Results and Evaluation
+\chapter{Results and Evaluation}
+
+\section{Test Scenarios}
+% • Small-scale validation datasets
+% • Real-world data from previous semesters
+% • Edge cases and stress tests
+
+\section{Performance Analysis}
+
+\subsection{Phase 1 Solver Performance}
+% • Runtime vs. problem size
+% • Score improvement over time
+% • Feasibility rate
+
+\subsection{Phase 2 Solver Performance}
+% • Student assignment success rate
+% • Distance metrics
+% • Optimization convergence
+
+\section{Solution Quality}
+
+\subsection{Constraint Satisfaction}
+% • Hard constraint violations (should be zero)
+% • Soft constraint scores
+% • Comparison to manual assignments (if available)
+
+\subsection{Stakeholder Feedback}
+% • Client satisfaction
+% • Usability observations
+% • Practical deployment considerations
+
+\section{Limitations}
+% • Cases where feasibility could not be achieved
+% • Trade-offs in multi-objective optimization
+% • Computational constraints for large-scale problems
+
+% Chapter 7: Conclusion
+\chapter{Conclusion}
+
+\section{Summary}
+% • Recap of problem and solution
+% • Key achievements
+% • Technical contributions
+
+\section{Reflection on Optimization Goals}
+% • Were optimization objectives met?
+% • How well did multi-phase approach work?
+% • Balance between automation and manual control
+
+\section{Lessons Learned}
+% • Technical insights
+% • Process learnings
+% • Collaboration experiences
+
+\section{Future Work}
+
+\subsection{Technical Enhancements}
+% • Better multi-objective optimization
+% • Machine learning for constraint tuning
+% • Real-time reoptimization
+
+\subsection{Feature Extensions}
+% • Scenario comparison and what-if analysis
+% • Advanced reporting and visualization
+% • Integration with university information systems
+
+\subsection{Process Improvements}
+% • Automated testing and validation
+% • Performance optimization
+% • Scalability for larger datasets
+
+% Bibliography
+\bibliographystyle{plain}
+\bibliography{references}
+
+% Appendices
+\appendix
+\chapter{Additional Materials}
+\section{Code Samples}
+% Add important code snippets
+
+\section{Configuration Files}
+% Add configuration examples
+
+\end{document}
