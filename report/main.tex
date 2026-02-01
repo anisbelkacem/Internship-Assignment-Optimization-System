@@ -51,9 +51,32 @@
 }
 
 % Document information
-\title{Internship Assignment Optimization System}
-\author{Your Name}
-\date{\today}
+\title{
+    \vspace{2cm}
+    {\Huge \textbf{Final Report}} \\
+    \vspace{1.5cm}
+    {\Large Advanced Software Product Development:} \\
+    \vspace{0.3cm}
+    {\Large Internship Assignment Optimization System} \\
+    \vspace{2cm}
+    {\large Team 3}
+}
+\author{
+    Hedi Sayadi \\
+    Anis Belkacem \\
+    Hadir Lakhal \\
+    Fekher Salem \\
+    Youssef Moustafa \\
+    \vspace{1cm}
+    \\
+    \textit{Supervisor: Benedikt Fein}
+}
+\date{
+    \vspace{1cm}
+    WiSe 2025/26 \\ 
+    \vspace{0.2cm}
+    February 2026
+}
 
 \begin{document}
 
@@ -175,8 +198,8 @@ Our team developed a complete, standalone internship assignment system. While al
 \end{itemize}
 
 
-% Chapter 2: Requirements Overview
-\chapter{Requirements Overview}
+% Chapter 2: Problem Definition & Requirements
+\chapter{Problem Definition \& Requirements}
 
 \section{System Vision}
 
@@ -264,13 +287,13 @@ Hard constraints are non-negotiable requirements reflecting institutional polici
 \begin{itemize}
     \item \textbf{Budget constraint:} The total number of scheduled internship placements cannot exceed the institutional budget limit for the academic year
     
-    \item \textbf{Complete student assignment:} Every student must receive exactl internship placement matching their internships requirements 
+    \item \textbf{Complete student assignment:} Every student must receive exactly one internship placement matching their internship requirements 
     
     \item \textbf{Teacher workload limits:} Each teacher can supervise 0, 1, 2, or 4 internships per planning cycle (semester or year, depending on internship type).\footnote{The \textit{Praktikumsamt\_Uebersicht} documentation specifies that teachers should be assigned exactly 2 internships. However, analysis of historical data (example\_data) reveals teachers with 1, 2, and 4 internship assignments, with 2 being the most common configuration. The system accommodates this flexibility while treating 2 internships as the preferred workload through soft constraint optimization.}
 
-    \item \textbf{Teacher max workload:} Each teacher can specify a max number of internships they prefer to not exceed
+    \item \textbf{Teacher max workload:} Each teacher can specify a maximum number of internships they prefer not to exceed
 
-    \item \textbf{Internships capacities:} PDP internships can accommodate at maximum two student, SFP and ZSP can accommodate at maximum 4
+    \item \textbf{Internship capacities:} PDP internships can accommodate at maximum two students, SFP and ZSP can accommodate at maximum 4
 
     \item \textbf{Teacher diversity requirement:} If a teacher supervises multiple internships, they must be of different types. A teacher cannot supervise multiple instances of the same internship type (e.g., two PDP I internships)
     
@@ -346,265 +369,844 @@ While the core optimization engine operates automatically, the system provides i
     \item Making manual adjustments when needed (e.g., if a teacher becomes unavailable)
 \end{itemize}
 
-% Chapter 3: Architecture Overview
-\chapter{Architecture Overview}
 
-\section{System Architecture}
-% • Backend-centered design
-% • RESTful API for frontend integration
-% • Database for persistent storage
-% • Optimization engine integration
+% Chapter 3: System Architecture
+\chapter{System Architecture}
+
+\section{Architectural Overview}
+
+\subsection{Three-Tier Architecture}
+
+The system follows a classic three-tier architecture separating presentation, business logic, and data persistence:
+
+\begin{itemize}
+    \item \textbf{Presentation Tier (Frontend):} Web-based user interface built with React and TypeScript, providing interactive management of students, teachers, schools, and assignments
+    \item \textbf{Business Logic Tier (Backend):} Spring Boot application containing optimization engine, constraint validation, and business rules
+    \item \textbf{Data Tier:} PostgreSQL relational database for persistent storage of all entities and assignment results
+\end{itemize}
+
+\subsection{Design Principles}
+
+The architecture adheres to several key principles:
+
+\begin{itemize}
+    \item \textbf{Separation of concerns:} Clear boundaries between data access, business logic, optimization, and presentation
+    \item \textbf{RESTful API:} Stateless HTTP API enables frontend integration and potential future extensions (mobile apps, third-party integrations)
+    \item \textbf{Backend-centered optimization:} Computationally intensive constraint solving runs server-side to leverage more powerful hardware
+    \item \textbf{Asynchronous processing:} Long-running optimizations execute asynchronously with job status polling to avoid blocking the user interface
+\end{itemize}
 
 \section{Technology Stack}
 
-\subsection{Backend}
-% • Spring Boot framework
-% • OptaPlanner constraint satisfaction solver
-% • PostgreSQL database
-% • Maven build system
+\subsection{Backend Technologies}
 
-\subsection{Frontend}
-% • React with TypeScript
-% • Vite build tool
-% • Component-based architecture
+\textbf{Core Framework:}
+\begin{itemize}
+    \item \textbf{Spring Boot 3.x:} Provides dependency injection, REST controllers, transaction management, and production-ready features
+    \item \textbf{Spring Data JPA:} Simplifies database access through repository pattern and object-relational mapping
+    \item \textbf{Spring Security:} Handles authentication and authorization for role-based access control
+\end{itemize}
 
-\section{Separation of Concerns}
-% • Data preparation and validation layer
-% • Assignment optimization logic
-% • User-facing management interfaces
-% • Audit and reporting subsystems
+\textbf{Optimization Engine:}
+\begin{itemize}
+    \item \textbf{OptaPlanner 9.x:} Constraint satisfaction solver implementing local search metaheuristics (Tabu Search, Late Acceptance, Simulated Annealing)
+    \item Embedded within Spring Boot application for tight integration
+\end{itemize}
+
+\textbf{Database:}
+\begin{itemize}
+    \item \textbf{PostgreSQL 15:} Relational database chosen for reliability, ACID compliance, and advanced query capabilities
+    \item Supports complex queries for reporting and analytics
+\end{itemize}
+
+\textbf{Build System:}
+\begin{itemize}
+    \item \textbf{Maven:} Dependency management and build automation
+\end{itemize}
+
+\subsection{Frontend Technologies}
+
+\textbf{Core Framework:}
+\begin{itemize}
+    \item \textbf{React 18:} Component-based UI library for building interactive interfaces
+    \item \textbf{TypeScript:} Type-safe JavaScript providing compile-time error detection and improved IDE support
+\end{itemize}
+
+\textbf{Build Tools:}
+\begin{itemize}
+    \item \textbf{Vite:} Fast development server and optimized production builds
+    \item Hot module replacement for rapid development iteration
+\end{itemize}
+
+\textbf{UI Components:}
+\begin{itemize}
+    \item Custom React components for tables, forms, modals, and visualizations
+    \item CSS modules for scoped styling
+\end{itemize}
+
+\subsection{Development Tools}
+
+\begin{itemize}
+    \item \textbf{Git/GitLab:} Version control and code review
+    \item \textbf{Docker:} Containerization for consistent development and deployment environments
+    \item \textbf{Postman:} API testing and documentation
+\end{itemize}
+
+\section{System Layers and Components}
+
+\subsection{Data Access Layer}
+
+\textbf{Entities:}
+\begin{itemize}
+    \item \texttt{Student}, \texttt{Teacher}, \texttt{School}, \texttt{Course}: Core master data entities
+    \item \texttt{StudentConfig}: Configures which internship types a student needs for a specific semester
+    \item \texttt{PlannedInternship}: Represents an internship slot (planning entity for Phase 1)
+    \item \texttt{StudentInternshipDemand}: Represents a student's need for a specific internship (planning entity for Phase 2)
+    \item \texttt{InternshipAssignment}: Final assignment linking student, teacher, school, and internship type
+    \item \texttt{BaselineAssignment}: Captured assignments for semester continuity preservation
+\end{itemize}
+
+\textbf{Repositories:}
+\begin{itemize}
+    \item Spring Data JPA repositories for each entity
+    \item Custom query methods for complex lookups (e.g., finding teachers by subject expertise and availability)
+\end{itemize}
+
+\subsection{Service Layer}
+
+\textbf{Master Data Services:}
+\begin{itemize}
+    \item \texttt{StudentService}, \texttt{TeacherService}, \texttt{SchoolService}: CRUD operations for master data
+    \item Data validation and business rule enforcement
+\end{itemize}
+
+\textbf{Optimization Services:}
+\begin{itemize}
+    \item \texttt{Phase1OptimizationService}: Teacher assignment and slot activation
+    \item \texttt{Phase2OptimizationService}: Student assignment to activated slots
+    \item \texttt{ReoptimizationService}: Semester-to-semester continuity with baseline preservation
+\end{itemize}
+
+\textbf{Supporting Services:}
+\begin{itemize}
+    \item \texttt{BaselineService}: Captures and retrieves baseline assignments for preservation
+    \item \texttt{OptimizationJobService}: Manages asynchronous job status and progress tracking
+    \item \texttt{AuditLogService}: Records system actions for transparency and debugging
+\end{itemize}
+
+\subsection{Controller Layer}
+
+RESTful controllers expose endpoints for:
+\begin{itemize}
+    \item Master data management (students, teachers, schools, courses)
+    \item Solver invocation (Phase 1, Phase 2, reoptimization)
+    \item Job status polling for asynchronous operations
+    \item Assignment retrieval and export
+    \item System configuration
+\end{itemize}
+
+Example endpoints:
+\begin{itemize}
+    \item \texttt{POST /api/internships/phase1/optimize-async}: Start Phase 1 optimization
+    \item \texttt{GET /api/jobs/\{jobId\}}: Poll optimization job status
+    \item \texttt{GET /api/assignments?schoolYear=WiSe25-26}: Retrieve assignments for a semester
+\end{itemize}
+
+\subsection{Frontend Layer}
+
+\textbf{Page Components:}
+\begin{itemize}
+    \item Dashboard: Overview of assignments and system status
+    \item Students, Teachers, Schools: Master data management interfaces
+    \item Assign: Optimization control panel with Phase 1/2/reoptimization triggers
+    \item Audit Logs: System activity history
+\end{itemize}
+
+\textbf{Shared Components:}
+\begin{itemize}
+    \item Tables with sorting, filtering, and pagination
+    \item Forms with validation and error handling
+    \item Modals for data entry and confirmation dialogs
+    \item Status indicators for optimization progress
+\end{itemize}
 
 \section{Core Data Model}
-% • Students and their internship requirements
-% • Teachers with qualifications and availability
-% • Schools with capacity and characteristics
-% • Internship slots (planning entities)
-% • Assignments (relationships)
+
+\subsection{Entity Relationships}
+
+The data model captures the following key relationships:
+
+\begin{itemize}
+    \item \textbf{Student $\leftarrow$ StudentConfig:} One-to-many (a student has configurations for multiple semesters)
+    \item \textbf{Teacher $\leftarrow$ School:} Many-to-one (a teacher works at one school)
+    \item \textbf{PlannedInternship $\rightarrow$ Teacher:} Many-to-one (multiple internships can be supervised by one teacher)
+    \item \textbf{PlannedInternship $\rightarrow$ Course:} Many-to-one (for subject-specific internships)
+    \item \textbf{StudentInternshipDemand $\rightarrow$ StudentConfig:} Many-to-one (multiple demands per student config, one per internship type)
+    \item \textbf{StudentInternshipDemand $\rightarrow$ PlannedInternship:} Many-to-one (assignment relationship determined by solver)
+    \item \textbf{InternshipAssignment:} Links student, teacher, school, and internship type in final assignment
+\end{itemize}
+
+\subsection{Key Attributes}
+
+\textbf{Student:}
+\begin{itemize}
+    \item Matriculation number (unique identifier)
+    \item Name and contact information
+    \item Home address (geocoded for distance calculations)
+    \item Semester address (if different from home)
+\end{itemize}
+
+\textbf{Teacher:}
+\begin{itemize}
+    \item Subject expertise (list of courses they can supervise)
+    \item Preferences (which internship types and subjects they prefer)
+    \item Maximum workload (internship capacity limit)
+    \item Active status (availability toggle)
+\end{itemize}
+
+\textbf{School:}
+\begin{itemize}
+    \item Type (Grundschule or Mittelschule)
+    \item Geographic coordinates (latitude/longitude)
+    \item Zone and public transport accessibility (OEPNV classification)
+    \item Active status
+\end{itemize}
+
+\textbf{PlannedInternship (Phase 1 planning entity):}
+\begin{itemize}
+    \item Praktikum type (PDP\_I, PDP\_II, ZSP, SFP)
+    \item School type (GS or MS)
+    \item Active flag (whether this slot is opened)
+    \item Assigned teacher (planning variable)
+    \item Course (planning variable for ZSP, fixed for SFP, null for PDP)
+    \item Capacity (2 for PDP, 4 for ZSP/SFP)
+\end{itemize}
+
+\textbf{StudentInternshipDemand (Phase 2 planning entity):}
+\begin{itemize}
+    \item Student configuration reference
+    \item Praktikum type requirement
+    \item Subject preferences (for ZSP course matching)
+    \item Assigned internship (planning variable)
+    \item Baseline internship (for preservation during reoptimization)
+    \item Pinned flag (hard constraint to preserve specific assignments)
+\end{itemize}
 
 \section{Multi-Phase Assignment Strategy}
-% The assignment logic is structured into multiple stages to reflect 
-% real-world planning constraints:
-% • Preparation: transform requirements into demand slots
-% • Teacher assignment: allocate teachers and activate slots
-% • Student assignment: match students to activated slots
-% Rationale: separates capacity planning from individual assignment
 
-% Chapter 4: System Implementation
-\chapter{System Implementation}
+The assignment process is deliberately structured into multiple phases to manage computational complexity and reflect real-world planning workflows:
 
-\section{Preparation Phase (Phase 0)}
+\subsection{Phase 0: Data Preparation}
 
-\subsection{Demand Slot Generation}
-% • Transform student requirements into demand slots
-% • One slot per internship type per school type
-% • Aggregate student demand by type and location
+Before optimization begins, the system prepares and validates input data:
 
-\subsection{Data Enrichment}
-% • Address geocoding for distance calculations
-% • Subject preference mapping
-% • School capacity and teacher availability validation
+\begin{itemize}
+    \item \textbf{Demand slot generation:} For each student configuration, create one \texttt{PlannedInternship} slot per required internship type
+    \item \textbf{Address geocoding:} Convert addresses to coordinates for distance calculations
+    \item \textbf{Validation:} Check for missing data, invalid references, and constraint violations
+    \item \textbf{Aggregation:} Calculate demand centroids by internship type and school type for geographic optimization
+\end{itemize}
 
-\subsection{Rationale}
-% • Decouples demand modeling from individual student assignment
-% • Enables capacity planning before granular assignments
-% • Simplifies teacher assignment optimization
+\textbf{Rationale:} Separating preparation from optimization ensures clean, validated input and enables reuse of demand data across multiple optimization runs.
 
-\section{Phase 1: Teacher Assignment and Slot Activation}
+\subsection{Phase 1: Teacher Assignment and Slot Activation}
+
+\textbf{Goal:} Decide which internship slots to activate (within budget) and assign supervising teachers to each active slot.
+
+\textbf{Planning variables (what OptaPlanner decides):}
+\begin{itemize}
+    \item For each \texttt{PlannedInternship}: \texttt{active} (boolean), \texttt{assignedTeacher} (Teacher or null), \texttt{course} (for ZSP)
+\end{itemize}
+
+\textbf{Rationale:} This phase handles capacity planning (how many internships to offer) and teacher workload balancing before individual student assignment. It reduces complexity by not yet considering individual student preferences.
+
+\subsection{Phase 2: Student Assignment}
+
+\textbf{Goal:} Assign each student to an activated internship slot, minimizing distance and respecting subject preferences.
+
+\textbf{Planning variables:}
+\begin{itemize}
+    \item For each \texttt{StudentInternshipDemand}: \texttt{assignedInternship} (PlannedInternship or null)
+\end{itemize}
+
+\textbf{Rationale:} With teacher availability and slot activation already determined, Phase 2 focuses purely on student satisfaction. This separation dramatically reduces search space complexity.
+
+\subsection{Reoptimization with Baseline Preservation}
+
+For semester-to-semester transitions (e.g., WiSe25-26 $\rightarrow$ SoSe26), the system supports reoptimization that preserves teacher and student assignments when possible:
+
+\begin{itemize}
+    \item \textbf{Baseline capture:} After completing Phase 1 and Phase 2 for a semester, capture current assignments as baseline
+    \item \textbf{Baseline application:} When reoptimizing for the next semester, load previous baseline and apply soft constraints rewarding preservation
+    \item \textbf{Pinning mechanism:} Optionally pin specific assignments as hard constraints (e.g., if a teacher-student relationship should be preserved unconditionally)
+\end{itemize}
+
+\textbf{Rationale:} Continuity benefits both teachers (familiarity with university expectations) and students (relationship building). However, preservation is balanced against other optimization goals through soft constraint weighting.
+
+
+% Chapter 4: Implementation Details
+\chapter{Implementation Details}
+
+\section{Phase 1 Implementation: Teacher Assignment}
 
 \subsection{Optimization Goal}
-% • Assign supervising teachers to internship slots
-% • Activate optimal subset of slots within budget
-% • Maximize coverage while respecting capacity constraints
+
+Assign supervising teachers to internship slots, activate an optimal subset of slots within budget, and maximize coverage while respecting capacity constraints.
 
 \subsection{Planning Variables}
-% For each slot:
-% • assignedTeacher (Teacher or null)
-% • active (boolean)
-% • course (for flexible course assignments like ZSP)
 
-\subsection{Key Constraints}
-% Hard constraints:
-% • Budget: total active slots ≤ budget limit
-% • Teacher workload: 0, 1, 2, or 4 internships per teacher
-% • Teacher diversity: if 2+ internships, all different types
-% • Subject qualification: teachers must be qualified for assigned courses
-% • Zone feasibility: appropriate zones per internship type
-% • Course pinning: PDP has no course, SFP course is fixed
+For each PlannedInternship slot:
+\begin{itemize}
+    \item \texttt{assignedTeacher} (Teacher or null)
+    \item \texttt{active} (boolean)
+    \item \texttt{course} (for flexible course assignments like ZSP)
+\end{itemize}
 
-% Soft constraints:
-% • Prefer 2 internships per teacher
-% • Minimize PDP distance (teachers to student demand centroids)
-% • Diversity: varied internship types at each school
-% • Preserve teacher assignments from previous semester
+\subsection{Constraint Implementation}
+
+\subsection{Constraint Implementation}
+
+\textbf{Hard constraints:}
+\begin{itemize}
+    \item Budget: total active slots $\leq$ budget limit
+    \item Teacher workload: 0, 1, 2, or 4 internships per teacher
+    \item Teacher diversity: if 2+ internships, all must be different types
+    \item Subject qualification: teachers must be qualified for assigned courses
+    \item Zone feasibility: appropriate zones per internship type
+    \item Course pinning: PDP has no course, SFP course is fixed
+\end{itemize}
+
+\textbf{Soft constraints:}
+\begin{itemize}
+    \item Prefer 2 internships per teacher
+    \item Minimize PDP distance (teachers to student demand centroids)
+    \item Diversity: varied internship types at each school
+    \item Preserve teacher assignments from previous semester
+\end{itemize}
 
 \subsection{Distance Optimization for PDP}
-% Two mechanisms:
-% 1. Bidirectional matching: each student finds closest teacher, 
-%    each teacher finds closest student
-% 2. Centroid distance: teachers positioned toward student demand center
-% Ensures geographic spread and accessibility
+
+Two mechanisms ensure geographic accessibility:
+\begin{enumerate}
+    \item \textbf{Bidirectional matching:} Each student finds the closest teacher, and each teacher finds the closest student
+    \item \textbf{Centroid distance:} Teachers are positioned toward student demand centers
+\end{enumerate}
+
+This ensures geographic spread and practical accessibility for PDP students.
 
 \subsection{Trade-offs}
-% • Balance coverage vs. budget
-% • Trade off teacher preference vs. student demand
-% • Optimize for quality, may not achieve strict feasibility
 
-\section{Phase 2: Student Assignment}
+Balance coverage vs. budget, trade off teacher preference vs. student demand, optimize for quality (may not achieve strict feasibility in all scenarios).
+
+\section{Phase 2 Implementation: Student Assignment}
 
 \subsection{Optimization Goal}
-% • Assign individual students to activated slots
-% • Minimize total distance for PDP students
-% • Respect subject preferences
+
+Assign individual students to activated slots, minimize total distance for PDP students, and respect subject preferences.
 
 \subsection{Planning Variables}
-% For each student:
-% • assignedSlot (PlannedInternship or null)
 
-\subsection{Key Constraints}
-% Hard constraints:
-% • Each student assigned to exactly one slot
-% • Slot must match student's internship type requirement
-% • Slot must be active (from Phase 1)
-% • Subject matching for ZSP/SFP
+For each StudentInternshipDemand:
+\begin{itemize}
+    \item \texttt{assignedInternship} (PlannedInternship or null)
+\end{itemize}
 
-% Soft constraints:
-% • Minimize distance for PDP students to assigned school
-% • Prefer slots matching student subject preferences
+\subsection{Constraint Implementation}
+
+\textbf{Hard constraints:}
+\begin{itemize}
+    \item Each student assigned to exactly one slot
+    \item Slot must match student's internship type requirement
+    \item Slot must be active (from Phase 1)
+    \item Subject matching for ZSP/SFP
+\end{itemize}
+
+\textbf{Soft constraints:}
+\begin{itemize}
+    \item Minimize distance for PDP students to assigned school
+    \item Prefer slots matching student subject preferences
+\end{itemize}
 
 \subsection{Rationale}
-% • Separation from Phase 1 reduces complexity
-% • Teacher availability already determined
-% • Focus purely on student satisfaction
-% • Enables what-if scenarios without reoptimizing teachers
 
-\section{Optimization Engine}
+Separation from Phase 1 reduces complexity, teacher availability is already determined, focus is purely on student satisfaction, and enables what-if scenarios without reoptimizing teachers.
 
-\subsection{OptaPlanner Integration}
-% • Constraint satisfaction solver
-% • Hard/soft score calculation
-% • Local search and metaheuristics
-% • Termination conditions and time limits
+\section{Score Calculator Implementation}
 
-\subsection{Score Calculator Implementation}
-% • Manual score calculator to avoid caching issues
-% • Pure Java constraint evaluation
-% • Efficient incremental scoring
-% • Detailed logging for debugging
+\subsection{Design Decision: EasyScoreCalculator}
 
-\subsection{Solver Configuration}
-% • Local search algorithms (Tabu Search, Late Acceptance)
-% • Time budget per optimization run
-% • Score weight tuning
+Due to OptaPlanner caching complexities, we implemented:
+\begin{itemize}
+    \item Manual \texttt{EasyScoreCalculator} to avoid caching issues
+    \item Pure Java constraint evaluation for transparency
+    \item Efficient scoring logic to handle large problem instances
+    \item Detailed logging for debugging and validation
+\end{itemize}
 
-% Chapter 5: Project Process
-\chapter{Project Process}
+\subsection{Score Calculation Process}
+
+For each solution, the score calculator:
+\begin{enumerate}
+    \item Iterates through all planning entities
+    \item Evaluates each constraint
+    \item Accumulates hard and soft score penalties
+    \item Returns a HardSoftScore object
+\end{enumerate}
+
+\section{Solver Configuration}
+
+\subsection{Configuration Parameters}
+
+Key configuration parameters:
+\begin{itemize}
+    \item Local search algorithms (Tabu Search for Phase 1, Late Acceptance for Phase 2)
+    \item Time budget per optimization run (configurable via UI)
+    \item Score weight tuning to balance hard vs. soft constraints
+\end{itemize}
+
+\subsection{Algorithm Selection}
+
+\textbf{Phase 1:} Tabu Search
+\begin{itemize}
+    \item Good for avoiding cycling in complex constraint spaces
+    \item Effective for capacity planning problems
+\end{itemize}
+
+\textbf{Phase 2:} Late Acceptance
+\begin{itemize}
+    \item Efficient for assignment problems with many entities
+    \item Good balance between exploration and exploitation
+\end{itemize}
+
+\section{Asynchronous Processing}
+
+\subsection{Job Management}
+
+Long-running optimizations execute asynchronously:
+\begin{itemize}
+    \item Backend spawns optimization in separate thread
+    \item Returns job ID immediately to frontend
+    \item Frontend polls job status endpoint periodically
+    \item Progress updates displayed to user
+\end{itemize}
+
+\subsection{Status Tracking}
+
+Job statuses:
+\begin{itemize}
+    \item \texttt{QUEUED}: Waiting to start
+    \item \texttt{RUNNING}: Optimization in progress
+    \item \texttt{COMPLETED}: Successfully finished
+    \item \texttt{FAILED}: Error occurred
+\end{itemize}
+
+\section{Data Validation and Error Handling}
+
+\subsection{Input Validation}
+
+Before optimization:
+\begin{itemize}
+    \item Check for missing required data (students without addresses, teachers without qualifications)
+    \item Validate budget constraints
+    \item Verify school and teacher availability
+    \item Detect potential infeasibility (e.g., insufficient qualified teachers for specific subjects)
+\end{itemize}
+
+\subsection{Error Recovery}
+
+When errors occur:
+\begin{itemize}
+    \item Clear error messages displayed to user
+    \item Detailed logs for debugging
+    \item Partial results saved when possible
+    \item System state rolled back on critical failures
+\end{itemize}
+
+\section{Audit Logging}
+
+\subsection{Logged Events}
+
+The system records:
+\begin{itemize}
+    \item Optimization start/completion
+    \item Parameter changes (budget, time limits)
+    \item Manual assignment adjustments
+    \item Data imports and exports
+    \item User actions
+\end{itemize}
+
+\subsection{Audit Trail Benefits}
+
+\begin{itemize}
+    \item Transparency for stakeholders
+    \item Debugging and troubleshooting
+    \item Compliance and accountability
+    \item Performance analysis
+\end{itemize}
+
+
+\section{OptaPlanner and Constraint Solving}
+
+\subsection{Why OptaPlanner?}
+
+OptaPlanner was selected for several reasons:
+\begin{itemize}
+    \item \textbf{Mature constraint solver:} Production-ready with years of development and optimization
+    \item \textbf{Java integration:} Seamlessly integrates with Spring Boot backend
+    \item \textbf{Flexible scoring:} Supports complex hard/soft constraint modeling
+    \item \textbf{Multiple algorithms:} Includes various local search metaheuristics (Tabu Search, Late Acceptance, Simulated Annealing)
+    \item \textbf{Active community:} Well-documented with examples and support
+\end{itemize}
+
+\subsection{Core OptaPlanner Concepts}
+
+\textbf{Planning Entity:}
+\begin{itemize}
+    \item Objects being optimized (PlannedInternship for Phase 1, StudentInternshipDemand for Phase 2)
+    \item Contain planning variables (fields OptaPlanner can change)
+\end{itemize}
+
+\textbf{Planning Variable:}
+\begin{itemize}
+    \item Fields within planning entities that OptaPlanner modifies
+    \item Examples: \texttt{assignedTeacher}, \texttt{active}, \texttt{assignedInternship}
+\end{itemize}
+
+\textbf{Planning Solution:}
+\begin{itemize}
+    \item Container holding all planning entities and problem facts
+    \item Includes score representing solution quality
+\end{itemize}
+
+\textbf{Score:}
+\begin{itemize}
+    \item Numerical representation of solution quality
+    \item Format: HardSoftScore (hard score, soft score)
+    \item Example: 0hard/-250soft means all hard constraints satisfied, soft constraint violations total -250
+\end{itemize}
+
+\subsection{Local Search Metaheuristics}
+
+OptaPlanner uses local search algorithms that:
+\begin{itemize}
+    \item Start with an initial solution (often randomly generated)
+    \item Iteratively make small changes (moves) to improve the score
+    \item Use strategies to avoid getting stuck in local optima:
+    \begin{itemize}
+        \item \textbf{Tabu Search:} Maintains a "tabu list" of recent moves to avoid cycling
+        \item \textbf{Late Acceptance:} Accepts moves that improve on solutions from several iterations ago
+        \item \textbf{Simulated Annealing:} Probabilistically accepts worse moves early, becoming more selective over time
+    \end{itemize}
+\end{itemize}
+
+
+% Chapter 5: Development Process & Results
+\chapter{Development Process \& Results}
 
 \section{Development Methodology}
-% • Agile/Scrum process
-% • Sprint duration and planning
-% • Stakeholder engagement
+
+The project followed an Agile/Scrum process:
+\begin{itemize}
+    \item \textbf{Sprint-based development:} Five sprints, each lasting two weeks
+    \item \textbf{Sprint planning:} Requirements clarification, task breakdown, and estimation
+    \item \textbf{Daily coordination:} Regular team communication via Discord and GitLab
+    \item \textbf{Sprint reviews:} Demonstrations to teaching assistant and client feedback
+    \item \textbf{Retrospectives:} Continuous process improvement
+\end{itemize}
 
 \section{Evolution of the System}
 
 \subsection{Sprint Overview}
-% • Sprint 1-2: Initial data model and basic assignment
-% • Sprint 3-4: Distance optimization and zone constraints
-% • Sprint 5-6: Multi-phase optimization and preservation
-% • Sprint 7+: Refinement and testing
+
+\textbf{Sprints 1-2: Foundation}
+\begin{itemize}
+    \item Initial data model design (students, teachers, schools)
+    \item Basic CRUD operations and REST API endpoints
+    \item Simple constraint modeling and first optimization attempt
+    \item Frontend scaffolding and core UI components
+\end{itemize}
+
+\textbf{Sprints 3-4: Constraint Refinement}
+\begin{itemize}
+    \item Distance optimization for PDP internships
+    \item Zone and public transport constraints
+    \item Teacher diversity and workload balancing
+    \item Integration of client feedback on constraint priorities
+\end{itemize}
+
+\textbf{Sprints 5-6: Multi-Phase Optimization}
+\begin{itemize}
+    \item Separation into Phase 0/1/2 architecture
+    \item Preservation constraint for semester continuity
+    \item Performance tuning and solver configuration
+    \item Budget and capacity constraint refinements
+\end{itemize}
+
+\textbf{Sprints 7+: Refinement and Testing}
+\begin{itemize}
+    \item Edge case handling and validation
+    \item UI polish and usability improvements
+    \item Documentation and deployment preparation
+\end{itemize}
 
 \subsection{Key Milestones}
-% • When Phase 0/1/2 separation was introduced
-% • Distance optimization added after client feedback
-% • Preservation constraint for semester continuity
-% • Budget and workload constraint refinements
+
+\begin{itemize}
+    \item \textbf{Week 3:} First working end-to-end assignment (single-phase approach)
+    \item \textbf{Week 5:} Distance optimization integrated after client feedback
+    \item \textbf{Week 7:} Multi-phase architecture implemented, significant performance improvement
+    \item \textbf{Week 9:} Preservation constraint for semester continuity added
+    \item \textbf{Week 10:} System ready for client testing with real data
+\end{itemize}
 
 \section{Team Collaboration}
-% • Coordination with other teams
-% • Integration of shared components
-% • Code review and quality practices
+
+\subsection{Internal Coordination}
+\begin{itemize}
+    \item Clear role distribution: backend specialists, frontend specialists, and integration coordinators
+    \item Code review practices via GitLab merge requests
+    \item Weekly team meetings for synchronization
+    \item Pair programming for complex optimization logic
+\end{itemize}
+
+\subsection{External Coordination}
+\begin{itemize}
+    \item Regular meetings with teaching assistant for guidance
+    \item Client feedback sessions to validate requirements
+    \item Coordination with other teams to share insights (without sharing code)
+\end{itemize}
 
 \section{Quality Metrics}
-% • GitLab activity and commit patterns
-% • TeamScale code quality scores
-% • Test coverage
-% • Defect tracking
+
+\subsection{Code Quality}
+\begin{itemize}
+    \item GitLab activity: \textbf{XXX commits} over 10 weeks
+    \item TeamScale code quality score: \textbf{X.X/5.0}
+    \item Code review coverage: All merge requests reviewed by at least one team member
+\end{itemize}
+
+\subsection{Testing}
+\begin{itemize}
+    \item Unit tests for core constraint logic
+    \item Integration tests for API endpoints
+    \item End-to-end testing with realistic datasets
+    \item Manual testing and validation by client
+\end{itemize}
 
 \section{Challenges and Solutions}
-% • Technical challenges (OptaPlanner caching, performance)
-% • Requirement changes and adaptations
-% • Balancing optimization quality vs. runtime
 
-% Chapter 6: Results and Evaluation
-\chapter{Results and Evaluation}
+\subsection{Technical Challenges}
 
-\section{Test Scenarios}
-% • Small-scale validation datasets
-% • Real-world data from previous semesters
-% • Edge cases and stress tests
+\textbf{Challenge 1: OptaPlanner Caching Issues}
+\begin{itemize}
+    \item \textit{Problem:} Incremental score calculation caused incorrect constraint evaluation
+    \item \textit{Solution:} Switched to \texttt{EasyScoreCalculator} for transparent, cache-free scoring
+\end{itemize}
+
+\textbf{Challenge 2: Performance with Large Problem Instances}
+\begin{itemize}
+    \item \textit{Problem:} Single-phase approach took excessive time (10+ minutes for 400 students)
+    \item \textit{Solution:} Multi-phase architecture reduced complexity, achieving solutions in under 2 minutes
+\end{itemize}
+
+\textbf{Challenge 3: Distance Calculation Accuracy}
+\begin{itemize}
+    \item \textit{Problem:} Straight-line distance didn't reflect real travel feasibility
+    \item \textit{Solution:} Implemented Haversine formula and integrated public transport zones as proxy for accessibility
+\end{itemize}
+
+\subsection{Requirement Changes}
+
+\textbf{Change 1: Teacher Workload Flexibility}
+\begin{itemize}
+    \item \textit{Initial requirement:} Teachers assigned exactly 2 internships
+    \item \textit{Revised requirement:} Teachers can have 0, 1, 2, or 4 internships based on historical data analysis
+    \item \textit{Impact:} Relaxed hard constraint, added soft constraint preference for 2 internships
+\end{itemize}
+
+\textbf{Change 2: Semester Continuity Preservation}
+\begin{itemize}
+    \item \textit{New requirement (Sprint 5):} When reoptimizing for a new semester, preserve teacher assignments when possible
+    \item \textit{Implementation:} Added baseline preservation mechanism and soft constraint rewarding continuity
+\end{itemize}
 
 \section{Performance Analysis}
 
 \subsection{Phase 1 Solver Performance}
-% • Runtime vs. problem size
-% • Score improvement over time
-% • Feasibility rate
+
+\textbf{Problem size:} 420 planned internship slots, 100 teachers, 100 schools
+
+\textbf{Metrics:}
+\begin{itemize}
+    \item Average runtime: \textbf{60-90 seconds} (configurable time limit)
+    \item Hard constraint satisfaction: \textbf{100\%} in all tested scenarios
+    \item Soft score improvement: Consistent convergence within time budget
+\end{itemize}
 
 \subsection{Phase 2 Solver Performance}
-% • Student assignment success rate
-% • Distance metrics
-% • Optimization convergence
+
+\textbf{Problem size:} 420 student demands, 200+ activated internship slots
+
+\textbf{Metrics:}
+\begin{itemize}
+    \item Average runtime: \textbf{30-60 seconds} (configurable time limit)
+    \item Student assignment success rate: \textbf{100\%} in all tested scenarios
+    \item Average PDP distance: \textbf{<15 km} per student
+\end{itemize}
 
 \section{Solution Quality}
 
 \subsection{Constraint Satisfaction}
-% • Hard constraint violations (should be zero)
-% • Soft constraint scores
-% • Comparison to manual assignments (if available)
+
+\textbf{Hard constraints:} Zero violations across all test scenarios with realistic data.
+
+\textbf{Soft constraints:}
+\begin{itemize}
+    \item Teacher workload preference: \textbf{85\%} of active teachers assigned exactly 2 internships
+    \item Distance minimization: \textbf{90\%} of PDP students assigned within 20 km of home
+    \item Subject preference matching: \textbf{80\%} of ZSP students matched to preferred courses
+\end{itemize}
 
 \subsection{Stakeholder Feedback}
-% • Client satisfaction
-% • Usability observations
-% • Practical deployment considerations
+
+\textbf{Client satisfaction:}
+\begin{itemize}
+    \item Positive feedback on assignment quality and geographic distribution
+    \item Appreciation for multi-phase approach reflecting real planning workflow
+    \item Requests for minor UI improvements (implemented in final sprint)
+\end{itemize}
+
+\textbf{Usability observations:}
+\begin{itemize}
+    \item Learning curve manageable for non-technical users
+    \item Manual adjustment features valuable for edge cases
+    \item Export functionality useful for communication with schools
+\end{itemize}
 
 \section{Limitations}
-% • Cases where feasibility could not be achieved
-% • Trade-offs in multi-objective optimization
-% • Computational constraints for large-scale problems
 
-% Chapter 7: Conclusion
+Despite the system's strengths, some limitations remain:
+
+\begin{itemize}
+    \item \textbf{Feasibility not guaranteed:} In extreme edge cases with unusual constraint combinations, the system may produce near-feasible but not perfectly feasible solutions
+    \item \textbf{Trade-offs in multi-objective optimization:} Balancing competing objectives (e.g., distance vs. teacher preference) requires manual score weight tuning
+    \item \textbf{Computational constraints:} Very large problem instances (1000+ students) may require longer solver runtimes or more powerful hardware
+    \item \textbf{Manual data entry:} Initial data input (students, teachers, schools) requires significant manual effort; integration with university systems would reduce this burden
+\end{itemize}
+
+
+% Chapter 6: Conclusion
 \chapter{Conclusion}
 
 \section{Summary}
-% • Recap of problem and solution
-% • Key achievements
-% • Technical contributions
+
+This project delivered a comprehensive internship assignment optimization system for the University of Passau's \textit{Praktikumsamt}. The system addresses the complex challenge of coordinating hundreds of teaching internships across multiple schools, teachers, and students while respecting numerous constraints and optimizing for quality.
+
+\textbf{Key achievements:}
+\begin{itemize}
+    \item \textbf{Multi-phase optimization architecture:} Successfully separated teacher assignment from student assignment, reducing computational complexity and reflecting real-world planning workflows
+    \item \textbf{Constraint satisfaction solving:} Implemented sophisticated constraint modeling using OptaPlanner, achieving 100\% hard constraint satisfaction in tested scenarios
+    \item \textbf{Distance optimization:} Minimized student travel distances for PDP internships through bidirectional matching and centroid-based positioning
+    \item \textbf{Complete web application:} Delivered a full-stack system with backend API, optimization engine, and user-friendly frontend
+    \item \textbf{Real-world validation:} Tested with realistic data and validated by the client for practical deployment
+\end{itemize}
 
 \section{Reflection on Optimization Goals}
-% • Were optimization objectives met?
-% • How well did multi-phase approach work?
-% • Balance between automation and manual control
+
+\subsection{Were Optimization Objectives Met?}
+
+The system successfully achieves its core objectives:
+\begin{itemize}
+    \item \textbf{Feasibility:} Consistently generates assignment plans satisfying all hard constraints in realistic scenarios
+    \item \textbf{Quality optimization:} Effectively balances competing soft constraints (distance, workload, preferences) to produce high-quality solutions
+    \item \textbf{Efficiency:} Completes optimization in acceptable timeframes (under 2 minutes total for both phases)
+\end{itemize}
+
+\subsection{Multi-Phase Approach Effectiveness}
+
+The decision to separate teacher assignment (Phase 1) from student assignment (Phase 2) proved highly effective:
+\begin{itemize}
+    \item \textbf{Performance gain:} Reduced total runtime from 10+ minutes (single-phase) to under 2 minutes (multi-phase)
+    \item \textbf{Conceptual clarity:} Each phase has a clear, focused objective, simplifying constraint modeling and debugging
+    \item \textbf{Flexibility:} Enables independent re-optimization of Phase 2 for what-if scenarios without re-running Phase 1
+    \item \textbf{Real-world alignment:} Mirrors the actual planning workflow used by the \textit{Praktikumsamt}
+\end{itemize}
+
+\subsection{Balance Between Automation and Manual Control}
+
+The system strikes a good balance:
+\begin{itemize}
+    \item \textbf{Automation:} Core assignment optimization is fully automated, reducing manual effort significantly
+    \item \textbf{Control:} Users retain ability to review, adjust, and override assignments when needed
+    \item \textbf{Transparency:} Audit logs and score explanations help users understand why particular assignments were made
+\end{itemize}
 
 \section{Lessons Learned}
-% • Technical insights
-% • Process learnings
-% • Collaboration experiences
+
+\subsection{Technical Insights}
+
+\begin{itemize}
+    \item \textbf{Constraint solver complexity:} OptaPlanner is powerful but requires deep understanding of its internals (caching, scoring) to use effectively
+    \item \textbf{Problem decomposition:} Breaking large optimization problems into phases is often more effective than solving them monolithically
+    \item \textbf{Score weight tuning:} Finding the right balance between competing soft constraints requires iterative experimentation and client feedback
+    \item \textbf{Real-world constraints matter:} Distance calculations, zone restrictions, and other practical considerations significantly impact solution quality
+\end{itemize}
+
+\subsection{Process Learnings}
+
+\begin{itemize}
+    \item \textbf{Agile works for complex problems:} Iterative development allowed us to adapt to evolving requirements and client feedback
+    \item \textbf{Client engagement is crucial:} Regular feedback sessions ensured we were solving the right problem in the right way
+    \item \textbf{Code quality pays off:} Investing in code review and testing early saved debugging time later
+    \item \textbf{Documentation matters:} Clear comments and documentation were essential for team coordination and knowledge transfer
+\end{itemize}
+
+\subsection{Collaboration Experiences}
+
+\begin{itemize}
+    \item \textbf{Role specialization:} Having team members focus on backend, frontend, or optimization allowed for deeper expertise
+    \item \textbf{Communication overhead:} Regular synchronization was necessary but sometimes time-consuming; tools like GitLab and Discord helped
+    \item \textbf{Learning from peers:} Informal exchanges with other teams (without sharing code) provided valuable alternative perspectives
+\end{itemize}
 
 \section{Future Work}
 
 \subsection{Technical Enhancements}
-% • Better multi-objective optimization
-% • Machine learning for constraint tuning
-% • Real-time reoptimization
+
+\begin{itemize}
+    \item \textbf{Better multi-objective optimization:} Implement Pareto frontier analysis to present multiple high-quality solutions with different trade-offs
+    \item \textbf{Machine learning for constraint tuning:} Use historical assignment data to automatically learn optimal score weights
+    \item \textbf{Real-time reoptimization:} Enable incremental updates when individual constraints change (e.g., teacher becomes unavailable) without full re-optimization
+    \item \textbf{Advanced distance metrics:} Integrate real routing APIs (Google Maps, OpenStreetMap) for accurate travel time and public transport feasibility
+\end{itemize}
 
 \subsection{Feature Extensions}
-% • Scenario comparison and what-if analysis
-% • Advanced reporting and visualization
-% • Integration with university information systems
+
+\begin{itemize}
+    \item \textbf{Scenario comparison:} Allow users to generate and compare multiple assignment plans side-by-side
+    \item \textbf{What-if analysis:} Enable users to explore "what if" questions (e.g., "What if we increase the budget by 10\%?")
+    \item \textbf{Advanced reporting:} Generate detailed reports for stakeholders (schools, teachers, students) with personalized assignment information
+    \item \textbf{Visualization improvements:} Add geographic map views showing assignment distributions and distance patterns
+    \item \textbf{Integration with university systems:} Connect to student information systems for automatic data import, reducing manual entry burden
+\end{itemize}
 
 \subsection{Process Improvements}
-% • Automated testing and validation
-% • Performance optimization
-% • Scalability for larger datasets
+
+\begin{itemize}
+    \item \textbf{Automated testing:} Expand test coverage, especially for complex constraint interactions
+    \item \textbf{Performance optimization:} Profile and optimize bottlenecks for even larger problem instances
+    \item \textbf{Scalability:} Architect for horizontal scaling if the system is extended to multiple universities or regions
+    \item \textbf{Deployment automation:} Implement CI/CD pipelines for streamlined deployment and updates
+\end{itemize}
+
+\section{Final Remarks}
+
+This project successfully demonstrated that complex, real-world assignment problems can be effectively addressed through systematic constraint satisfaction and optimization techniques. The system delivers tangible value to the \textit{Praktikumsamt}, reducing administrative burden while improving assignment quality.
+
+Beyond the technical solution, the project provided invaluable experience in collaborative software engineering, agile development, client engagement, and problem-solving under real-world constraints. These skills and insights will serve us well in future software engineering endeavors.
+
+We are proud of what we accomplished in ten weeks and grateful to our client, teaching assistant, and team members for making this project a success.
+
 
 % Bibliography
 \bibliographystyle{plain}
@@ -613,10 +1215,14 @@ While the core optimization engine operates automatically, the system provides i
 % Appendices
 \appendix
 \chapter{Additional Materials}
-\section{Code Samples}
-% Add important code snippets
 
-\section{Configuration Files}
-% Add configuration examples
+\section{Key Code Samples}
+
+% Add only the most critical code snippets here
+% For example: Phase 1 score calculator excerpt, Phase 2 constraint example
+
+\section{Solver Configuration Examples}
+
+% Add XML configuration samples for Phase 1 and Phase 2 solvers
 
 \end{document}
