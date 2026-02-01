@@ -104,33 +104,75 @@ The system delivers tangible benefits to the internship planning process:
 \chapter{Introduction}
 
 \section{Teaching Internships in Teacher Education}
-% • Role of practical experience in teacher training programs
-% • Different internship types serving different pedagogical goals
-% • Importance of quality supervision by experienced teachers
+
+Practical teaching experience is a cornerstone of teacher education programs. While theoretical coursework provides foundational knowledge in pedagogy, child development, and subject-specific didactics, it is through hands-on classroom experience that future teachers develop essential professional competencies. Teaching internships bridge the gap between academic study and professional practice, offering students the opportunity to observe experienced educators, experiment with teaching methods, and receive mentored feedback in authentic school settings.
+
+At the University of Passau, education students pursuing elementary and middle school teaching credentials are required to complete four distinct internship types throughout their program of study:
+
+\begin{itemize}
+    \item \textbf{PDP I} (\textit{Pädagogisch-didaktisches Praktikum I}): An initial pedagogical-didactic internship introducing students to classroom observation and basic teaching interactions
+    \item \textbf{ZSP} (\textit{Zusätzlich studienbegleitendes Praktikum}): An additional internship accompanying coursework, focusing on subject-specific teaching methods
+    \item \textbf{PDP II} (\textit{Pädagogisch-didaktisches Praktikum II}): An advanced pedagogical-didactic internship with increased teaching responsibilities
+    \item \textbf{SFP} (\textit{Studienbegleitendes fachdidaktisches Praktikum im Unterrichtsfach}): A subject-didactic internship in a specific teaching subject, integrating theory and practice
+\end{itemize}
+
+Each internship type serves distinct pedagogical goals and occurs at different stages of the degree program. Successful completion of all four internships is mandatory for graduation and licensure as a teacher. Critically, these internships take place in real elementary and middle schools throughout the region, supervised by active classroom teachers who mentor students and evaluate their performance.
 
 \section{Scale and Complexity of Internship Coordination}
-% • Hundreds of students per semester
-% • Dozens of schools and supervising teachers
-% • Multiple subject areas and school types (GS, MS)
-% • Geographic distribution and accessibility considerations
+
+The logistical challenge of organizing these internships is substantial. For the 2025/2026 academic year, the \textit{Praktikumsamt} must coordinate approximately \textbf{420 planned internship placements} across roughly \textbf{100 schools} distributed among \textbf{8 regional school districts} (\textit{Schulämter}). Each school employs multiple teachers with varying subject specializations, availability, and capacity to supervise student interns.
+
+The assignment process must account for numerous factors:
+\begin{itemize}
+    \item \textbf{Student requirements:} Matching each student's internship type, subject specialization, and school type
+    \item \textbf{Teacher qualifications and preferences:} Supervising teachers have individual preferences regarding which internship types and subject areas they wish to supervise
+    \item \textbf{School characteristics:} Distinguishing between elementary schools (\textit{Grundschule}, GS) and middle schools (\textit{Mittelschule}, MS)
+    \item \textbf{Student geographic accessibility:} For PDP I and PDP II internships, students must be assigned to schools close to their home addresses to minimize commute time
+    \item \textbf{Capacity constraints:} Respecting internship capacity limits and institutional budget restrictions on the total number of active placements
+\end{itemize}
 
 \section{Limitations of Manual Planning}
-% • Time-intensive process
-% • Difficulty balancing competing constraints
-% • Prone to errors and inconsistencies
-% • Lack of optimization and transparency
-% • Challenge of reoptimization when circumstances change
+
+Historically, internship assignments have been managed through manual processes involving spreadsheets, email coordination, and institutional knowledge. While this approach has functioned adequately in the past, it presents significant limitations:
+
+\begin{itemize}
+    \item \textbf{Time intensity:} Manually matching hundreds of students to appropriate placements requires weeks of dedicated effort by administrative staff
+    \item \textbf{Suboptimal assignments:} Without systematic optimization, manual assignments may inadvertently result in long commutes for students, unbalanced teacher workloads, or missed opportunities for better matches
+    \item \textbf{Error susceptibility:} Human planners may overlook constraint violations (e.g., assigning a teacher beyond their capacity, mismatching subject requirements) or introduce data entry errors
+    \item \textbf{Lack of transparency:} It is difficult to explain why particular assignments were made or to demonstrate that assignments are fair and equitable
+    \item \textbf{Inflexibility:} When circumstances change (e.g., a teacher becomes unavailable, enrollment projections shift), revising assignments manually is labor-intensive and may cascade into broader disruptions
+    \item \textbf{Limited optimization:} Manual processes struggle to balance competing objectives such as minimizing student travel distance while preserving teacher assignment continuity across semesters
+\end{itemize}
+
+These limitations motivated the \textit{Praktikumsamt} to seek an automated solution that could systematically generate high-quality assignments while reducing administrative burden.
 
 \section{Course Context}
-% • Real client: university internship coordination unit
-% • Multiple student teams working on related aspects
-% • Agile, sprint-based development over multiple semesters
-% • Collaboration with stakeholders and teaching assistants
+
+This project was developed as part of the \textbf{Advanced Software Product Development (ASPD)} course at the University of Passau during the winter semester of 2025/2026. The ASPD course is structured around real-world client projects, providing students with practical experience in collaborative software engineering.
+
+The course operates with the following organizational structure:
+\begin{itemize}
+    \item \textbf{Four student teams:} Each team consists of five students, for a total of 20 participants
+    \item \textbf{Shared client need:} All four teams address the same problem domain (internship planning), but may approach implementation differently or use different technologies
+    \item \textbf{Agile methodology:} Development follows an iterative, sprint-based approach with \textbf{five sprints}, each lasting \textbf{two weeks}, for a total development period of ten weeks
+    \item \textbf{Teaching assistant supervision:} Each team is guided by a dedicated teaching assistant (TA) who provides mentorship, oversight, and coordination with the client
+    \item \textbf{Client engagement:} Communication with the \textit{Praktikumsamt} ensures that requirements are grounded in real needs and that delivered solutions are practically deployable
+\end{itemize}
+
+This structure creates a realistic software development environment where students must balance technical challenges, evolving requirements, team coordination, and stakeholder expectations—mirroring professional software engineering practice.
 
 \section{Team Contribution}
-% • Your specific role and deliverables
-% • Integration with work from other teams
-% • Evolution of the system across development cycles
+
+Our team focused on developing the core optimization engine and backend infrastructure for the internship assignment system. While all four teams collaborated on shared data models and interface specifications, our specific contributions included:
+
+\begin{itemize}
+    \item \textbf{Constraint modeling:} Translating the complex business rules governing valid assignments into formal hard and soft constraints
+    \item \textbf{Multi-phase optimization architecture:} Designing a phased approach that separates teacher assignment from student assignment to manage computational complexity
+    \item \textbf{OptaPlanner integration:} Implementing constraint satisfaction solving using the OptaPlanner framework
+    \item \textbf{Score calculation logic:} Developing efficient algorithms to evaluate solution quality based on distance minimization, workload balance, and assignment diversity
+    \item \textbf{Backend API development:} Creating RESTful endpoints for data management, solver invocation, and result retrieval
+\end{itemize}
+
 
 % Chapter 2: Requirements Overview
 \chapter{Requirements Overview}
