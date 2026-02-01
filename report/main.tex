@@ -178,64 +178,172 @@ Our team focused on developing the core optimization engine and backend infrastr
 \chapter{Requirements Overview}
 
 \section{System Vision}
-% • Support annual internship planning cycle
-% • Optimize assignments under real-world constraints
-% • Prioritize solution quality over strict feasibility guarantees
-% • Provide transparency and configurability
+
+The internship assignment system is designed to support the \textit{Praktikumsamt's} annual planning cycle while maintaining flexibility and quality. The core vision rests on three pillars:
+
+\begin{itemize}
+    \item \textbf{Systematic assignment optimization:} Rather than relying on manual processes, the system applies algorithmic techniques to systematically generate assignments that satisfy constraints and optimize for quality
+    \item \textbf{Real-world pragmatism:} Assignments must respect practical constraints including teacher availability, student location preferences, and institutional budgets. The system prioritizes \textit{solution quality} over exhaustive feasibility guarantees, acknowledging that in complex problems with many competing objectives, perfect feasibility may be unattainable
+    \item \textbf{Operational transparency:} The system maintains an audit trail of assignments and provides clear justification for decisions, enabling the \textit{Praktikumsamt} to explain assignments to stakeholders and make adjustments when needed
+\end{itemize}
 
 \section{Stakeholders}
-\subsection{Primary: Internship Coordination Unit}
-% • Needs efficient planning tools
-% • Requires audit trails and justification for decisions
 
-\subsection{Teaching Students}
-% • Need fair, quality placements
-% • Prefer locations close to home
-% • Require subject-appropriate supervision
+\subsection{Primary: Internship Coordination Unit (\textit{Praktikumsamt})}
 
-\subsection{Schools and Supervising Teachers}
-% • Have capacity and availability constraints
-% • Bring subject expertise and preferences
-% • Constrained by geographic zones and accessibility
+The internship office is the primary stakeholder and system user. They require:
+\begin{itemize}
+    \item Efficient tools to coordinate hundreds of placements annually, reducing time spent on manual assignment work
+    \item Flexibility to review and manually adjust assignments when business circumstances change
+\end{itemize}
+
+\subsection{Secondary: Teaching Students}
+
+Students require high-quality placements that serve their educational development. Their interests include:
+\begin{itemize}
+    \item Geographic accessibility: for PDP I and PDP II internships, assignment to schools near their home addresses to make regular school visits feasible
+    \item Subject-appropriate placements aligned with their intended teaching specialization
+\end{itemize}
+
+\subsection{Secondary: Schools and Supervising Teachers}
+
+Schools and their supervising teachers are the infrastructure that enables internships. Their interests include:
+\begin{itemize}
+    \item Balanced workload: not overwhelming individual teachers with too many interns while ensuring adequate supervision
+    \item Alignment with subject expertise and teaching preferences (teachers have preferences for which internship types and subjects to supervise)
+    \item Respect for institutional capacity constraints and available supervision time
+\end{itemize}
 
 \section{Core Problem Definition}
 
+The internship assignment problem can be formally defined by specifying inputs, constraints, and objectives.
+
 \subsection{Input Data}
-% Students:
-% • Internship type requirements (PDP_I, PDP_II, ZSP, SFP)
-% • Subject preferences and specializations
-% • Home addresses for distance calculations
 
-% Schools:
-% • Type (GS - elementary, MS - middle school)
-% • Location, zone, and public transport accessibility
-% • Available supervising teachers
+The system operates on four categories of input:
 
-% Teachers:
-% • Subject expertise and qualifications
-% • Capacity and availability preferences
-% • Maximum workload constraints
+\begin{enumerate}
+    \item \textbf{Students:} Each student record contains:
+    \begin{itemize}
+        \item Internship type requirement (PDP I, PDP II, ZSP, or SFP for a given semester)
+        \item Subject specialization (primary teaching subject)
+        \item Home address (for distance calculations)
+    \end{itemize}
+    
+    \item \textbf{Teachers:} Each teacher record contains:
+    \begin{itemize}
+        \item Subject expertise and qualifications
+        \item Preferences: which internship types and subjects they are willing to supervise
+        \item Maximum internship capacity (workload limit per semester/year)
+        \item Availability constraints
+    \end{itemize}
+    
+    \item \textbf{Schools:} Each school record contains:
+    \begin{itemize}
+        \item Type: elementary (\textit{Grundschule}, GS) or middle school (\textit{Mittelschule}, MS)
+        \item Geographic location (address and coordinates)
+        \item Zone and public transport accessibility
+        \item List of supervising teachers and their availability
+    \end{itemize}
+    
+    \item \textbf{Institutional constraints:} System-level parameters including:
+    \begin{itemize}
+        \item Total budget: maximum number of active internship placements for the semester/year
+    \end{itemize}
+\end{enumerate}
 
 \subsection{Constraints}
-% Hard constraints (must be satisfied):
-% • Budget: total number of active internship slots
-% • Teacher workload: valid combinations (1, 2, or 4 internships)
-% • Subject matching: teachers must be qualified for assigned subjects
-% • Zone feasibility: appropriate geographic zones per internship type
-% • Course pinning: certain subjects fixed, others flexible
 
-% Soft constraints (preferences to optimize):
-% • Minimize student travel distance (PDP internships)
-% • Balance teacher workload (prefer 2 internships per teacher)
-% • Diversity: mix of internship types at each school
-% • Preserve teacher assignments across semesters
-% • Zone preferences: optimal zones per internship type
+The system must respect multiple categories of constraints representing real-world business rules and stakeholder requirements:
+
+\subsubsection{Hard Constraints (must be satisfied)}
+
+Hard constraints are non-negotiable requirements reflecting institutional policies and operational feasibility:
+
+\begin{itemize}
+    \item \textbf{Budget constraint:} The total number of scheduled internship placements cannot exceed the institutional budget limit for the academic year
+    
+    \item \textbf{Complete student assignment:} Every student must receive exactl internship placement matching their internships requirements 
+    
+    \item \textbf{Teacher workload limits:} Each teacher can supervise 0, 1, 2, or 4 internships per planning cycle (semester or year, depending on internship type).\footnote{The \textit{Praktikumsamt\_Uebersicht} documentation specifies that teachers should be assigned exactly 2 internships. However, analysis of historical data (example\_data) reveals teachers with 1, 2, and 4 internship assignments, with 2 being the most common configuration. The system accommodates this flexibility while treating 2 internships as the preferred workload through soft constraint optimization.}
+
+    \item \textbf{Teacher max workload:} Each teacher can specify a max number of internships they prefer to not exceed
+
+    \item \textbf{Internships capacities:} PDP internships can accommodate at maximum two student, SFP and ZSP can accommodate at maximum 4
+
+    \item \textbf{Teacher diversity requirement:} If a teacher supervises multiple internships, they must be of different types. A teacher cannot supervise multiple instances of the same internship type (e.g., two PDP I internships)
+    
+    \item \textbf{Subject qualification:} Teachers supervising ZSP or SFP internships (which are subject-specific) must have relevant subject expertise. SFP internships must match the student's main course 
+    
+    \item \textbf{School type matching:} Students pursuing elementary school certification must be assigned to elementary schools (GS), and those pursuing middle school certification to middle schools (MS)
+
+    \item \textbf{School zones matching:} Internships, by type, must take place in schools with specific zones
+
+    \item \textbf{Teacher availability:} Internship placements can only be scheduled at schools with available, qualified supervising teachers
+\end{itemize}
+
+\subsubsection{Soft Constraints (preferences to optimize)}
+
+Soft constraints are desirable properties that improve assignment quality and stakeholder satisfaction:
+
+\begin{itemize}
+    \item \textbf{Student proximity for PDP I \& PDP II:} Minimize the geographic distance between assigned students and their home addresses. This ensures practical feasibility for repeated school visits
+    
+    \item \textbf{Teacher workload preference:} Prefer assigning teachers exactly 2 internships over other valid counts (1, 4, or 0). This represents ideal teacher engagement
+    
+    \item \textbf{Diversity at schools:} Prefer schools with diverse internship types, rather than schools where one type dominates
+    
+    \item \textbf{Teacher preference matching:} Favor assignments of internship types and subjects that align with individual teacher preferences
+    
+    \item \textbf{Teacher assignment preservation:} When reoptimizing across semesters, prefer preserving teacher assignments for the same types of internships. This promotes continuity and relationship-building between teachers and the university program
+
+    \item \textbf{Subject Matching for ZSP:} Unlike SFP, ZSP internships are flexible regarding the subject course, favor assignments that align with students preferences (main course + 3 additional preferred courses)
+\end{itemize}
 
 \subsection{Objectives}
-% • Produce high-quality assignment plans
-% • Maximize satisfaction of soft constraints
-% • Acknowledge: not guaranteed feasibility due to conflicting constraints
-% • System is an optimization system rather than a pure feasibility solver
+
+The system has two primary objectives:
+
+\begin{enumerate}
+    \item \textbf{Feasibility:} Generate assignment plans that satisfy all hard constraints. This ensures that assignments are valid and implementable
+    
+    \item \textbf{Optimization:} Among feasible solutions, select plans that maximize soft constraint satisfaction. This means minimizing student travel distances, balancing teacher workloads, respecting preferences, and achieving other quality goals
+\end{enumerate}
+
+Importantly, \textbf{this system is an optimization system rather than a pure feasibility solver}. In problems with many competing constraints and objectives, guaranteed feasibility across all scenarios may be unattainable. The system prioritizes generating \textit{high-quality, near-feasible} solutions over mathematical certainty of feasibility. This pragmatic approach reflects real-world practice: even if 100\% feasibility cannot be assured, the system can produce solutions that satisfy most constraints and provide a high-quality starting point for manual adjustment if needed.
+
+\subsubsection*{Feasibility Landscape}
+
+A key observation mitigates feasibility concerns: the institution has a favorable constraint-to-resource ratio. The total number of available supervising teachers substantially exceeds the number of students requiring placements. For the 2025/2026 academic year, approximately 100 schools with multiple teachers each, must accommodate roughly 420 planned internships. This surplus of teacher availability significantly improves the likelihood of finding feasible solutions in most scenarios.
+
+However, the system is deliberately structured to strategically satisfy constraints even when full satisfaction is impossible, rather than assuming feasibility is guaranteed. This defensive design approach:
+\begin{itemize}
+    \item Acknowledges that specific combinations of constraints (e.g., specialized subject requirements + teacher preferences) can create local infeasibility despite overall abundance
+    \item Implements constraint prioritization so that violations, if they must occur, affect lower-priority (preference) constraints rather than critical hard (impossibility) constraints
+    \item Ensures robust behavior even in edge cases or future scenarios with tighter resource availability
+\end{itemize}
+
+\section{System Characteristics}
+
+\subsection{Deterministic Optimization}
+
+The system uses constraint satisfaction and local search optimization to explore the solution space. While it does not guarantee globally optimal solutions (such problems are NP-hard), it consistently produces high-quality solutions within acceptable runtime limits.
+
+\subsection{Configurability}
+
+The \textit{Praktikumsamt} can adjust:
+\begin{itemize}
+    \item Budget limits per semester
+    \item Teacher preferences and availability
+\end{itemize}
+
+\subsection{Interactive Assignment Management}
+
+While the core optimization engine operates automatically, the system provides interfaces for:
+\begin{itemize}
+    \item Reviewing and validating proposed assignments
+    \item Making manual adjustments when needed (e.g., if a teacher becomes unavailable)
+\end{itemize}
 
 % Chapter 3: Architecture Overview
 \chapter{Architecture Overview}
