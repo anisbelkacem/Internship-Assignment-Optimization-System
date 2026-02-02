@@ -647,7 +647,197 @@ For semester-to-semester transitions (e.g., WiSe25-26 $\rightarrow$ SoSe26), the
 % Chapter 4: Implementation Details
 \chapter{Implementation Details}
 
-% Content to be completed by team members
+\section{Repository Structure and Tech Stack (as implemented)}
+
+The submitted repository is a mono-repo consisting of a Spring Boot backend, a React + TypeScript frontend, and a Docker-based development database setup:
+
+\begin{itemize}
+    \item \textbf{\texttt{backend/}}: Spring Boot application providing REST APIs, persistence, security, and the OptaPlanner optimization engine
+    \item \textbf{\texttt{frontend/}}: React + TypeScript web UI (Vite-based) for managing data and running optimizations
+    \item \textbf{\texttt{docker-compose.yml}}: local development database (MySQL) and phpMyAdmin
+    \item \textbf{\texttt{.gitlab-ci.yml}}: CI pipeline for backend tests/build and frontend tests/build
+\end{itemize}
+
+\noindent
+Note: While Chapter 3 describes PostgreSQL and React 18 as target technologies, the delivered implementation uses MySQL in the provided Docker setup and the React version defined in \texttt{package.json}. The overall architecture and interfaces remain unchanged.
+
+\section{Backend Implementation (Spring Boot)}
+
+\subsection{Layering and Main Modules}
+
+The backend follows a standard Spring layering:
+
+\begin{itemize}
+    \item \textbf{Controller layer}: exposes REST endpoints for CRUD operations, optimization triggers, job polling, and import/export
+    \item \textbf{Service layer}: contains business logic (validation, orchestration, optimization pipeline, baseline handling)
+    \item \textbf{Repository layer}: Spring Data JPA repositories for database access
+    \item \textbf{Model layer}: JPA entities representing students, teachers, schools, internships, and assignments
+\end{itemize}
+
+\subsection{Persistence and Development Database}
+
+All master data and computed results are persisted using Spring Data JPA/Hibernate. For development, a MySQL database is provided via Docker Compose. Hibernate schema generation is enabled for development convenience (schema recreated on startup). In a production-like setup, migrations (e.g., Flyway/Liquibase) or \texttt{ddl-auto=validate} would typically be used instead.
+
+\subsection{Authentication and Authorization}
+
+Security is implemented with Spring Security using JWT authentication:
+
+\begin{itemize}
+    \item \texttt{/auth/*} endpoints provide login and token issuance
+    \item API endpoints require a valid \texttt{Authorization: Bearer <token>} header
+    \item Role-based access control restricts sensitive operations (e.g., user management, editing, optimization execution)
+\end{itemize}
+
+\section{Optimization Implementation (Two-Phase OptaPlanner)}
+
+The optimization is implemented using OptaPlanner and follows a two-phase strategy to manage complexity:
+
+\begin{itemize}
+    \item \textbf{Phase 1:} activate an appropriate subset of internship slots under the budget and assign supervising teachers (and courses where applicable)
+    \item \textbf{Phase 2:} assign each student demand to one of the activated internship slots while optimizing for distance and preferences
+\end{itemize}
+
+\subsection{Phase 0: Data Preparation}
+
+Before starting the solvers, the backend prepares the required input data:
+
+\begin{itemize}
+    \item \textbf{Demand-to-slot generation:} create candidate \texttt{PlannedInternship} objects from \texttt{StudentConfig} requirements
+    \item \textbf{Geocoding and coordinates:} convert addresses to coordinates to enable distance-based scoring
+    \item \textbf{Derived data:} compute helper structures (e.g., coordinate sets/aggregations) used by the score calculators
+\end{itemize}
+
+\subsection{Phase 1: Teacher Assignment and Slot Activation}
+
+\subsubsection*{Planning Model}
+
+Phase 1 uses \texttt{PlannedInternship} as the planning entity. OptaPlanner decides:
+
+\begin{itemize}
+    \item \texttt{active}: whether a slot is opened (counts towards the budget)
+    \item \texttt{assignedTeacher}: the supervising teacher
+    \item \texttt{course}: for flexible cases (e.g., ZSP); fixed/pinned for others (e.g., SFP), and null for PDP
+\end{itemize}
+
+A key implementation decision is to \textbf{derive the school from the assigned teacher} rather than making the school a planning variable. After solving, the backend post-processes solved internships and populates the school reference based on the selected teacher, reducing the solver search space and ensuring teacher/school consistency.
+
+\subsubsection*{Score Calculation (Phase 1)}
+
+Phase 1 uses an \texttt{EasyScoreCalculator} for transparent, explicit scoring. Constraints are implemented as Java penalty/reward functions and combined into a \texttt{HardSoftScore}:
+
+\paragraph{Hard constraints (feasibility).}
+Representative enforced rules include:
+\begin{itemize}
+    \item Budget alignment / limiting active slots
+    \item Active internship must have an assigned teacher
+    \item Teacher workload validity (allowed counts and limits)
+    \item Teacher diversity: multiple internships per teacher must be different types
+    \item School type compatibility (GS/MS) and school active status
+    \item Course rules: PDP has no course; SFP course is fixed; ZSP requires a course
+    \item Zone / ÖPNV feasibility rules by internship type
+\end{itemize}
+
+\paragraph{Soft constraints (quality).}
+Representative preferences include:
+\begin{itemize}
+    \item Prefer assigning teachers exactly two internships (ideal workload)
+    \item Preserve teacher assignments across semesters (when a baseline exists)
+    \item Improve ZSP course distribution based on student preference patterns
+    \item PDP geographic heuristics based on student-demand clustering (distance reduction)
+\end{itemize}
+
+\subsubsection*{Post-processing}
+
+After solving, the backend:
+\begin{itemize}
+    \item removes inactive slots (only active internships proceed to Phase 2)
+    \item deduplicates equivalent internships (same type/school type/course/teacher/school) to avoid redundant entries from demand generation
+    \item persists the resulting set of active \texttt{PlannedInternship} records
+\end{itemize}
+
+\subsection{Phase 2: Student Assignment to Activated Slots}
+
+\subsubsection*{Planning Model}
+
+Phase 2 uses \texttt{StudentInternshipDemand} as the planning entity. OptaPlanner decides:
+
+\begin{itemize}
+    \item \texttt{assignedInternship}: which active \texttt{PlannedInternship} the student demand is assigned to
+\end{itemize}
+
+\subsubsection*{Score Calculation (Phase 2)}
+
+Phase 2 is also implemented using an \texttt{EasyScoreCalculator} producing a \texttt{HardSoftScore}.
+
+\paragraph{Hard constraints (feasibility).}
+\begin{itemize}
+    \item Each demand must be assigned to exactly one active internship
+    \item Internship type compatibility (demand type must match slot type)
+    \item School type compatibility (GS/MS)
+    \item Capacity must not be exceeded (2 for PDP; 4 for ZSP/SFP)
+    \item Safety rule for SFP: course must match the student's main subject
+\end{itemize}
+
+\paragraph{Soft constraints (quality).}
+\begin{itemize}
+    \item Minimize student-to-school distance (especially relevant for PDP)
+    \item Improve ZSP matching against student course preferences
+    \item Preserve baseline assignments during reoptimization (reward keeping earlier assignments)
+\end{itemize}
+
+After solving, the backend materializes the result as persistent \texttt{InternshipAssignment} records for review and export.
+
+\subsection{Reoptimization and Baseline Preservation}
+
+For semester-to-semester continuity, the system supports reoptimization:
+
+\begin{itemize}
+    \item previous assignments are stored as baseline records
+    \item reoptimization rewards preserving baseline choices unless hard constraints require changes
+    \item selected items can be pinned (non-movable) for critical cases
+\end{itemize}
+
+\section{Asynchronous Solving and Job Tracking}
+
+Optimization runs can be executed asynchronously to avoid blocking the UI. When started asynchronously, the backend returns a job identifier immediately. The frontend polls a job-status endpoint periodically and shows progress until the job finishes (completed or failed). Concurrency safeguards prevent running Phase 1 and Phase 2 simultaneously for the same school year.
+
+\section{Import/Export and Validation}
+
+The system supports administrative workflows through Excel import/export (using Apache POI). Validation services detect missing/invalid data (e.g., missing qualifications, inconsistent configurations) before running optimization, and return user-friendly error messages that the frontend can display.
+
+\section{Frontend Implementation (React + TypeScript)}
+
+The frontend is a React + TypeScript single-page application. It provides pages for:
+
+\begin{itemize}
+    \item master data management (students, schools, teachers, courses)
+    \item semester configuration for student internship demands
+    \item optimization control (start Phase 1 / Phase 2 / reoptimization)
+    \item assignment review and export
+    \item audit log viewing
+\end{itemize}
+
+Authentication is handled by storing the JWT in the browser session and attaching it to API requests. The optimization page starts solver jobs through the async endpoints and polls job status to update the UI.
+
+\section{How to Run the System Locally}
+
+A typical local workflow is:
+
+\begin{enumerate}
+    \item Start the database using \texttt{docker-compose up -d}
+    \item Start the backend (Maven) and ensure DB connection settings match
+    \item Start the frontend (\texttt{npm install}, \texttt{npm run dev})
+    \item Import or enter master data, configure students, run Phase 1 and Phase 2, review results, and export assignments
+\end{enumerate}
+
+\section{Implementation Notes and Limitations}
+
+\begin{itemize}
+    \item Development setup uses MySQL; migration to PostgreSQL is mainly configuration due to JPA usage.
+    \item API keys (e.g., geocoding) should be handled via environment variables/secrets in deployment.
+    \item Job status is tracked in memory; a server restart clears running/completed job state.
+\end{itemize}
+
 
 
 % Chapter 5: Development Process & Results
