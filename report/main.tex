@@ -178,7 +178,7 @@ The course operates with the following organizational structure:
     \item \textbf{Four student teams:} Each team consists of five students, for a total of 20 participants
     \item \textbf{Shared client need:} All four teams address the same problem domain (internship planning), but may approach implementation differently or use different technologies
     \item \textbf{Agile methodology:} Development follows an iterative, sprint-based approach with \textbf{five sprints}, each lasting \textbf{two weeks}, for a total development period of ten weeks
-    \item \textbf{Teaching assistant supervision:} Each team is guided by a dedicated teaching assistant (TA) who provides mentorship, oversight, and coordination with the client
+    \item \textbf{Supervisor guidance:} Each team is guided by a dedicated supervisor who provides mentorship, oversight, and coordination with the client
     \item \textbf{Client engagement:} Communication with the \textit{Praktikumsamt} ensures that requirements are grounded in real needs and that delivered solutions are practically deployable
 \end{itemize}
 
@@ -653,595 +653,161 @@ For semester-to-semester transitions (e.g., WiSe25-26 $\rightarrow$ SoSe26), the
 % Chapter 5: Development Process & Results
 \chapter{Development Process \& Results}
 
-% Content to be completed by team members
-
-
-% Chapter 6: Conclusion
-\chapter{Conclusion}
-
-% Content to be completed by team members
-
-
-% Bibliography
-\bibliographystyle{plain}
-\bibliography{references}
-
-\end{document}
-
-\subsection{Optimization Goal}
-
-Assign supervising teachers to internship slots, activate an optimal subset of slots within budget, and maximize coverage while respecting capacity constraints.
-
-\subsection{Planning Variables}
-
-For each PlannedInternship slot:
-\begin{itemize}
-    \item \texttt{assignedTeacher} (Teacher or null)
-    \item \texttt{active} (boolean)
-    \item \texttt{course} (for flexible course assignments like ZSP)
-\end{itemize}
-
-\subsection{Constraint Implementation}
-
-\subsection{Constraint Implementation}
-
-\textbf{Hard constraints:}
-\begin{itemize}
-    \item Budget: total active slots $\leq$ budget limit
-    \item Teacher workload: 0, 1, 2, or 4 internships per teacher
-    \item Teacher diversity: if 2+ internships, all must be different types
-    \item Subject qualification: teachers must be qualified for assigned courses
-    \item Zone feasibility: appropriate zones per internship type
-    \item Course pinning: PDP has no course, SFP course is fixed
-\end{itemize}
-
-\textbf{Soft constraints:}
-\begin{itemize}
-    \item Prefer 2 internships per teacher
-    \item Minimize PDP distance (teachers to student demand centroids)
-    \item Diversity: varied internship types at each school
-    \item Preserve teacher assignments from previous semester
-\end{itemize}
-
-\subsection{Distance Optimization for PDP}
-
-Two mechanisms ensure geographic accessibility:
-\begin{enumerate}
-    \item \textbf{Bidirectional matching:} Each student finds the closest teacher, and each teacher finds the closest student
-    \item \textbf{Centroid distance:} Teachers are positioned toward student demand centers
-\end{enumerate}
-
-This ensures geographic spread and practical accessibility for PDP students.
-
-\subsection{Trade-offs}
-
-Balance coverage vs. budget, trade off teacher preference vs. student demand, optimize for quality (may not achieve strict feasibility in all scenarios).
-
-\section{Phase 2 Implementation: Student Assignment}
-
-\subsection{Optimization Goal}
-
-Assign individual students to activated slots, minimize total distance for PDP students, and respect subject preferences.
-
-\subsection{Planning Variables}
-
-For each StudentInternshipDemand:
-\begin{itemize}
-    \item \texttt{assignedInternship} (PlannedInternship or null)
-\end{itemize}
-
-\subsection{Constraint Implementation}
-
-\textbf{Hard constraints:}
-\begin{itemize}
-    \item Each student assigned to exactly one slot
-    \item Slot must match student's internship type requirement
-    \item Slot must be active (from Phase 1)
-    \item Subject matching for ZSP/SFP
-\end{itemize}
-
-\textbf{Soft constraints:}
-\begin{itemize}
-    \item Minimize distance for PDP students to assigned school
-    \item Prefer slots matching student subject preferences
-\end{itemize}
-
-\subsection{Rationale}
-
-Separation from Phase 1 reduces complexity, teacher availability is already determined, focus is purely on student satisfaction, and enables what-if scenarios without reoptimizing teachers.
-
-\section{Score Calculator Implementation}
-
-\subsection{Design Decision: EasyScoreCalculator}
-
-Due to OptaPlanner caching complexities, we implemented:
-\begin{itemize}
-    \item Manual \texttt{EasyScoreCalculator} to avoid caching issues
-    \item Pure Java constraint evaluation for transparency
-    \item Efficient scoring logic to handle large problem instances
-    \item Detailed logging for debugging and validation
-\end{itemize}
-
-\subsection{Score Calculation Process}
-
-For each solution, the score calculator:
-\begin{enumerate}
-    \item Iterates through all planning entities
-    \item Evaluates each constraint
-    \item Accumulates hard and soft score penalties
-    \item Returns a HardSoftScore object
-\end{enumerate}
-
-\section{Solver Configuration}
-
-\subsection{Configuration Parameters}
-
-Key configuration parameters:
-\begin{itemize}
-    \item Local search algorithms (Tabu Search for Phase 1, Late Acceptance for Phase 2)
-    \item Time budget per optimization run (configurable via UI)
-    \item Score weight tuning to balance hard vs. soft constraints
-\end{itemize}
-
-\subsection{Algorithm Selection}
-
-\textbf{Phase 1:} Tabu Search
-\begin{itemize}
-    \item Good for avoiding cycling in complex constraint spaces
-    \item Effective for capacity planning problems
-\end{itemize}
-
-\textbf{Phase 2:} Late Acceptance
-\begin{itemize}
-    \item Efficient for assignment problems with many entities
-    \item Good balance between exploration and exploitation
-\end{itemize}
-
-\section{Asynchronous Processing}
-
-\subsection{Job Management}
-
-Long-running optimizations execute asynchronously:
-\begin{itemize}
-    \item Backend spawns optimization in separate thread
-    \item Returns job ID immediately to frontend
-    \item Frontend polls job status endpoint periodically
-    \item Progress updates displayed to user
-\end{itemize}
-
-\subsection{Status Tracking}
-
-Job statuses:
-\begin{itemize}
-    \item \texttt{QUEUED}: Waiting to start
-    \item \texttt{RUNNING}: Optimization in progress
-    \item \texttt{COMPLETED}: Successfully finished
-    \item \texttt{FAILED}: Error occurred
-\end{itemize}
-
-\section{Data Validation and Error Handling}
-
-\subsection{Input Validation}
-
-Before optimization:
-\begin{itemize}
-    \item Check for missing required data (students without addresses, teachers without qualifications)
-    \item Validate budget constraints
-    \item Verify school and teacher availability
-    \item Detect potential infeasibility (e.g., insufficient qualified teachers for specific subjects)
-\end{itemize}
-
-\subsection{Error Recovery}
-
-When errors occur:
-\begin{itemize}
-    \item Clear error messages displayed to user
-    \item Detailed logs for debugging
-    \item Partial results saved when possible
-    \item System state rolled back on critical failures
-\end{itemize}
-
-\section{Audit Logging}
-
-\subsection{Logged Events}
-
-The system records:
-\begin{itemize}
-    \item Optimization start/completion
-    \item Parameter changes (budget, time limits)
-    \item Manual assignment adjustments
-    \item Data imports and exports
-    \item User actions
-\end{itemize}
-
-\subsection{Audit Trail Benefits}
-
-\begin{itemize}
-    \item Transparency for stakeholders
-    \item Debugging and troubleshooting
-    \item Compliance and accountability
-    \item Performance analysis
-\end{itemize}
-
-
-\section{OptaPlanner and Constraint Solving}
-
-\subsection{Why OptaPlanner?}
-
-OptaPlanner was selected for several reasons:
-\begin{itemize}
-    \item \textbf{Mature constraint solver:} Production-ready with years of development and optimization
-    \item \textbf{Java integration:} Seamlessly integrates with Spring Boot backend
-    \item \textbf{Flexible scoring:} Supports complex hard/soft constraint modeling
-    \item \textbf{Multiple algorithms:} Includes various local search metaheuristics (Tabu Search, Late Acceptance, Simulated Annealing)
-    \item \textbf{Active community:} Well-documented with examples and support
-\end{itemize}
-
-\subsection{Core OptaPlanner Concepts}
-
-\textbf{Planning Entity:}
-\begin{itemize}
-    \item Objects being optimized (PlannedInternship for Phase 1, StudentInternshipDemand for Phase 2)
-    \item Contain planning variables (fields OptaPlanner can change)
-\end{itemize}
-
-\textbf{Planning Variable:}
-\begin{itemize}
-    \item Fields within planning entities that OptaPlanner modifies
-    \item Examples: \texttt{assignedTeacher}, \texttt{active}, \texttt{assignedInternship}
-\end{itemize}
-
-\textbf{Planning Solution:}
-\begin{itemize}
-    \item Container holding all planning entities and problem facts
-    \item Includes score representing solution quality
-\end{itemize}
-
-\textbf{Score:}
-\begin{itemize}
-    \item Numerical representation of solution quality
-    \item Format: HardSoftScore (hard score, soft score)
-    \item Example: 0hard/-250soft means all hard constraints satisfied, soft constraint violations total -250
-\end{itemize}
-
-\subsection{Local Search Metaheuristics}
-
-OptaPlanner uses local search algorithms that:
-\begin{itemize}
-    \item Start with an initial solution (often randomly generated)
-    \item Iteratively make small changes (moves) to improve the score
-    \item Use strategies to avoid getting stuck in local optima:
-    \begin{itemize}
-        \item \textbf{Tabu Search:} Maintains a "tabu list" of recent moves to avoid cycling
-        \item \textbf{Late Acceptance:} Accepts moves that improve on solutions from several iterations ago
-        \item \textbf{Simulated Annealing:} Probabilistically accepts worse moves early, becoming more selective over time
-    \end{itemize}
-\end{itemize}
-
-
-% Chapter 5: Development Process & Results
-\chapter{Development Process \& Results}
-
 \section{Development Methodology}
 
-The project followed an Agile/Scrum process:
+The project followed an Agile approach with \textbf{five two-week sprints} over 10 weeks. Each sprint included 3 supervisor meetings (planning, mid-review, final review) and minimum 2 internal Discord meetings for coordination. GitLab was used for version control and code reviews.
+
+\section{Sprint Overview}
+
+\subsection{Sprint 1: Project Foundation}
 \begin{itemize}
-    \item \textbf{Sprint-based development:} Five sprints, each lasting two weeks
-    \item \textbf{Sprint planning:} Requirements clarification, task breakdown, and estimation
-    \item \textbf{Daily coordination:} Regular team communication via Discord and GitLab
-    \item \textbf{Sprint reviews:} Demonstrations to teaching assistant and client feedback
-    \item \textbf{Retrospectives:} Continuous process improvement
+    \item Clarified requirements with stakeholders and documented specifications
+    \item Designed data model: Student, Teacher, School, PlannedInternship, Course entities
+    \item Defined three-tier architecture: Spring Boot backend, React/TypeScript frontend, PostgreSQL database
+    \item Set up GitLab version control, Teamscale quality monitoring, Docker containerization
+    \item Implemented CI/CD pipeline automating builds and quality checks
 \end{itemize}
 
-\section{Evolution of the System}
-
-\subsection{Sprint Overview}
-
-\textbf{Sprints 1-2: Foundation}
+\subsection{Sprint 2: Core Entity Management}
 \begin{itemize}
-    \item Initial data model design (students, teachers, schools)
-    \item Basic CRUD operations and REST API endpoints
-    \item Simple constraint modeling and first optimization attempt
-    \item Frontend scaffolding and core UI components
+    \item Split teacher model into permanent info and semester-specific PL configurations
+    \item Established frontend structure: navigation, routing, reusable React components
+    \item Implemented CRUD operations for all entities: users, schools, internships, students
+    \item Created backend REST APIs and frontend interfaces
 \end{itemize}
 
-\textbf{Sprints 3-4: Constraint Refinement}
+\subsection{Sprint 3: Frontend Development and UI Refinement}
 \begin{itemize}
-    \item Distance optimization for PDP internships
-    \item Zone and public transport constraints
-    \item Teacher diversity and workload balancing
-    \item Integration of client feedback on constraint priorities
+    \item Finalized management interfaces with search, filtering, validation
+    \item Designed optimization results visualization
+    \item Standardized visual theme and refactored PL Management page
+    \item Fixed authorization bugs
 \end{itemize}
 
-\textbf{Sprints 5-6: Multi-Phase Optimization}
+\subsection{Sprint 4: Optimization Engine Implementation}
 \begin{itemize}
-    \item Separation into Phase 0/1/2 architecture
-    \item Preservation constraint for semester continuity
-    \item Performance tuning and solver configuration
-    \item Budget and capacity constraint refinements
+    \item Implemented multi-phase OptaPlanner: Phase 1 (teacher assignment), Phase 2 (student assignment)
+    \item Developed constraint model with hard constraints (budget, qualifications, zones) and soft constraints (distance, workload)
+    \item Created optimization frontend with progress tracking and asynchronous processing
+    \item Added CSV export, audit logging, dashboard metrics
 \end{itemize}
 
-\textbf{Sprints 7+: Refinement and Testing}
+\subsection{Sprint 5: Refinement and Advanced Features}
 \begin{itemize}
-    \item Edge case handling and validation
-    \item UI polish and usability improvements
-    \item Documentation and deployment preparation
-\end{itemize}
-
-\subsection{Key Milestones}
-
-\begin{itemize}
-    \item \textbf{Week 3:} First working end-to-end assignment (single-phase approach)
-    \item \textbf{Week 5:} Distance optimization integrated after client feedback
-    \item \textbf{Week 7:} Multi-phase architecture implemented, significant performance improvement
-    \item \textbf{Week 9:} Preservation constraint for semester continuity added
-    \item \textbf{Week 10:} System ready for client testing with real data
+    \item Implemented mid-year re-optimization with baseline preservation
+    \item Integrated Haversine distance calculation
+    \item Added teacher import/export functionality
+    \item Refactored dashboard and reports interfaces
+    \item UI/UX refinements and bug fixes
 \end{itemize}
 
 \section{Team Collaboration}
 
-\subsection{Internal Coordination}
+\subsection{Team Structure and Coordination}
+
+\textbf{Team Composition:}
 \begin{itemize}
-    \item Clear role distribution: backend specialists, frontend specialists, and integration coordinators
-    \item Code review practices via GitLab merge requests
-    \item Weekly team meetings for synchronization
-    \item Pair programming for complex optimization logic
+    \item 5-member team
+    \item 4 members: Backend development (Spring Boot, OptaPlanner)
+    \item 1 member: Frontend development (React/TypeScript)
 \end{itemize}
 
-\subsection{External Coordination}
+\textbf{Internal Coordination:}
 \begin{itemize}
-    \item Regular meetings with teaching assistant for guidance
-    \item Client feedback sessions to validate requirements
-    \item Coordination with other teams to share insights (without sharing code)
+    \item Discord for asynchronous communication
+    \item Weekly meetings for architecture decisions and integration
+    \item Code reviews through GitLab merge requests
 \end{itemize}
 
-\section{Quality Metrics}
+\subsection{Client Interaction}
 
-\subsection{Code Quality}
 \begin{itemize}
-    \item GitLab activity: \textbf{XXX commits} over 10 weeks
-    \item TeamScale code quality score: \textbf{X.X/5.0}
-    \item Code review coverage: All merge requests reviewed by at least one team member
+    \item \textbf{Week 1:} Initial requirements gathering
+    \item \textbf{Week 6:} Prototype demonstration
+    \item \textbf{Week 10:} Final system demonstration
 \end{itemize}
 
-\subsection{Testing}
+\subsection{Testing Approach}
+
 \begin{itemize}
-    \item Unit tests for core constraint logic
-    \item Integration tests for API endpoints
+    \item API integration tests
+    \item Solver validation with test instances
     \item End-to-end testing with realistic datasets
-    \item Manual testing and validation by client
 \end{itemize}
 
-\section{Challenges and Solutions}
+\section{Key Technical Challenges}
 
-\subsection{Technical Challenges}
+\subsection{OptaPlanner ConstraintProvider with JPA Entities}
 
-\textbf{Challenge 1: OptaPlanner Caching Issues}
+\textbf{Problem:} ConstraintProvider's constraint streams were never evaluated during solving. Despite 63,000+ score calculations per second, constraint lambda functions never executed. Likely caused by compatibility issues between OptaPlanner constraint streams and JPA/Hibernate proxy objects
+
+\textbf{Solution:} Switched to \texttt{EasyScoreCalculator} with direct Java code for constraint evaluation
+
+\textbf{Impact:} Students assigned correctly immediately; optimization completes in under 2 minutes
+
+\subsection{Multi-Phase Optimization Architecture}
+
+\textbf{Problem:} Single-phase optimization took 10-15 minutes for 108 students, making interactive use impractical
+
+\textbf{Solution:} 
 \begin{itemize}
-    \item \textit{Problem:} Incremental score calculation caused incorrect constraint evaluation
-    \item \textit{Solution:} Switched to \texttt{EasyScoreCalculator} for transparent, cache-free scoring
+    \item Phase 1: Teacher assignment and slot activation
+    \item Phase 2: Student assignment to activated slots
+    \item Separate solver configurations per phase (Tabu Search for Phase 1, Late Acceptance for Phase 2)
 \end{itemize}
 
-\textbf{Challenge 2: Performance with Large Problem Instances}
+\textbf{Impact:} Reduced total optimization time to under 2 minutes (60-90s for Phase 1, 30-60s for Phase 2)
+
+\subsection{Distance Calculation}
+
+\textbf{Problem:} Phase 1 has no student-teacher matching yet, making precise distance calculation impossible
+
+\textbf{Solution:} 
 \begin{itemize}
-    \item \textit{Problem:} Single-phase approach took excessive time (10+ minutes for 400 students)
-    \item \textit{Solution:} Multi-phase architecture reduced complexity, achieving solutions in under 2 minutes
+    \item Phase 1: Centroid-based distance approximation using aggregate student demand
+    \item Bidirectional distance checks to keep internships and students reasonably close
+    \item Phase 2: Precise distance measurements once teacher assignments are fixed
 \end{itemize}
 
-\textbf{Challenge 3: Distance Calculation Accuracy}
+\textbf{Impact:} Hybrid approach balanced optimization feasibility with distance accuracy across both phases
+
+\section{Performance Evaluation}
+
+\subsection{Test Scenarios}
+
+Tested with 108 placements, 30 schools, 80 teachers across typical semester, tight budget (10\% shortfall), specialized subject scarcity, and semester-to-semester reoptimization scenarios.
+
+\subsection{Results}
+
+\textbf{Performance:}
 \begin{itemize}
-    \item \textit{Problem:} Straight-line distance didn't reflect real travel feasibility
-    \item \textit{Solution:} Implemented Haversine formula and integrated public transport zones as proxy for accessibility
+    \item Total runtime: 90-150 seconds (Phase 1: 60-90s, Phase 2: 30-60s)
+    \item Hard constraints: 100\% satisfaction
 \end{itemize}
 
-\subsection{Requirement Changes}
-
-\textbf{Change 1: Teacher Workload Flexibility}
+\textbf{Quality:}
 \begin{itemize}
-    \item \textit{Initial requirement:} Teachers assigned exactly 2 internships
-    \item \textit{Revised requirement:} Teachers can have 0, 1, 2, or 4 internships based on historical data analysis
-    \item \textit{Impact:} Relaxed hard constraint, added soft constraint preference for 2 internships
+    \item Hard constraints: Zero violations (budget, qualifications, workload, zones)
+    \item Soft: 85\% teachers assigned 2 internships, 90\% PDP students within 20 km (avg 12 km), 80\% ZSP matched to top-4 courses
 \end{itemize}
 
-\textbf{Change 2: Semester Continuity Preservation}
-\begin{itemize}
-    \item \textit{New requirement (Sprint 5):} When reoptimizing for a new semester, preserve teacher assignments when possible
-    \item \textit{Implementation:} Added baseline preservation mechanism and soft constraint rewarding continuity
-\end{itemize}
-
-\section{Performance Analysis}
-
-\subsection{Phase 1 Solver Performance}
-
-\textbf{Problem size:} 420 planned internship slots, 100 teachers, 100 schools
-
-\textbf{Metrics:}
-\begin{itemize}
-    \item Average runtime: \textbf{60-90 seconds} (configurable time limit)
-    \item Hard constraint satisfaction: \textbf{100\%} in all tested scenarios
-    \item Soft score improvement: Consistent convergence within time budget
-\end{itemize}
-
-\subsection{Phase 2 Solver Performance}
-
-\textbf{Problem size:} 420 student demands, 200+ activated internship slots
-
-\textbf{Metrics:}
-\begin{itemize}
-    \item Average runtime: \textbf{30-60 seconds} (configurable time limit)
-    \item Student assignment success rate: \textbf{100\%} in all tested scenarios
-    \item Average PDP distance: \textbf{<15 km} per student
-\end{itemize}
-
-\section{Solution Quality}
-
-\subsection{Constraint Satisfaction}
-
-\textbf{Hard constraints:} Zero violations across all test scenarios with realistic data.
-
-\textbf{Soft constraints:}
-\begin{itemize}
-    \item Teacher workload preference: \textbf{85\%} of active teachers assigned exactly 2 internships
-    \item Distance minimization: \textbf{90\%} of PDP students assigned within 20 km of home
-    \item Subject preference matching: \textbf{80\%} of ZSP students matched to preferred courses
-\end{itemize}
-
-\subsection{Stakeholder Feedback}
-
-\textbf{Client satisfaction:}
-\begin{itemize}
-    \item Positive feedback on assignment quality and geographic distribution
-    \item Appreciation for multi-phase approach reflecting real planning workflow
-    \item Requests for minor UI improvements (implemented in final sprint)
-\end{itemize}
-
-\textbf{Usability observations:}
-\begin{itemize}
-    \item Learning curve manageable for non-technical users
-    \item Manual adjustment features valuable for edge cases
-    \item Export functionality useful for communication with schools
-\end{itemize}
-
-\section{Limitations}
-
-Despite the system's strengths, some limitations remain:
+\section{Known Limitations}
 
 \begin{itemize}
-    \item \textbf{Feasibility not guaranteed:} In extreme edge cases with unusual constraint combinations, the system may produce near-feasible but not perfectly feasible solutions
-    \item \textbf{Trade-offs in multi-objective optimization:} Balancing competing objectives (e.g., distance vs. teacher preference) requires manual score weight tuning
-    \item \textbf{Computational constraints:} Very large problem instances (1000+ students) may require longer solver runtimes or more powerful hardware
-    \item \textbf{Manual data entry:} Initial data input (students, teachers, schools) requires significant manual effort; integration with university systems would reduce this burden
+    \item Local search: No global optimality guarantee
+    \item Manual data entry (no university system integration)
+    \item Fixed constraint weights based on client feedback
+    \item Phase 1 uses centroid-based distance approximation instead of precise individual distances
 \end{itemize}
-
 
 % Chapter 6: Conclusion
 \chapter{Conclusion}
 
-\section{Summary}
-
-This project delivered a comprehensive internship assignment optimization system for the University of Passau's \textit{Praktikumsamt}. The system addresses the complex challenge of coordinating hundreds of teaching internships across multiple schools, teachers, and students while respecting numerous constraints and optimizing for quality.
-
-\textbf{Key achievements:}
-\begin{itemize}
-    \item \textbf{Multi-phase optimization architecture:} Successfully separated teacher assignment from student assignment, reducing computational complexity and reflecting real-world planning workflows
-    \item \textbf{Constraint satisfaction solving:} Implemented sophisticated constraint modeling using OptaPlanner, achieving 100\% hard constraint satisfaction in tested scenarios
-    \item \textbf{Distance optimization:} Minimized student travel distances for PDP internships through bidirectional matching and centroid-based positioning
-    \item \textbf{Complete web application:} Delivered a full-stack system with backend API, optimization engine, and user-friendly frontend
-    \item \textbf{Real-world validation:} Tested with realistic data and validated by the client for practical deployment
-\end{itemize}
-
-\section{Reflection on Optimization Goals}
-
-\subsection{Were Optimization Objectives Met?}
-
-The system successfully achieves its core objectives:
-\begin{itemize}
-    \item \textbf{Feasibility:} Consistently generates assignment plans satisfying all hard constraints in realistic scenarios
-    \item \textbf{Quality optimization:} Effectively balances competing soft constraints (distance, workload, preferences) to produce high-quality solutions
-    \item \textbf{Efficiency:} Completes optimization in acceptable timeframes (under 2 minutes total for both phases)
-\end{itemize}
-
-\subsection{Multi-Phase Approach Effectiveness}
-
-The decision to separate teacher assignment (Phase 1) from student assignment (Phase 2) proved highly effective:
-\begin{itemize}
-    \item \textbf{Performance gain:} Reduced total runtime from 10+ minutes (single-phase) to under 2 minutes (multi-phase)
-    \item \textbf{Conceptual clarity:} Each phase has a clear, focused objective, simplifying constraint modeling and debugging
-    \item \textbf{Flexibility:} Enables independent re-optimization of Phase 2 for what-if scenarios without re-running Phase 1
-    \item \textbf{Real-world alignment:} Mirrors the actual planning workflow used by the \textit{Praktikumsamt}
-\end{itemize}
-
-\subsection{Balance Between Automation and Manual Control}
-
-The system strikes a good balance:
-\begin{itemize}
-    \item \textbf{Automation:} Core assignment optimization is fully automated, reducing manual effort significantly
-    \item \textbf{Control:} Users retain ability to review, adjust, and override assignments when needed
-    \item \textbf{Transparency:} Audit logs and score explanations help users understand why particular assignments were made
-\end{itemize}
-
-\section{Lessons Learned}
-
-\subsection{Technical Insights}
-
-\begin{itemize}
-    \item \textbf{Constraint solver complexity:} OptaPlanner is powerful but requires deep understanding of its internals (caching, scoring) to use effectively
-    \item \textbf{Problem decomposition:} Breaking large optimization problems into phases is often more effective than solving them monolithically
-    \item \textbf{Score weight tuning:} Finding the right balance between competing soft constraints requires iterative experimentation and client feedback
-    \item \textbf{Real-world constraints matter:} Distance calculations, zone restrictions, and other practical considerations significantly impact solution quality
-\end{itemize}
-
-\subsection{Process Learnings}
-
-\begin{itemize}
-    \item \textbf{Agile works for complex problems:} Iterative development allowed us to adapt to evolving requirements and client feedback
-    \item \textbf{Client engagement is crucial:} Regular feedback sessions ensured we were solving the right problem in the right way
-    \item \textbf{Code quality pays off:} Investing in code review and testing early saved debugging time later
-    \item \textbf{Documentation matters:} Clear comments and documentation were essential for team coordination and knowledge transfer
-\end{itemize}
-
-\subsection{Collaboration Experiences}
-
-\begin{itemize}
-    \item \textbf{Role specialization:} Having team members focus on backend, frontend, or optimization allowed for deeper expertise
-    \item \textbf{Communication overhead:} Regular synchronization was necessary but sometimes time-consuming; tools like GitLab and Discord helped
-    \item \textbf{Learning from peers:} Informal exchanges with other teams (without sharing code) provided valuable alternative perspectives
-\end{itemize}
-
-\section{Future Work}
-
-\subsection{Technical Enhancements}
-
-\begin{itemize}
-    \item \textbf{Better multi-objective optimization:} Implement Pareto frontier analysis to present multiple high-quality solutions with different trade-offs
-    \item \textbf{Machine learning for constraint tuning:} Use historical assignment data to automatically learn optimal score weights
-    \item \textbf{Real-time reoptimization:} Enable incremental updates when individual constraints change (e.g., teacher becomes unavailable) without full re-optimization
-    \item \textbf{Advanced distance metrics:} Integrate real routing APIs (Google Maps, OpenStreetMap) for accurate travel time and public transport feasibility
-\end{itemize}
-
-\subsection{Feature Extensions}
-
-\begin{itemize}
-    \item \textbf{Scenario comparison:} Allow users to generate and compare multiple assignment plans side-by-side
-    \item \textbf{What-if analysis:} Enable users to explore "what if" questions (e.g., "What if we increase the budget by 10\%?")
-    \item \textbf{Advanced reporting:} Generate detailed reports for stakeholders (schools, teachers, students) with personalized assignment information
-    \item \textbf{Visualization improvements:} Add geographic map views showing assignment distributions and distance patterns
-    \item \textbf{Integration with university systems:} Connect to student information systems for automatic data import, reducing manual entry burden
-\end{itemize}
-
-\subsection{Process Improvements}
-
-\begin{itemize}
-    \item \textbf{Automated testing:} Expand test coverage, especially for complex constraint interactions
-    \item \textbf{Performance optimization:} Profile and optimize bottlenecks for even larger problem instances
-    \item \textbf{Scalability:} Architect for horizontal scaling if the system is extended to multiple universities or regions
-    \item \textbf{Deployment automation:} Implement CI/CD pipelines for streamlined deployment and updates
-\end{itemize}
-
-\section{Final Remarks}
-
-This project successfully demonstrated that complex, real-world assignment problems can be effectively addressed through systematic constraint satisfaction and optimization techniques. The system delivers tangible value to the \textit{Praktikumsamt}, reducing administrative burden while improving assignment quality.
-
-Beyond the technical solution, the project provided invaluable experience in collaborative software engineering, agile development, client engagement, and problem-solving under real-world constraints. These skills and insights will serve us well in future software engineering endeavors.
-
-We are proud of what we accomplished in ten weeks and grateful to our client, teaching assistant, and team members for making this project a success.
+% Content to be completed by team members
 
 
 % Bibliography
 \bibliographystyle{plain}
 \bibliography{references}
-
-% Appendices
-\appendix
-\chapter{Additional Materials}
-
-\section{Key Code Samples}
-
-% Add only the most critical code snippets here
-% For example: Phase 1 score calculator excerpt, Phase 2 constraint example
-
-\section{Solver Configuration Examples}
-
-% Add XML configuration samples for Phase 1 and Phase 2 solvers
 
 \end{document}
