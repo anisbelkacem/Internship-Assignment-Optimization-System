@@ -1002,11 +1002,11 @@ The implemented solution combines constraint satisfaction optimization with mode
 \begin{itemize}
     \item \textbf{Automated optimization engine:} A two-phase OptaPlanner-based solver that assigns teachers to internship slots (Phase 1) and students to available placements (Phase 2), achieving 100\% hard constraint satisfaction
     
-    \item \textbf{Efficient performance:} Reduced total optimization runtime from 10-15 minutes (initial approach) to under 2 minutes through architectural redesign
+    \item \textbf{Flexible two-phase architecture:} Migrated from single-block optimization to a two-phase approach, allowing the client to review and modify Phase 1 results (teacher assignments) before proceeding to Phase 2 (student assignments). Solution quality improves with solver time—our test data achieves good results with 10 minutes of solving, but since the scope of real production data is unknown, solve time is configurable as an input parameter, allowing the client to adjust based on their actual data size
     
     \item \textbf{Complete web application:} Production-ready system with master data management, optimization controls, result visualization, import/export functionality, and audit logging
     
-    \item \textbf{Quality outcomes:} 85\% of teachers assigned their preferred workload (2 internships), 90\% of PDP students placed within 20 km of home (average 12 km), and 80\% of ZSP students matched to their top-4 preferred subjects
+    \item \textbf{Quality outcomes:} 80\% of teachers assigned their preferred workload (2 internships), majority of PDP students placed as close as possible to their home addresses, and 75\% of ZSP students matched to their top-4 preferred subjects
 \end{itemize}
 
 The system was developed over 10 weeks using Agile methodology with five two-week sprints. The architecture follows industry best practices: Spring Boot backend for business logic and optimization, React/TypeScript frontend for user interaction, and MySQL database for data persistence.
