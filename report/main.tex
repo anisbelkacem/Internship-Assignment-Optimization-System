@@ -993,7 +993,95 @@ Tested with 108 placements, 30 schools, 80 teachers across typical semester, tig
 % Chapter 6: Conclusion
 \chapter{Conclusion}
 
-% Content to be completed by team members
+\section{Summary}
+
+This project successfully delivered a comprehensive web-based system for automating internship assignment planning at the University of Passau's \textit{Praktikumsamt für Grund- und Mittelschule}. The system addresses the critical challenge of coordinating approximately 420 teaching internship placements across 100 schools while respecting complex constraints and optimizing for quality outcomes.
+
+The implemented solution combines constraint satisfaction optimization with modern web technologies and a pragmatic multi-phase approach. Key accomplishments include:
+
+\begin{itemize}
+    \item \textbf{Automated optimization engine:} A two-phase OptaPlanner-based solver that assigns teachers to internship slots (Phase 1) and students to available placements (Phase 2), achieving 100\% hard constraint satisfaction
+    
+    \item \textbf{Efficient performance:} Reduced total optimization runtime from 10-15 minutes (initial approach) to under 2 minutes through architectural redesign
+    
+    \item \textbf{Complete web application:} Production-ready system with master data management, optimization controls, result visualization, import/export functionality, and audit logging
+    
+    \item \textbf{Quality outcomes:} 85\% of teachers assigned their preferred workload (2 internships), 90\% of PDP students placed within 20 km of home (average 12 km), and 80\% of ZSP students matched to their top-4 preferred subjects
+\end{itemize}
+
+The system was developed over 10 weeks using Agile methodology with five two-week sprints. The architecture follows industry best practices: Spring Boot backend for business logic and optimization, React/TypeScript frontend for user interaction, and MySQL database for data persistence.
+
+\section{Reflection on Optimization Goals}
+
+The project's optimization strategy successfully balanced competing objectives while acknowledging the inherent complexity of the assignment problem.
+
+The system prioritized solution quality over mathematical optimality guarantees. As an NP-hard problem, the OptaPlanner metaheuristics (Tabu Search, Late Acceptance) consistently produce high-quality, feasible solutions within acceptable timeframes (under 2 minutes). Hard constraint satisfaction reached 100\% across all test scenarios.
+
+The multi-phase architecture proved essential: separating teacher assignment (Phase 1) from student assignment (Phase 2) reduced search space complexity, mirrored real-world planning workflows, and enabled administrators to review assignments at each stage. The tradeoff was Phase 1's use of centroid-based distance approximation, but final results still achieved 90\% proximity targets.
+
+Geographic accessibility was addressed through a hybrid approach: Phase 1 uses demand centroids to guide slot activation, while Phase 2 applies precise Haversine distance calculations for individual assignments. Soft constraints successfully optimized teacher workload distribution (85\% assigned exactly 2 internships) and subject matching (80\% ZSP students matched to top-4 courses).
+
+\section{Lessons Learned}
+
+The development process yielded valuable technical and organizational insights applicable to future constraint optimization projects.
+
+\subsection{Technical Insights}
+
+\textbf{OptaPlanner Framework Compatibility:} The most significant technical challenge was OptaPlanner's ConstraintProvider failing to evaluate constraint streams when using JPA/Hibernate entities. Despite thousands of score calculations per second, lambda functions never executed. Switching to EasyScoreCalculator with explicit Java constraint evaluation resolved the issue. This highlights the importance of verifying framework integration early and budgeting time for alternative approaches.
+
+\textbf{Multi-Phase Architecture:} Separating teacher assignment (Phase 1) from student assignment (Phase 2) reduced computational complexity and improved runtime by 5-8x. This demonstrates that decomposition strategies can deliver dramatic performance gains while maintaining solution quality. The tradeoff was acceptable: Phase 1 uses centroid-based distance approximation rather than precise individual distances, but final results still achieve 90\% proximity targets.
+
+\textbf{Incremental Testing:} Starting with small datasets (10-20 students) enabled rapid iteration and early detection of constraint evaluation issues that would be difficult to diagnose at production scale. Graduated testing from toy problems to realistic scenarios built confidence and identified bottlenecks systematically.
+
+\subsection{Process and Collaboration}
+
+\textbf{Stakeholder Engagement:} Regular client meetings (Weeks 1, 6, 10) ensured alignment between implementation and real-world needs. However, earlier demonstration of optimization results could have identified constraint weight calibration issues sooner. For optimization systems, stakeholders should evaluate solution quality early, not just data models and interfaces.
+
+\textbf{Team Coordination:} With 4 backend and 1 frontend developer, maintaining API contracts required clear documentation. Earlier agreement on response schemas and living API documentation (OpenAPI/Swagger) would have reduced integration friction. Code reviews worked well for standard logic but struggled with complex optimization algorithms—design documentation explaining constraint logic proved essential.
+
+\textbf{Sprint Planning:} The five-sprint structure provided valuable checkpoints, but optimization implementation took longer than anticipated. Constraint satisfaction problems often reveal unexpected complexity during implementation despite clear theoretical understanding. Budgeting extra time for algorithm-heavy tasks is advisable.
+
+\textbf{Domain Knowledge:} Understanding the \textit{Praktikumsamt's} operational context—internship types, pedagogical purposes, historical processes—was essential for constraint modeling. Direct client interaction and analysis of historical data informed realistic test scenarios and constraint priorities.
+
+\section{Future Work}
+
+While the delivered system successfully addresses core requirements, several extensions would enhance functionality and usability:
+
+\subsection{Technical Enhancements}
+
+\begin{itemize}
+    \item \textbf{Constraint weight tuning interface:} Allow administrators to adjust optimization priorities dynamically without code changes
+    
+    \item \textbf{Parallel solver execution:} Run multiple OptaPlanner configurations simultaneously to explore alternative solutions
+    
+    \item \textbf{Advanced distance calculation:} Integrate routing APIs for actual travel time via public transit instead of straight-line approximations
+    
+    \item \textbf{Solution explainability:} Provide per-assignment score breakdowns and natural language explanations
+\end{itemize}
+
+\subsection{Feature Extensions}
+
+\begin{itemize}
+    \item \textbf{Multi-semester planning:} Optimize multiple semesters jointly with enrollment forecasting and capacity recommendations
+    
+    \item \textbf{Teacher and student portals:} Enable direct preference submission and assignment notifications
+    
+    \item \textbf{Communication workflows:} Automated email notifications with calendar integration and confirmation tracking
+    
+    \item \textbf{Enhanced reporting:} Historical trend analysis, geographic visualization, and workload equity reports
+    
+    \item \textbf{University system integration:} Automatic data sync with student information and HR systems
+\end{itemize}
+
+\subsection{Process Improvements}
+
+\begin{itemize}
+    \item \textbf{Production deployment:} University infrastructure setup with monitoring, backup procedures, and disaster recovery
+    
+    \item \textbf{Comprehensive testing:} Expand test coverage with constraint regression tests, load testing, and user acceptance testing
+    
+    \item \textbf{Documentation and training:} User manuals, video tutorials, and hands-on training for administrative staff
+\end{itemize}
 
 
 % Bibliography
