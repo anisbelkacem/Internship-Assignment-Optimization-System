@@ -249,7 +249,7 @@ The system operates on four categories of input:
 \begin{enumerate}
     \item \textbf{Students:} Each student record contains:
     \begin{itemize}
-        \item Internship type requirement (PDP I, PDP II, ZSP, or SFP for a given semester)
+        \item Internship type requirement (PDP I, PDP II, ZSP, or SFP for a given semester/year)
         \item Subject specialization (primary teaching subject)
         \item Home address (for distance calculations)
     \end{itemize}
@@ -382,7 +382,7 @@ The system follows a classic three-tier architecture separating presentation, bu
 \begin{itemize}
     \item \textbf{Presentation Tier (Frontend):} Web-based user interface built with React and TypeScript, providing interactive management of students, teachers, schools, and assignments
     \item \textbf{Business Logic Tier (Backend):} Spring Boot application containing optimization engine, constraint validation, and business rules
-    \item \textbf{Data Tier:} PostgreSQL relational database for persistent storage of all entities and assignment results
+    \item \textbf{Data Tier:} MySQL relational database for persistent storage of all entities and assignment results
 \end{itemize}
 
 \subsection{Design Principles}
@@ -415,8 +415,8 @@ The architecture adheres to several key principles:
 
 \textbf{Database:}
 \begin{itemize}
-    \item \textbf{PostgreSQL 15:} Relational database chosen for reliability, ACID compliance, and advanced query capabilities
-    \item Supports complex queries for reporting and analytics
+    \item \textbf{MySQL:} Relational database used for persistence in the delivered system and development environment
+    \item Supports transactional workloads and reporting queries
 \end{itemize}
 
 \textbf{Build System:}
@@ -659,7 +659,7 @@ The submitted repository is a mono-repo consisting of a Spring Boot backend, a R
 \end{itemize}
 
 \noindent
-Note: While Chapter 3 describes PostgreSQL and React 18 as target technologies, the delivered implementation uses MySQL in the provided Docker setup and the React version defined in \texttt{package.json}. The overall architecture and interfaces remain unchanged.
+Note: Chapter 3 describes the same core stack that is used in the delivered implementation, including MySQL in the Docker-based development setup and the React version defined in \texttt{package.json}. The overall architecture and interfaces remain unchanged.
 
 \section{Backend Implementation (Spring Boot)}
 
@@ -833,7 +833,7 @@ A typical local workflow is:
 \section{Implementation Notes and Limitations}
 
 \begin{itemize}
-    \item Development setup uses MySQL; migration to PostgreSQL is mainly configuration due to JPA usage.
+    \item Development setup uses MySQL; migration to another relational database would mainly require configuration changes due to JPA usage.
     \item API keys (e.g., geocoding) should be handled via environment variables/secrets in deployment.
     \item Job status is tracked in memory; a server restart clears running/completed job state.
 \end{itemize}
@@ -853,7 +853,7 @@ The project followed an Agile approach with \textbf{five two-week sprints} over 
 \begin{itemize}
     \item Clarified requirements with stakeholders and documented specifications
     \item Designed data model: Student, Teacher, School, PlannedInternship, Course entities
-    \item Defined three-tier architecture: Spring Boot backend, React/TypeScript frontend, PostgreSQL database
+    \item Defined three-tier architecture: Spring Boot backend, React/TypeScript frontend, MySQL database
     \item Set up GitLab version control, Teamscale quality monitoring, Docker containerization
     \item Implemented CI/CD pipeline automating builds and quality checks
 \end{itemize}
@@ -950,15 +950,19 @@ The project followed an Agile approach with \textbf{five two-week sprints} over 
 
 \subsection{Distance Calculation}
 
-\textbf{Problem:} Phase 1 has no student-teacher matching yet, making precise distance calculation impossible
+\textbf{Problem:} Phase 1 has no individual student-teacher matching yet, making precise per-student distance calculation impossible. However, distance is critical for PDP internships where students must commute to schools regularly
 
 \textbf{Solution:} 
+
+\textbf{Phase 1 (Two-pronged distance strategy):}
 \begin{itemize}
-    \item Phase 1: Centroid-based distance approximation using aggregate student demand
-    \item Bidirectional distance checks to keep internships and students reasonably close
-    \item Phase 2: Precise distance measurements once teacher assignments are fixed
+    \item \textbf{Centroid-based distance optimization:} Each internship type/school type has a demand centroid; teachers are positioned to minimize distance to these centroids. Ensures teacher placement aligns with overall student demand.
+    
+    \item \textbf{Bidirectional matching:} For each student, identify closest teacher; for each teacher, identify closest student. This ensures geographic spread and prevents isolated placements.
 \end{itemize}
 
+\textbf{Phase 2:} Precise Haversine distance calculations once individual teacher assignments are fixed, optimizing final student placements
+\\
 \textbf{Impact:} Hybrid approach balanced optimization feasibility with distance accuracy across both phases
 
 \section{Performance Evaluation}
