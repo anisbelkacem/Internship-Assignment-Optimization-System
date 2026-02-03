@@ -950,15 +950,19 @@ The project followed an Agile approach with \textbf{five two-week sprints} over 
 
 \subsection{Distance Calculation}
 
-\textbf{Problem:} Phase 1 has no student-teacher matching yet, making precise distance calculation impossible
+\textbf{Problem:} Phase 1 has no individual student-teacher matching yet, making precise per-student distance calculation impossible. However, distance is critical for PDP internships where students must commute to schools regularly
 
 \textbf{Solution:} 
+
+\textbf{Phase 1 (Two-pronged distance strategy):}
 \begin{itemize}
-    \item Phase 1: Centroid-based distance approximation using aggregate student demand
-    \item Bidirectional distance checks to keep internships and students reasonably close
-    \item Phase 2: Precise distance measurements once teacher assignments are fixed
+    \item \textbf{Centroid-based distance optimization:} Each internship type/school type has a demand centroid; teachers are positioned to minimize distance to these centroids. Ensures teacher placement aligns with overall student demand.
+    
+    \item \textbf{Bidirectional matching:} For each student, identify closest teacher; for each teacher, identify closest student. This ensures geographic spread and prevents isolated placements.
 \end{itemize}
 
+\textbf{Phase 2:} Precise Haversine distance calculations once individual teacher assignments are fixed, optimizing final student placements
+\\
 \textbf{Impact:} Hybrid approach balanced optimization feasibility with distance accuracy across both phases
 
 \section{Performance Evaluation}
